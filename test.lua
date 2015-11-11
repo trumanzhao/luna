@@ -1,4 +1,14 @@
-print("fuck_a(1, 2)-->"..fuck_a(1, 2));
+function f0(a, b)
+	print("f0".."a="..a..", b="..b);
+end
 
-x=a.Copy(b, 1000);
-print("a.Copy(b, 1000)-->"..x);
+function f1(a, b)
+	print("f1".."a="..a..", b="..b);
+	return a + b;
+end
+
+function f2(a, b)
+	print("f2".."a="..a..", b="..b);
+	return a + 1, b + 1;
+end
+

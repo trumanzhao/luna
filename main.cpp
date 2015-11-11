@@ -6,9 +6,9 @@
 #include <cstdint>
 #include "lua_adpter.h"
 
-int func_a(int a, int b)
+int func_a(int a, int b, int c)
 {
-    return a + b;
+    return a + b + c;
 }
 
 void func_b()
@@ -68,35 +68,58 @@ EXPORT_LUA_FUNCTION(Print)
 EXPORT_LUA_FUNCTION(Copy)
 EXPORT_CLASS_END()
 
-void CallSomeone(lua_State* L)
-{
-    lua_stack_guard  guard(L);
-    lua_get_file_function(L, "test.lua", "Down");
-    lua_safe_call(guard, 0, 0);
-}
-
 void Fuck(lua_State* L)
 {
-    my_object a, b;
-
-    lua_push_object(L, &a);
-    lua_setglobal(L, "a");
-
-    lua_push_object(L, &b);
-    lua_setglobal(L, "b");
-
     lua_load_script(L, "test.lua");
+
+
+	lua_function_object func(L);
+	int x, y;
+
+	if (func.get_file_func("test.lua", "f0"))
+	{
+		func.call();
+	}
+
+	if (func.get_file_func("test.lua", "f1"))
+	{
+		func.call(&x, 1, 2);
+	}
+
+	if (func.get_file_func("test.lua", "f2"))
+	{
+		func.call(std::tie(x, y), 1, 2);
+	}
 }
 
+template <typename T>
+typename std::enable_if<is_tuple<T>::value, void>::type func(T& t)
+{
+	printf("is_tuple: %zu\n", sizeof(t));
+}
+
+template <typename T>
+typename std::enable_if<!is_tuple<T>::value, void>::type func(T& t)
+{
+	printf("is_int: %zu\n", sizeof(t));
+}
 
 int main(int argc, char* argv[])
 {
     lua_State* L = lua_create_vm();
 
+	bool b = is_tuple<int>::type();
+
+	int a;
+	std::tuple<int, bool> t{1, false};
+
+	func(a);
+	func(t);
+
     lua_register_function(L, "fuck_a", func_a);
     lua_register_function(L, "fuck_b", func_b);
 
-    Fuck(L);
+	Fuck(L);
 
     lua_delete_vm(L);
 	return 0;

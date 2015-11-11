@@ -42,17 +42,17 @@ static std::string regularize_path(const char path[])
 
 static bool get_file_time(time_t* mtime, const char file_name[])
 {
-    struct stat	fileInfo;
-    int ret = stat(file_name, &fileInfo);
+    struct stat	file_info;
+    int ret = stat(file_name, &file_info);
     if (ret != 0)
         return false;
 
 #ifdef __APPLE__
-    *mtime = fileInfo.st_mtimespec.tv_sec;
+    *mtime = file_info.st_mtimespec.tv_sec;
 #endif
 
 #if defined(_MSC_VER) || defined(__linux)
-    *mtime = fileInfo.st_mtime;
+    *mtime = file_info.st_mtime;
 #endif
     return true;
 }
@@ -320,8 +320,8 @@ bool lua_get_file_function(lua_State* L, const char file_name[], const char func
 
         lua_getglobal(L, env_name.c_str());
     }
-
     lua_getfield(L, -1, function);
+	lua_remove(L, -2);
     result = lua_isfunction(L, -1);
 Exit0:
     if (!result)
@@ -335,6 +335,7 @@ bool lua_get_table_function(lua_State* L, const char table[], const char functio
 {
     lua_getglobal(L, table);
     lua_getfield(L, -1, function);
+	lua_remove(L, -2);
     if (!lua_isfunction(L, -1))
     {
         lua_pop(L, 1);
@@ -343,32 +344,27 @@ bool lua_get_table_function(lua_State* L, const char table[], const char functio
     return true;
 }
 
-bool  lua_safe_call(lua_stack_guard& guard, int arg_count, int return_count)
+bool lua_call_function(lua_State* L, int arg_count, int ret_count)
 {
-    lua_State*  L = guard.m_lua;
-    int func_idx = lua_gettop(L) - arg_count;
+	int func_idx = lua_gettop(L) - arg_count;
+	if (func_idx <= 0 || !lua_isfunction(L, func_idx))
+	{
+		print_error(L, "call invalid function !");
+		return false;
+	}
 
-    assert(guard.m_count == 0);
-    guard.m_count++;
+	lua_getglobal(L, "debug");
+	lua_getfield(L, -1, "traceback");
+	lua_remove(L, -2); // remove 'debug'
 
-    if (func_idx <= 0)
-    {
-        print_error(L, "lua_safe_call bad arg_count !");
-        return false;
-    }
-
-    lua_getglobal(L, "debug");
-    lua_getfield(L, -1, "traceback");
-    lua_remove(L, -2); // remove 'debug'
-
-    lua_insert(L, func_idx);
-    if (lua_pcall(L, arg_count, return_count, func_idx))
-    {
-        print_error(L, lua_tostring(L, -1));
-        return false;
-    }
-
-    return true;
+	lua_insert(L, func_idx);
+	if (lua_pcall(L, arg_count, ret_count, func_idx))
+	{
+		print_error(L, lua_tostring(L, -1));
+		return false;
+	}
+	lua_remove(L, -ret_count -1); // remove 'traceback'
+	return true;
 }
 
 void lua_set_error_func(lua_State* L, std::function<void(const char*)>& error_func)
@@ -394,4 +390,3 @@ void lua_set_file_data_func(lua_State* L, std::function<bool(char*, size_t, cons
     lua_adpter_runtime* runtime = get_adpter_runtime(L);
     runtime->file_data_func = data_func;
 }
-

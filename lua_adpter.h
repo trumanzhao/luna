@@ -29,30 +29,14 @@ template <> inline void native_to_lua<double>(lua_State* L, double v) { lua_push
 typedef std::function<int(lua_State*)> lua_global_function;
 typedef std::function<int(void*, lua_State*)> lua_object_function;
 
-template<int...>
-struct integer_seq{};
-
-//生成整形序列
-template<int N, int... Integers>
-struct make_integer_seq
-{
-    using integer_seq_t = typename make_integer_seq<N - 1, N - 1, Integers...>::integer_seq_t;
-};
-
-template<int... Integers>
-struct make_integer_seq<0, Integers...>
-{
-    typedef integer_seq<Integers...> integer_seq_t;
-};
-
-template<int... Integers, typename return_type, typename... arg_types>
-return_type call_helper(lua_State* L, return_type(*func)(arg_types...), integer_seq<Integers...>&&)
+template<size_t... Integers, typename return_type, typename... arg_types>
+return_type call_helper(lua_State* L, return_type(*func)(arg_types...), std::index_sequence<Integers...>&&)
 {
     return (*func)(lua_to_native<arg_types>(L, Integers + 1)...);
 }
 
-template<int... Integers, typename return_type, typename class_type, typename... arg_types>
-return_type call_helper(lua_State* L, class_type* obj, return_type(class_type::*func)(arg_types...), integer_seq<Integers...>&&)
+template<size_t... Integers, typename return_type, typename class_type, typename... arg_types>
+return_type call_helper(lua_State* L, class_type* obj, return_type(class_type::*func)(arg_types...), std::index_sequence<Integers...>&&)
 {
     return (obj->*func)(lua_to_native<arg_types>(L, Integers + 1)...);
 }
@@ -62,7 +46,7 @@ lua_global_function lua_adpter(return_type(*func)(arg_types...))
 {
     return [=](lua_State* L)
     {
-        native_to_lua(L, call_helper(L, func, typename make_integer_seq<sizeof...(arg_types)>::integer_seq_t()));
+        native_to_lua(L, call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>()));
         return 1;
     };
 }
@@ -72,7 +56,7 @@ lua_global_function lua_adpter(void(*func)(arg_types...))
 {
     return [=](lua_State* L)
     {
-        call_helper(L, func, typename make_integer_seq<sizeof...(arg_types)>::integer_seq_t());
+        call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>());
         return 0;
     };
 }
@@ -88,7 +72,7 @@ lua_object_function lua_adpter(return_type(T::*func)(arg_types...))
 {
     return [=](void* obj, lua_State* L)
     {
-        native_to_lua(L, call_helper(L, (T*)obj, func, typename make_integer_seq<sizeof...(arg_types)>::integer_seq_t()));
+        native_to_lua(L, call_helper(L, (T*)obj, func, std::make_index_sequence<sizeof...(arg_types)>()));
         return 1;
     };
 }
@@ -98,7 +82,7 @@ lua_object_function lua_adpter(void(T::*func)(arg_types...))
 {
     return [=](void* obj, lua_State* L)
     {
-        call_helper(L, (T*)obj, func, typename make_integer_seq<sizeof...(arg_types)>::integer_seq_t());
+        call_helper(L, (T*)obj, func, std::make_index_sequence<sizeof...(arg_types)>());
         return 0;
     };
 }
@@ -402,24 +386,24 @@ struct lua_obj_ref
 
     void release()
     {
-        if (m_lua_state == nullptr || m_lua_ref == LUA_NOREF)
+        if (m_lvm == nullptr || m_ref == LUA_NOREF)
             return;
 
-        int top = lua_gettop(m_lua_state);
-        lua_rawgeti(m_lua_state, LUA_REGISTRYINDEX, m_lua_ref);
-        if (lua_istable(m_lua_state, -1))
+        int top = lua_gettop(m_lvm);
+        lua_rawgeti(m_lvm, LUA_REGISTRYINDEX, m_ref);
+        if (lua_istable(m_lvm, -1))
         {
-            lua_pushstring(m_lua_state, LUA_NATIVE_POINTER);
-            lua_pushnil(m_lua_state);
-            lua_rawset(m_lua_state, -3);
-            luaL_unref(m_lua_state, LUA_REGISTRYINDEX, m_lua_ref);
+            lua_pushstring(m_lvm, LUA_NATIVE_POINTER);
+            lua_pushnil(m_lvm);
+            lua_rawset(m_lvm, -3);
+            luaL_unref(m_lvm, LUA_REGISTRYINDEX, m_ref);
         }
-        lua_settop(m_lua_state, top);
-        m_lua_state = nullptr;
-        m_lua_ref = LUA_NOREF;
+        lua_settop(m_lvm, top);
+        m_lvm = nullptr;
+        m_ref = LUA_NOREF;
     }
-    lua_State* m_lua_state = nullptr;
-    int m_lua_ref = LUA_NOREF;
+    lua_State* m_lvm = nullptr;
+    int m_ref = LUA_NOREF;
 };
 
 template <typename T>
@@ -432,10 +416,10 @@ void lua_push_object(lua_State* L, T* obj)
     }
 
     lua_obj_ref& ref = obj->get_obj_ref();
-    if (ref.m_lua_ref != LUA_NOREF)
+    if (ref.m_ref != LUA_NOREF)
     {
-        assert(ref.m_lua_state == L);
-        lua_rawgeti(L, LUA_REGISTRYINDEX, ref.m_lua_ref);
+        assert(ref.m_lvm == L);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref.m_ref);
         return;
     }
 
@@ -454,8 +438,8 @@ void lua_push_object(lua_State* L, T* obj)
     }
     lua_setmetatable(L, -2);
     lua_pushvalue(L, -1);
-    ref.m_lua_state = L;
-    ref.m_lua_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    ref.m_lvm = L;
+    ref.m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
 template <typename T>
@@ -610,28 +594,135 @@ bool lua_get_object_function(lua_State* L, T* object, const char function[])
     return true;
 }
 
-struct lua_stack_guard
-{
-    lua_stack_guard(lua_State* L) : m_lua(L), m_count(0)
-    {
-        m_top = lua_gettop(L);
-    }
-
-    ~lua_stack_guard()
-    {
-        lua_settop(m_lua, m_top);
-    }
-
-    lua_State* m_lua;
-    int m_count;
-    int m_top;
-};
-
-// lua_stack_guard每次调用必须构造一个新的,不得复用!
-bool  lua_safe_call(lua_stack_guard& guard, int arg_count, int return_count);
+bool lua_call_function(lua_State* L, int arg_count, int ret_count);
 
 // 设置错误处理函数以及文件读取函数,默认调用c库相关函数:
 void lua_set_error_func(lua_State* L, std::function<void(const char*)>& error_func);
 void lua_set_file_time_func(lua_State* L, std::function<bool(time_t*, const char*)>& time_func);
 void lua_set_file_size_func(lua_State* L, std::function<bool(size_t*, const char*)>& size_func);
 void lua_set_file_data_func(lua_State* L, std::function<bool(char*, size_t, const char*)>& data_func);
+
+
+template <typename T, template <typename...> class Template>
+struct is_specialization_of : std::false_type {};
+
+template <template <typename...> class Template, typename... Args>
+struct is_specialization_of<Template<Args...>, Template> : std::true_type {};
+
+template<typename T> struct is_tuple : is_specialization_of<typename std::decay<T>::type, std::tuple> {};
+
+template<int index, typename... Types>
+struct type_at;
+
+template<int index, typename First, typename... Others>
+struct type_at<index, First, Others...>
+{
+	using type = typename type_at<index - 1, Others...>::type;
+};
+
+template<typename T, typename... Others>
+struct type_at<0, T, Others...>
+{
+	using type = T;
+};
+
+struct lua_function_object
+{
+	lua_function_object(lua_State* L) 
+	{
+		m_lvm = L;
+		m_base = lua_gettop(L);
+	}
+
+	~lua_function_object() 
+	{
+		lua_settop(m_lvm, m_base);
+	}
+
+	bool get_global_func(const char func[])
+	{
+		lua_settop(m_lvm, m_base);
+		if (lua_getglobal(m_lvm, func) != LUA_OK)
+			return false;
+		m_func = lua_gettop(m_lvm);
+		return lua_isfunction(m_lvm, -1);
+	}
+
+	bool get_file_func(const char file_name[], const char func[])
+	{
+		lua_settop(m_lvm, m_base);
+		lua_get_file_function(m_lvm, file_name, func);
+		m_func = lua_gettop(m_lvm);
+		return lua_isfunction(m_lvm, -1);
+	}
+
+	bool get_table_func(const char table_name[], const char func[])
+	{
+		lua_settop(m_lvm, m_base);
+		lua_get_table_function(m_lvm, table_name, func);
+		m_func = lua_gettop(m_lvm);
+		return lua_isfunction(m_lvm, -1);
+	}
+
+	template <typename T>
+	bool get_object_func(T* obj, const char func[])
+	{
+		lua_settop(m_lvm, m_base);
+		lua_get_object_function(m_lvm, obj, func);
+		m_func = lua_gettop(m_lvm);
+		return lua_isfunction(m_lvm, -1);
+	}
+
+	template<size_t... Integers, typename... var_types>
+	void rets_helper(std::tuple<var_types&...>& vars, std::index_sequence<Integers...>&&)
+	{
+		constexpr int ret_count = sizeof...(Integers);
+		int _0[] = { (std::get<Integers>(vars) = lua_to_native<var_types>(m_lvm, (int)Integers - ret_count), 0)...};
+	}
+
+	template <typename ret_type1, typename ret_type2, typename... ret_rest, typename... arg_types>
+	bool call(std::tuple<ret_type1&, ret_type2&, ret_rest&...>&& rets, arg_types... args)
+	{
+		lua_settop(m_lvm, m_func);
+		int _0[] = {0, (native_to_lua(m_lvm, args), 0)...};
+		constexpr int ret_count = 2 + sizeof...(ret_rest);
+		if (!lua_call_function(m_lvm, sizeof...(arg_types), ret_count))
+			return false;
+		rets_helper(rets, std::make_index_sequence<ret_count>());
+		return true;
+	}
+
+	template <typename ret_type, typename... arg_types>
+	bool call(ret_type* ret, arg_types... args)
+	{
+		lua_settop(m_lvm, m_func);
+		int _0[] = {0, (native_to_lua(m_lvm, args), 0)... };
+		if (!lua_call_function(m_lvm, sizeof...(arg_types), 1))
+			return false;
+		*ret = lua_to_native<ret_type>(m_lvm, 1);
+		return true;
+	}
+
+	template <typename... arg_types>
+	typename std::enable_if<!is_tuple<typename type_at<0, arg_types...>::type>::value, bool>::type call(arg_types... args)
+	{
+		lua_settop(m_lvm, m_func);
+		int _0[] = {0, (native_to_lua(m_lvm, args), 0)... };
+		return lua_call_function(m_lvm, sizeof...(arg_types), 0);
+	}
+
+	bool call()
+	{
+		lua_settop(m_lvm, m_func);
+		return lua_call_function(m_lvm, 0, 0);
+	}
+
+	bool custom_call(int arg_count, int ret_count)
+	{
+		return lua_call_function(m_lvm, arg_count, ret_count);
+	}
+
+	int m_base = 0;
+	int m_func = 0;
+	lua_State* m_lvm;
+};
