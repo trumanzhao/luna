@@ -112,7 +112,8 @@ int x, y;
 if (!func.get_from_file("test.lua", "some_func"))
   	return; // 没找到函数,失败....
 
-if (!func.call(std::tie(x, y), a, b))
+// call_nvn: 返回多个值,传入多个参数
+if (!func.call_nvn(std::tie(x, y), a, b))
   	return; // 函数调用失败...
 
 printf("x=%d, y=%d\n", x, y);
