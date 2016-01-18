@@ -1,14 +1,4 @@
-function f0(a, b)
-	print("f0".."a="..a..", b="..b);
+function func(obj)
+	local x = obj.Add(1, 2);	
+	print("in lua func, ret="..x);
 end
-
-function f1(a, b)
-	print("f1".."a="..a..", b="..b);
-	return a + b;
-end
-
-function f2(a, b)
-	print("f2".."a="..a..", b="..b);
-	return a + 1, b + 1;
-end
-

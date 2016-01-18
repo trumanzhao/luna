@@ -16,17 +16,17 @@ void func_b()
     puts("func_b");
 }
 
-struct base 
+struct base_t 
 {
     int m_id = 1;
 public:
     virtual void eat()
     {
-        puts("base eat");
+        puts("base_t eat");
     }
 };
 
-struct my_object : base
+struct my_object_t : base_t
 {
     int m_id = 2;
 public:
@@ -53,68 +53,31 @@ public:
 		return 0;
 	}
 
-    int Copy(my_object* object, int x)
-    {
-        printf("copy: %p-->%p, x=%d\n", object, this, x);
-        this->m_x = x;
-        return x + 1;
-    }
-
-    DECLARE_LUA_CLASS(my_object);
+    DECLARE_LUA_CLASS(my_object_t);
 };
 
-EXPORT_CLASS_BEGIN(my_object)
+EXPORT_CLASS_BEGIN(my_object_t)
 EXPORT_LUA_FUNCTION(Print)
-EXPORT_LUA_FUNCTION(Copy)
+EXPORT_LUA_FUNCTION(Add)
 EXPORT_CLASS_END()
 
 void Fuck(lua_State* L)
 {
+	my_object_t obj;
+
     lua_load_script(L, "test.lua");
 
-
 	lua_function_object func(L);
-	int x, y;
 
-	if (func.get_file_func("test.lua", "f0"))
+	if (func.get_file_func("test.lua", "func"))
 	{
-		func.call();
+		func.call_0vn(&obj);
 	}
-
-	if (func.get_file_func("test.lua", "f1"))
-	{
-		func.call(&x, 1, 2);
-	}
-
-	if (func.get_file_func("test.lua", "f2"))
-	{
-		func.call(std::tie(x, y), 1, 2);
-	}
-}
-
-template <typename T>
-typename std::enable_if<is_tuple<T>::value, void>::type func(T& t)
-{
-	printf("is_tuple: %zu\n", sizeof(t));
-}
-
-template <typename T>
-typename std::enable_if<!is_tuple<T>::value, void>::type func(T& t)
-{
-	printf("is_int: %zu\n", sizeof(t));
 }
 
 int main(int argc, char* argv[])
 {
     lua_State* L = lua_create_vm();
-
-	bool b = is_tuple<int>::type();
-
-	int a;
-	std::tuple<int, bool> t{1, false};
-
-	func(a);
-	func(t);
 
     lua_register_function(L, "fuck_a", func_a);
     lua_register_function(L, "fuck_b", func_b);

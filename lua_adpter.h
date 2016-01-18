@@ -469,7 +469,7 @@ void lua_clear_ref(T* obj)
     virtual lua_obj_ref& get_obj_ref() { return m_lua_obj_ref; }
     virtual const char* get_meta_name() { return "_class_meta:some_fuck_class"; }
     virtual lua_member_item* get_meta_data(){ static lua_member_item items[] = {...}; return items; };
-    */
+*/
 
 #define DECLARE_LUA_CLASS(ClassName)    \
     lua_obj_ref m_lua_obj_ref;  \
@@ -681,7 +681,7 @@ struct lua_function_object
 	}
 
 	template <typename ret_type1, typename ret_type2, typename... ret_rest, typename... arg_types>
-	bool call(std::tuple<ret_type1&, ret_type2&, ret_rest&...>&& rets, arg_types... args)
+	bool call_nvn(std::tuple<ret_type1&, ret_type2&, ret_rest&...>&& rets, arg_types... args)
 	{
 		lua_settop(m_lvm, m_func);
 		int _0[] = {0, (native_to_lua(m_lvm, args), 0)...};
@@ -693,7 +693,7 @@ struct lua_function_object
 	}
 
 	template <typename ret_type, typename... arg_types>
-	bool call(ret_type* ret, arg_types... args)
+	bool call_1vn(ret_type* ret, arg_types... args)
 	{
 		lua_settop(m_lvm, m_func);
 		int _0[] = {0, (native_to_lua(m_lvm, args), 0)... };
@@ -704,20 +704,20 @@ struct lua_function_object
 	}
 
 	template <typename... arg_types>
-	typename std::enable_if<!is_tuple<typename type_at<0, arg_types...>::type>::value, bool>::type call(arg_types... args)
+	bool call_0vn(arg_types... args)
 	{
 		lua_settop(m_lvm, m_func);
 		int _0[] = {0, (native_to_lua(m_lvm, args), 0)... };
 		return lua_call_function(m_lvm, sizeof...(arg_types), 0);
 	}
 
-	bool call()
+	bool call_0v0()
 	{
 		lua_settop(m_lvm, m_func);
 		return lua_call_function(m_lvm, 0, 0);
 	}
 
-	bool custom_call(int arg_count, int ret_count)
+	bool call_custom(int arg_count, int ret_count)
 	{
 		return lua_call_function(m_lvm, arg_count, ret_count);
 	}

@@ -1,4 +1,4 @@
-product = app
+product = test
 # execute, dynamic_shared, static_shared
 target_type = execute
 define_macros =
@@ -20,7 +20,7 @@ lib_out =
 CC = gcc
 CXX = g++
 CFLAGS = -m64
-CXXFLAGS = $(CFLAGS) -Wno-invalid-offsetof -Wno-deprecated-declarations -std=c++11
+CXXFLAGS = $(CFLAGS) -Wno-invalid-offsetof -Wno-deprecated-declarations -std=c++1y
 
 #----------------- 下面部分通常不用改 --------------------------
 
