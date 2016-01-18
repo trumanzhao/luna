@@ -617,112 +617,112 @@ struct type_at;
 template<int index, typename First, typename... Others>
 struct type_at<index, First, Others...>
 {
-	using type = typename type_at<index - 1, Others...>::type;
+    using type = typename type_at<index - 1, Others...>::type;
 };
 
 template<typename T, typename... Others>
 struct type_at<0, T, Others...>
 {
-	using type = T;
+    using type = T;
 };
 
 struct lua_function_object
 {
-	lua_function_object(lua_State* L) 
-	{
-		m_lvm = L;
-		m_base = lua_gettop(L);
-	}
+    lua_function_object(lua_State* L) 
+    {
+        m_lvm = L;
+        m_base = lua_gettop(L);
+    }
 
-	~lua_function_object() 
-	{
-		lua_settop(m_lvm, m_base);
-	}
+    ~lua_function_object() 
+    {
+        lua_settop(m_lvm, m_base);
+    }
 
-	bool get_global_func(const char func[])
-	{
-		lua_settop(m_lvm, m_base);
-		if (lua_getglobal(m_lvm, func) != LUA_OK)
-			return false;
-		m_func = lua_gettop(m_lvm);
-		return lua_isfunction(m_lvm, -1);
-	}
+    bool get_global_func(const char func[])
+    {
+        lua_settop(m_lvm, m_base);
+        if (lua_getglobal(m_lvm, func) != LUA_OK)
+            return false;
+        m_func = lua_gettop(m_lvm);
+        return lua_isfunction(m_lvm, -1);
+    }
 
-	bool get_file_func(const char file_name[], const char func[])
-	{
-		lua_settop(m_lvm, m_base);
-		lua_get_file_function(m_lvm, file_name, func);
-		m_func = lua_gettop(m_lvm);
-		return lua_isfunction(m_lvm, -1);
-	}
+    bool get_file_func(const char file_name[], const char func[])
+    {
+        lua_settop(m_lvm, m_base);
+        lua_get_file_function(m_lvm, file_name, func);
+        m_func = lua_gettop(m_lvm);
+        return lua_isfunction(m_lvm, -1);
+    }
 
-	bool get_table_func(const char table_name[], const char func[])
-	{
-		lua_settop(m_lvm, m_base);
-		lua_get_table_function(m_lvm, table_name, func);
-		m_func = lua_gettop(m_lvm);
-		return lua_isfunction(m_lvm, -1);
-	}
+    bool get_table_func(const char table_name[], const char func[])
+    {
+        lua_settop(m_lvm, m_base);
+        lua_get_table_function(m_lvm, table_name, func);
+        m_func = lua_gettop(m_lvm);
+        return lua_isfunction(m_lvm, -1);
+    }
 
-	template <typename T>
-	bool get_object_func(T* obj, const char func[])
-	{
-		lua_settop(m_lvm, m_base);
-		lua_get_object_function(m_lvm, obj, func);
-		m_func = lua_gettop(m_lvm);
-		return lua_isfunction(m_lvm, -1);
-	}
+    template <typename T>
+    bool get_object_func(T* obj, const char func[])
+    {
+        lua_settop(m_lvm, m_base);
+        lua_get_object_function(m_lvm, obj, func);
+        m_func = lua_gettop(m_lvm);
+        return lua_isfunction(m_lvm, -1);
+    }
 
-	template<size_t... Integers, typename... var_types>
-	void rets_helper(std::tuple<var_types&...>& vars, std::index_sequence<Integers...>&&)
-	{
-		constexpr int ret_count = sizeof...(Integers);
-		int _0[] = { (std::get<Integers>(vars) = lua_to_native<var_types>(m_lvm, (int)Integers - ret_count), 0)...};
-	}
+    template<size_t... Integers, typename... var_types>
+    void rets_helper(std::tuple<var_types&...>& vars, std::index_sequence<Integers...>&&)
+    {
+        constexpr int ret_count = sizeof...(Integers);
+        int _0[] = { (std::get<Integers>(vars) = lua_to_native<var_types>(m_lvm, (int)Integers - ret_count), 0)...};
+    }
 
-	template <typename ret_type1, typename ret_type2, typename... ret_rest, typename... arg_types>
-	bool call_nvn(std::tuple<ret_type1&, ret_type2&, ret_rest&...>&& rets, arg_types... args)
-	{
-		lua_settop(m_lvm, m_func);
-		int _0[] = {0, (native_to_lua(m_lvm, args), 0)...};
-		constexpr int ret_count = 2 + sizeof...(ret_rest);
-		if (!lua_call_function(m_lvm, sizeof...(arg_types), ret_count))
-			return false;
-		rets_helper(rets, std::make_index_sequence<ret_count>());
-		return true;
-	}
+    template <typename ret_type1, typename ret_type2, typename... ret_rest, typename... arg_types>
+    bool call_nvn(std::tuple<ret_type1&, ret_type2&, ret_rest&...>&& rets, arg_types... args)
+    {
+        lua_settop(m_lvm, m_func);
+        int _0[] = {0, (native_to_lua(m_lvm, args), 0)...};
+        constexpr int ret_count = 2 + sizeof...(ret_rest);
+        if (!lua_call_function(m_lvm, sizeof...(arg_types), ret_count))
+            return false;
+        rets_helper(rets, std::make_index_sequence<ret_count>());
+        return true;
+    }
 
-	template <typename ret_type, typename... arg_types>
-	bool call_1vn(ret_type* ret, arg_types... args)
-	{
-		lua_settop(m_lvm, m_func);
-		int _0[] = {0, (native_to_lua(m_lvm, args), 0)... };
-		if (!lua_call_function(m_lvm, sizeof...(arg_types), 1))
-			return false;
-		*ret = lua_to_native<ret_type>(m_lvm, 1);
-		return true;
-	}
+    template <typename ret_type, typename... arg_types>
+    bool call_1vn(ret_type* ret, arg_types... args)
+    {
+        lua_settop(m_lvm, m_func);
+        int _0[] = {0, (native_to_lua(m_lvm, args), 0)... };
+        if (!lua_call_function(m_lvm, sizeof...(arg_types), 1))
+            return false;
+        *ret = lua_to_native<ret_type>(m_lvm, 1);
+        return true;
+    }
 
-	template <typename... arg_types>
-	bool call_0vn(arg_types... args)
-	{
-		lua_settop(m_lvm, m_func);
-		int _0[] = {0, (native_to_lua(m_lvm, args), 0)... };
-		return lua_call_function(m_lvm, sizeof...(arg_types), 0);
-	}
+    template <typename... arg_types>
+    bool call_0vn(arg_types... args)
+    {
+        lua_settop(m_lvm, m_func);
+        int _0[] = {0, (native_to_lua(m_lvm, args), 0)... };
+        return lua_call_function(m_lvm, sizeof...(arg_types), 0);
+    }
 
-	bool call_0v0()
-	{
-		lua_settop(m_lvm, m_func);
-		return lua_call_function(m_lvm, 0, 0);
-	}
+    bool call_0v0()
+    {
+        lua_settop(m_lvm, m_func);
+        return lua_call_function(m_lvm, 0, 0);
+    }
 
-	bool call_custom(int arg_count, int ret_count)
-	{
-		return lua_call_function(m_lvm, arg_count, ret_count);
-	}
+    bool call_custom(int arg_count, int ret_count)
+    {
+        return lua_call_function(m_lvm, arg_count, ret_count);
+    }
 
-	int m_base = 0;
-	int m_func = 0;
-	lua_State* m_lvm;
+    int m_base = 0;
+    int m_func = 0;
+    lua_State* m_lvm;
 };

@@ -42,7 +42,7 @@ static std::string regularize_path(const char path[])
 
 static bool get_file_time(time_t* mtime, const char file_name[])
 {
-    struct stat	file_info;
+    struct stat file_info;
     int ret = stat(file_name, &file_info);
     if (ret != 0)
         return false;
@@ -80,11 +80,11 @@ static bool read_file_data(char* buffer, size_t size, const char file_name[])
 // env内预留了一些回调接口: 错误响应,获取文件时间,大小,数据
 struct lua_adpter_runtime
 {
-	std::map<std::string, time_t> files;
-	std::function<void(const char*)> error_func = [](const char* err) { puts(err); };
-	std::function<bool(time_t*, const char*)> file_time_func = get_file_time;
-	std::function<bool(size_t*, const char*)> file_size_func = get_file_size;
-	std::function<bool(char*, size_t, const char*)> file_data_func = read_file_data;
+    std::map<std::string, time_t> files;
+    std::function<void(const char*)> error_func = [](const char* err) { puts(err); };
+    std::function<bool(time_t*, const char*)> file_time_func = get_file_time;
+    std::function<bool(size_t*, const char*)> file_size_func = get_file_size;
+    std::function<bool(char*, size_t, const char*)> file_data_func = read_file_data;
     std::map<std::string, lua_global_function*> global_funcs;
 };
 
@@ -120,7 +120,7 @@ static int lua_import(lua_State* L)
 {
     int top = lua_gettop(L);
     const char* file_name = nullptr;
-    std::string	env_name = LUA_ENV_PREFIX;
+    std::string env_name = LUA_ENV_PREFIX;
 
     if (top != 1 || !lua_isstring(L, 1))
     {
@@ -251,31 +251,31 @@ exit0:
 
 bool lua_load_script(lua_State* L, const char file_name[])
 {
-	bool result = false;
+    bool result = false;
     lua_adpter_runtime* runtime = get_adpter_runtime(L);
     std::string file_path = regularize_path(file_name);
-    std::string	env_name = LUA_ENV_PREFIX;
-	time_t file_time = 0;
-	size_t file_size = 0;
-	char* buffer = nullptr;
-	char* code = nullptr;
+    std::string env_name = LUA_ENV_PREFIX;
+    time_t file_time = 0;
+    size_t file_size = 0;
+    char* buffer = nullptr;
+    char* code = nullptr;
 
-	env_name += file_path;
+    env_name += file_path;
 
-	if (!runtime->file_time_func(&file_time, file_name))
-		goto exit0;
+    if (!runtime->file_time_func(&file_time, file_name))
+        goto exit0;
 
-	if (!runtime->file_size_func(&file_size, file_name))
-		goto exit0;
+    if (!runtime->file_size_func(&file_size, file_name))
+        goto exit0;
 
-	buffer = new char[file_size];
-	if (buffer == nullptr)
-		goto exit0;
+    buffer = new char[file_size];
+    if (buffer == nullptr)
+        goto exit0;
 
-	if (!runtime->file_data_func(buffer, file_size, file_name))
-		goto exit0;
+    if (!runtime->file_data_func(buffer, file_size, file_name))
+        goto exit0;
 
-	code = skip_utf8_bom(buffer, file_size);
+    code = skip_utf8_bom(buffer, file_size);
     if (lua_load_string(L, env_name.c_str(), code, (int)(buffer + file_size - code)))
     {
         runtime->files[file_path] = file_time;
@@ -321,7 +321,7 @@ bool lua_get_file_function(lua_State* L, const char file_name[], const char func
         lua_getglobal(L, env_name.c_str());
     }
     lua_getfield(L, -1, function);
-	lua_remove(L, -2);
+    lua_remove(L, -2);
     result = lua_isfunction(L, -1);
 Exit0:
     if (!result)
@@ -335,7 +335,7 @@ bool lua_get_table_function(lua_State* L, const char table[], const char functio
 {
     lua_getglobal(L, table);
     lua_getfield(L, -1, function);
-	lua_remove(L, -2);
+    lua_remove(L, -2);
     if (!lua_isfunction(L, -1))
     {
         lua_pop(L, 1);
@@ -346,25 +346,25 @@ bool lua_get_table_function(lua_State* L, const char table[], const char functio
 
 bool lua_call_function(lua_State* L, int arg_count, int ret_count)
 {
-	int func_idx = lua_gettop(L) - arg_count;
-	if (func_idx <= 0 || !lua_isfunction(L, func_idx))
-	{
-		print_error(L, "call invalid function !");
-		return false;
-	}
+    int func_idx = lua_gettop(L) - arg_count;
+    if (func_idx <= 0 || !lua_isfunction(L, func_idx))
+    {
+        print_error(L, "call invalid function !");
+        return false;
+    }
 
-	lua_getglobal(L, "debug");
-	lua_getfield(L, -1, "traceback");
-	lua_remove(L, -2); // remove 'debug'
+    lua_getglobal(L, "debug");
+    lua_getfield(L, -1, "traceback");
+    lua_remove(L, -2); // remove 'debug'
 
-	lua_insert(L, func_idx);
-	if (lua_pcall(L, arg_count, ret_count, func_idx))
-	{
-		print_error(L, lua_tostring(L, -1));
-		return false;
-	}
-	lua_remove(L, -ret_count -1); // remove 'traceback'
-	return true;
+    lua_insert(L, func_idx);
+    if (lua_pcall(L, arg_count, ret_count, func_idx))
+    {
+        print_error(L, lua_tostring(L, -1));
+        return false;
+    }
+    lua_remove(L, -ret_count -1); // remove 'traceback'
+    return true;
 }
 
 void lua_set_error_func(lua_State* L, std::function<void(const char*)>& error_func)
