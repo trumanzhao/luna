@@ -65,14 +65,11 @@ void Fuck(lua_State* L)
 {
 	my_object_t obj;
 
-    lua_load_script(L, "test.lua");
+	//const char* msg = nullptr;
+	std::string msg = "xx";
 
-	lua_function_object func(L);
-
-	if (func.get_file_func("test.lua", "func"))
-	{
-		func.call_0vn(&obj);
-	}
+    if (call_file_function(L, "test.lua", "add2", std::tie(msg), 11, 2, msg))
+    	printf("msg=%s\n", msg.c_str());
 }
 
 int main(int argc, char* argv[])
