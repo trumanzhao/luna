@@ -66,9 +66,10 @@ void Fuck(lua_State* L)
     lua_guard_t g(L);
 
 	const char* msg = nullptr;
+    int len = 0;
 
-    if (call_file_function(L, "test.lua", "add2", std::tie(msg), 11, 2, msg))
-    	printf("msg=%s\n", msg);
+    if (call_file_function(L, "test.lua", "some_func", std::tie(msg, len), "hello", "world"))
+    	printf("msg=%s, len=%d\n", msg, len);
 }
 
 int main(int argc, char* argv[])

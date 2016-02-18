@@ -1,8 +1,4 @@
-function func(obj)
-	local x = obj.Add(1, 2);	
-	print("in lua func, ret="..x);
-end
-
-function add2(m, n)
-	return "fuck:"..m..", "..n;
+function some_func(s1, s2)
+    local s = s1.." "..s2;
+    return s, #s;
 end
