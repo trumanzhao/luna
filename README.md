@@ -103,19 +103,8 @@ end
 那么,可以在C++中这样调用:
 
 ``` c++
-// 注意,不要把lua_function_object额外保存起来,放在栈上即时声明即可.
-lua_function_object func(L);
-int a = 1;
-int b = 2;
-int x, y;
-
-if (!func.get_from_file("test.lua", "some_func"))
-  	return; // 没找到函数,失败....
-
-// call_nvn: 返回多个值,传入多个参数
-if (!func.call_nvn(std::tie(x, y), a, b))
-  	return; // 函数调用失败...
-
-printf("x=%d, y=%d\n", x, y);
+    int x, y;
+    lua_guard_t g(L);
+    call_file_function(L, "test.lua", "some_func", std::tie(x, y), 11, 2);
 ```
 

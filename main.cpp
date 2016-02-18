@@ -16,7 +16,7 @@ void func_b()
     puts("func_b");
 }
 
-struct base_t 
+struct base_t
 {
     int m_id = 1;
 public:
@@ -63,13 +63,12 @@ EXPORT_CLASS_END()
 
 void Fuck(lua_State* L)
 {
-	my_object_t obj;
+    lua_guard_t g(L);
 
-	//const char* msg = nullptr;
-	std::string msg = "xx";
+	const char* msg = nullptr;
 
     if (call_file_function(L, "test.lua", "add2", std::tie(msg), 11, 2, msg))
-    	printf("msg=%s\n", msg.c_str());
+    	printf("msg=%s\n", msg);
 }
 
 int main(int argc, char* argv[])
