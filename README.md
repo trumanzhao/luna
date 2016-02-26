@@ -108,7 +108,6 @@ end
     call_file_function(L, "test.lua", "some_func", std::tie(x, y), 11, 2);
 ```
 
-其他典型调用形式如下.
 无返回,无参数:
 
 ``` c++
