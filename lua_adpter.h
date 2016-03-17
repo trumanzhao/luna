@@ -1,8 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include <assert.h>
 #include <string.h>
 #include <cstdint>
+#include <string>
 #include <functional>
 #include <tuple>
 #include <type_traits>
