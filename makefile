@@ -91,7 +91,9 @@ endif
 ifeq ($(do_file),yes)
 my_obj_list = $(obj_list:%=$(my_build_dir)/%)
 $(foreach obj, $(my_obj_list), $(shell mkdir -p $(dir $(obj))))
+ifeq ($(lib_out),)
 $(shell mkdir -p $(lib_out))
+endif
 $(shell mkdir -p $(target_dir))
 endif
  
