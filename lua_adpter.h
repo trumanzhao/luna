@@ -644,7 +644,7 @@ template<size_t... Integers, typename... var_types>
 void rets_helper(lua_State* L, std::tuple<var_types&...>& vars, std::index_sequence<Integers...>&&)
 {
     constexpr int ret_count = sizeof...(Integers);
-    int _[] = { (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - ret_count), 0)...};
+    int _[] = {0, (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - ret_count), 0)...};
 }
 
 template <typename... ret_types, typename... arg_types>
