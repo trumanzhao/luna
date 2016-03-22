@@ -8,33 +8,33 @@
 
 int func_a(int a, int b, int c)
 {
-    return a + b + c;
+	return a + b + c;
 }
 
 void func_b()
 {
-    puts("func_b");
+	puts("func_b");
 }
 
 struct base_t
 {
-    int m_id = 1;
+	int m_id = 1;
 public:
-    virtual void eat()
-    {
-        puts("base_t eat");
-    }
+	virtual void eat()
+	{
+		puts("base_t eat");
+	}
 };
 
 struct my_object_t : base_t
 {
-    int m_id = 2;
+	int m_id = 2;
 public:
 
-    virtual void eat()
-    {
-        printf("obj eat, id=%d\n", m_id);
-    }
+	virtual void eat()
+	{
+		printf("obj eat, id=%d\n", m_id);
+	}
 
 	int m_x = 123;
 	void Print(int a, int b)
@@ -53,7 +53,7 @@ public:
 		return 0;
 	}
 
-    DECLARE_LUA_CLASS(my_object_t);
+	DECLARE_LUA_CLASS(my_object_t);
 };
 
 EXPORT_CLASS_BEGIN(my_object_t)
@@ -63,25 +63,28 @@ EXPORT_CLASS_END()
 
 void Fuck(lua_State* L)
 {
-    lua_guard_t g(L);
+	lua_guard_t g(L);
 
 	const char* msg = nullptr;
-    int len = 0;
+	int len = 0;
 
-    if (call_file_function(L, "test.lua", "some_func", std::tie(msg, len), "hello", "world"))
-    	printf("msg=%s, len=%d\n", msg, len);
+	if (call_file_function(L, "test.lua", "some_func", std::tie(msg, len), "hello", "world"))
+		printf("msg=%s, len=%d\n", msg, len);
 }
 
 int main(int argc, char* argv[])
 {
-    lua_State* L = lua_create_vm();
+	lua_State* L = luaL_newstate();
 
-    lua_register_function(L, "fuck_a", func_a);
-    lua_register_function(L, "fuck_b", func_b);
+	luaL_openlibs(L);
+
+	lua_bind_adpter(L);
+
+	lua_register_function(L, "fuck_a", func_a);
+	lua_register_function(L, "fuck_b", func_b);
 
 	Fuck(L);
 
-    lua_delete_vm(L);
+	lua_close(L);
 	return 0;
 }
-

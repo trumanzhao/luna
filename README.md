@@ -14,14 +14,14 @@ Mac OS X: Apple (GCC) LLVM 7.0.0, 注意在编译参数中加入选项: `-std=c+
 
 ## 创建lua_adpter运行时环境:
 
-创建lua\_State以及加载文件,删除
+初始化lua_adpter运行时环境: `lua_bind_adpter(L)`
+该函数会创建一个运行时数据结构,以userdata的形式存放到lus_State中去.
+在lua_State被close时,会通过userdata的gc方法自动释放.
 
 ``` c++
-lua_State* L = lua_create_vm();
-
-lua_load_script(L, "test.lua");
-
-lua_delete_vm(L);
+lua_State* L = luaL_newstate();
+luaL_openlibs(L);
+lua_bind_adpter(L);
 ```
 
 有必要的话,你可以设置以下即可回调函数:
