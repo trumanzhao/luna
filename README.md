@@ -103,9 +103,9 @@ end
 那么,可以在C++中这样调用:
 
 ``` c++
-    int x, y;
-    lua_guard_t g(L);
-    call_file_function(L, "test.lua", "some_func", std::tie(x, y), 11, 2);
+int x, y;
+lua_guard_t g(L);
+call_file_function(L, "test.lua", "some_func", std::tie(x, y), 11, 2);
 ```
 
 无返回,无参数:
