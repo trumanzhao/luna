@@ -1,8 +1,8 @@
-# 关于`lua_adpter`
+# 关于`luna`
 
 ## 怎么加到工程中去
 
-直接将`lua_adpter.h`, `lua_adpter.cpp`两个文件加到工程中去即可.
+直接将`luna.h`, `luna.cpp`两个文件加到工程中去即可.
 
 值得注意的是,你得编译器必须支持C++14.
 
@@ -21,7 +21,7 @@ Mac OS X: Apple (GCC) LLVM 7.0.0, 注意在编译参数中加入选项: `-std=c+
 ``` c++
 lua_State* L = luaL_newstate();
 luaL_openlibs(L);
-lua_bind_adpter(L);
+luna_setup(L);
 ```
 
 有必要的话,你可以设置以下即可回调函数:

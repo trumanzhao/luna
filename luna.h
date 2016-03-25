@@ -561,7 +561,7 @@ lua_member_item* ClassName::get_meta_data()   \
 #define EXPORT_LUA_FUNCTION(Member) EXPORT_LUA_FUNCTION_AS(Member, #Member)
 #define EXPORT_LUA_FUNCTION_R(Member) EXPORT_LUA_FUNCTION_AS_R(Member, #Member)
 
-void lua_bind_adpter(lua_State*);
+void luna_setup(lua_State*);
 
 // 注册全局函数
 void lua_register_function(lua_State* L, const char* name, lua_global_function func);

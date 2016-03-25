@@ -4,7 +4,7 @@
 #include <string>
 #include <locale>
 #include <cstdint>
-#include "lua_adpter.h"
+#include "luna.h"
 
 int func_a(int a, int b, int c)
 {
