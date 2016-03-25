@@ -12,9 +12,9 @@ Windows: Visual studio 2015
 
 Mac OS X: Apple (GCC) LLVM 7.0.0, 注意在编译参数中加入选项: `-std=c++1y`
 
-## 创建lua_adpter运行时环境:
+## 创建luna运行时环境:
 
-初始化lua_adpter运行时环境: `lua_bind_adpter(L)`
+初始化luna运行时环境: `luna_setup(L)`
 该函数会创建一个运行时数据结构,以userdata的形式存放到lus_State中去.
 在lua_State被close时,会通过userdata的gc方法自动释放.
 
@@ -119,6 +119,15 @@ call_file_function(L, "test.lua", "some_func");
 call_file_function(L, "test.lua", "some_func", std::tie(), a, b, c);
 ```
 
+### 沙盒环境
+每个文件具有独立的环境,文件之间通过`import`相互访问,如:
+
+```lua
+local m = import("some_one.lua");
+m.some_function();
+```
+实际上,import返回目标文件的环境表.
+如果目标文件未被加载,则会自动加载.
 
 
 

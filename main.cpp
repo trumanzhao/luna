@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 
 	luaL_openlibs(L);
 
-	lua_bind_adpter(L);
+	luna_setup(L);
 
 	lua_register_function(L, "fuck_a", func_a);
 	lua_register_function(L, "fuck_b", func_b);
