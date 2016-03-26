@@ -7,7 +7,7 @@
 #include <string>
 #include <algorithm>
 #include <cstdio>
-#include "lua_adpter.h"
+#include "luna.h"
 
 #define LUA_ENV_METATABLE  "__env_metatable__"
 #define LUA_ADP_METATABLE  "__adp_metatable__"

@@ -61,7 +61,7 @@ EXPORT_LUA_FUNCTION(Print)
 EXPORT_LUA_FUNCTION(Add)
 EXPORT_CLASS_END()
 
-void Fuck(lua_State* L)
+void call_some_func(lua_State* L)
 {
 	lua_guard_t g(L);
 
@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
 	lua_register_function(L, "fuck_a", func_a);
 	lua_register_function(L, "fuck_b", func_b);
 
-	Fuck(L);
+	call_some_func(L);
 
 	lua_close(L);
 	return 0;
