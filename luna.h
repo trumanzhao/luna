@@ -25,14 +25,8 @@ template <> inline std::string lua_to_native<std::string>(lua_State* L, int i)
 	return str == nullptr ? "" : str;
 }
 
-template <typename T> void native_to_lua(lua_State* L, T v);
-
 template <typename T>
-inline void native_to_lua(lua_State* L, typename std::enable_if<std::is_pointer<T>::value, T>::type v)
-{
-	lua_push_object(L, v);
-}
-
+void native_to_lua(lua_State* L, T* v) { lua_push_object(L, v); }
 inline void native_to_lua(lua_State* L, const char* v) { lua_pushstring(L, v); }
 inline void native_to_lua(lua_State* L, int v) { lua_pushinteger(L, v); }
 inline void native_to_lua(lua_State* L, int64_t v) { lua_pushinteger(L, v); }
