@@ -155,7 +155,7 @@ static int lua_adpter_gc(lua_State* L)
 	return 0;
 }
 
-void luna_setup(lua_State* L)
+void lua_setup_env(lua_State* L)
 {
 	auto adpter = get_adpter_runtime(L);
 	if (adpter != nullptr)

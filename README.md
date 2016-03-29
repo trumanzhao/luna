@@ -14,14 +14,14 @@ Mac OS X: Apple (GCC) LLVM 7.0.0, 注意在编译参数中加入选项: `-std=c+
 
 ## 创建luna运行时环境:
 
-初始化luna运行时环境: `luna_setup(L)`
+初始化luna运行时环境: `lua_setup_env(L)`
 该函数会创建一个运行时数据结构,以userdata的形式存放到lus_State中去.
 在lua_State被close时,会通过userdata的gc方法自动释放.
 
 ``` c++
 lua_State* L = luaL_newstate();
 luaL_openlibs(L);
-luna_setup(L);
+lua_setup_env(L);
 ```
 
 有必要的话,你可以设置以下即可回调函数:

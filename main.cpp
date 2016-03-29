@@ -37,28 +37,22 @@ public:
 	}
 
 	int m_x = 123;
-	void Print(int a, int b)
+	void print(int a, int b)
 	{
 		printf("a+b=%d,m_x=%d\n", a + b, m_x);
 	}
 
-	int Add(int a, int b)
+	int add(int a, int b)
 	{
 		return a + b;
-	}
-
-	int MyFunc(lua_State* L)
-	{
-		printf("%p\n", L);
-		return 0;
 	}
 
 	DECLARE_LUA_CLASS(my_object_t);
 };
 
 EXPORT_CLASS_BEGIN(my_object_t)
-EXPORT_LUA_FUNCTION(Print)
-EXPORT_LUA_FUNCTION(Add)
+EXPORT_LUA_FUNCTION(print)
+EXPORT_LUA_FUNCTION(add)
 EXPORT_CLASS_END()
 
 void call_some_func(lua_State* L)
@@ -78,7 +72,7 @@ int main(int argc, char* argv[])
 
 	luaL_openlibs(L);
 
-	luna_setup(L);
+	lua_setup_env(L);
 
 	lua_register_function(L, "fuck_a", func_a);
 	lua_register_function(L, "fuck_b", func_b);
