@@ -50,7 +50,7 @@ return_type call_helper(lua_State* L, class_type* obj, return_type(class_type::*
 }
 
 template <typename return_type, typename... arg_types>
-lua_global_function lua_adpter(return_type(*func)(arg_types...))
+lua_global_function lua_adapter(return_type(*func)(arg_types...))
 {
 	return [=](lua_State* L)
 	{
@@ -60,7 +60,7 @@ lua_global_function lua_adpter(return_type(*func)(arg_types...))
 }
 
 template <typename... arg_types>
-lua_global_function lua_adpter(void(*func)(arg_types...))
+lua_global_function lua_adapter(void(*func)(arg_types...))
 {
 	return [=](lua_State* L)
 	{
@@ -70,13 +70,13 @@ lua_global_function lua_adpter(void(*func)(arg_types...))
 }
 
 template <>
-inline lua_global_function lua_adpter(int(*func)(lua_State* L))
+inline lua_global_function lua_adapter(int(*func)(lua_State* L))
 {
 	return func;
 }
 
 template <typename return_type, typename T, typename... arg_types>
-lua_object_function lua_adpter(return_type(T::*func)(arg_types...))
+lua_object_function lua_adapter(return_type(T::*func)(arg_types...))
 {
 	return [=](void* obj, lua_State* L)
 	{
@@ -86,7 +86,7 @@ lua_object_function lua_adpter(return_type(T::*func)(arg_types...))
 }
 
 template <typename T, typename... arg_types>
-lua_object_function lua_adpter(void(T::*func)(arg_types...))
+lua_object_function lua_adapter(void(T::*func)(arg_types...))
 {
 	return [=](void* obj, lua_State* L)
 	{
@@ -96,7 +96,7 @@ lua_object_function lua_adpter(void(T::*func)(arg_types...))
 }
 
 template <typename T>
-lua_object_function lua_adpter(int(T::*func)(lua_State* L))
+lua_object_function lua_adapter(int(T::*func)(lua_State* L))
 {
 	return [=](void* obj, lua_State* L)
 	{
@@ -550,8 +550,8 @@ lua_member_item* ClassName::get_meta_data()   \
 #define EXPORT_LUA_STD_STR(Member)   EXPORT_LUA_STD_STR_AS(Member, #Member)
 #define EXPORT_LUA_STD_STR_R(Member)   EXPORT_LUA_STD_STR_AS_R(Member, #Member)
 
-#define EXPORT_LUA_FUNCTION_AS(Member, Name) { Name, lua_member_type::member_function, 0, 0, false, lua_adpter(&class_type::Member) },
-#define EXPORT_LUA_FUNCTION_AS_R(Member, Name) { Name, lua_member_type::member_function, 0, 0, true, lua_adpter(&class_type::Member) },
+#define EXPORT_LUA_FUNCTION_AS(Member, Name) { Name, lua_member_type::member_function, 0, 0, false, lua_adapter(&class_type::Member) },
+#define EXPORT_LUA_FUNCTION_AS_R(Member, Name) { Name, lua_member_type::member_function, 0, 0, true, lua_adapter(&class_type::Member) },
 #define EXPORT_LUA_FUNCTION(Member) EXPORT_LUA_FUNCTION_AS(Member, #Member)
 #define EXPORT_LUA_FUNCTION_R(Member) EXPORT_LUA_FUNCTION_AS_R(Member, #Member)
 
@@ -563,7 +563,7 @@ void lua_register_function(lua_State* L, const char* name, lua_global_function f
 template <typename T>
 void lua_register_function(lua_State* L, const char* name, T func)
 {
-	lua_register_function(L, name, lua_adpter(func));
+	lua_register_function(L, name, lua_adapter(func));
 }
 
 // 在一个指定环境表中执行脚本字符串
