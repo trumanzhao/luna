@@ -9,10 +9,10 @@
 #include <cstdio>
 #include "luna.h"
 
-#define LUA_ENV_METATABLE  "__env_metatable__"
-#define LUA_ADP_METATABLE  "__adp_metatable__"
-#define LUA_ADPTER_ENV  "__adpter_env__"
-#define LUA_ENV_PREFIX "__file:"
+#define LUA_FILE_ENV_METATABLE  "__file_env_meta__"
+#define LUA_FILE_ENV_PREFIX "__file:"
+#define LUNA_RUNTIME_METATABLE  "__luna_runtime_meta__"
+#define LUNA_RUNTIME_TABLE  "__luna_runtime__"
 
 int Lua_object_bridge(lua_State* L)
 {
@@ -78,8 +78,8 @@ static bool read_file_data(char* buffer, size_t size, const char file_name[])
 	return (rcount == 1);
 }
 
-// env内预留了一些回调接口: 错误响应,获取文件时间,大小,数据
-struct lua_adpter_runtime
+// runtime中预留了一些回调接口: 错误响应,获取文件时间,大小,数据
+struct luna_runtime_t
 {
 	std::map<std::string, time_t> files;
 	std::function<void(const char*)> error_func = [](const char* err) { puts(err); };
@@ -89,17 +89,17 @@ struct lua_adpter_runtime
 	std::map<std::string, lua_global_function*> global_funcs;
 };
 
-static lua_adpter_runtime* get_adpter_runtime(lua_State* L)
+static luna_runtime_t* get_luna_runtime(lua_State* L)
 {
-	lua_getglobal(L, LUA_ADPTER_ENV);
-	auto user_data = (lua_adpter_runtime**)lua_touserdata(L, -1);
+	lua_getglobal(L, LUNA_RUNTIME_TABLE);
+	auto user_data = (luna_runtime_t**)lua_touserdata(L, -1);
 	lua_pop(L, 1);
 	return user_data ? *user_data : nullptr;
 }
 
 static void print_error(lua_State* L, const char* text)
 {
-	lua_adpter_runtime* runtime = get_adpter_runtime(L);
+	auto runtime = get_luna_runtime(L);
 	runtime->error_func(text);
 }
 
@@ -121,7 +121,7 @@ static int lua_import(lua_State* L)
 {
 	int top = lua_gettop(L);
 	const char* file_name = nullptr;
-	std::string env_name = LUA_ENV_PREFIX;
+	std::string env_name = LUA_FILE_ENV_PREFIX;
 
 	if (top != 1 || !lua_isstring(L, 1))
 	{
@@ -142,9 +142,9 @@ static int lua_import(lua_State* L)
 	return 1;
 }
 
-static int lua_adpter_gc(lua_State* L)
+static int luna_runtime_gc(lua_State* L)
 {
-	auto user_data = (lua_adpter_runtime**)lua_touserdata(L, 1);
+	auto user_data = (luna_runtime_t**)lua_touserdata(L, 1);
 	auto runtime = *user_data;
 	for (auto one : runtime->global_funcs)
 	{
@@ -157,24 +157,24 @@ static int lua_adpter_gc(lua_State* L)
 
 void lua_setup_env(lua_State* L)
 {
-	auto adpter = get_adpter_runtime(L);
-	if (adpter != nullptr)
+	auto runtime = get_luna_runtime(L);
+	if (runtime != nullptr)
 		return;
 
-	adpter = new lua_adpter_runtime();
-	auto user_data = (lua_adpter_runtime**)lua_newuserdata(L, sizeof(adpter));
-	*user_data = adpter;
+	runtime = new luna_runtime_t();
+	auto user_data = (luna_runtime_t**)lua_newuserdata(L, sizeof(runtime));
+	*user_data = runtime;
 	lua_pushvalue(L, -1);
-	lua_setglobal(L, LUA_ADPTER_ENV);
+	lua_setglobal(L, LUNA_RUNTIME_TABLE);
 
-	luaL_newmetatable(L, LUA_ADP_METATABLE);
+	luaL_newmetatable(L, LUNA_RUNTIME_METATABLE);
 	lua_pushstring(L, "__gc");
-	lua_pushcfunction(L, lua_adpter_gc);
+	lua_pushcfunction(L, luna_runtime_gc);
 	lua_settable(L, -3);
 	lua_setmetatable(L, -2);
 	lua_pop(L, 1);
 
-	luaL_newmetatable(L, LUA_ENV_METATABLE);
+	luaL_newmetatable(L, LUA_FILE_ENV_METATABLE);
 	lua_pushstring(L, "__index");
 	lua_pushcfunction(L, file_env_index);
 	lua_settable(L, -3);
@@ -191,7 +191,7 @@ static int Lua_global_bridge(lua_State* L)
 
 void lua_register_function(lua_State* L, const char* name, lua_global_function func)
 {
-	lua_adpter_runtime* runtime = get_adpter_runtime(L);
+	auto runtime = get_luna_runtime(L);
 	lua_global_function* func_ptr = nullptr;
 	auto it = runtime->global_funcs.find(name);
 	if (it != runtime->global_funcs.end())
@@ -237,7 +237,7 @@ bool lua_load_string(lua_State* L, const char env[], const char code[], int code
 		// file env table
 		lua_newtable(L);
 
-		luaL_getmetatable(L, LUA_ENV_METATABLE);
+		luaL_getmetatable(L, LUA_FILE_ENV_METATABLE);
 		lua_setmetatable(L, -2);
 
 		lua_pushvalue(L, -1);
@@ -260,9 +260,9 @@ exit0:
 bool lua_load_script(lua_State* L, const char file_name[])
 {
 	bool result = false;
-	lua_adpter_runtime* runtime = get_adpter_runtime(L);
+	auto runtime = get_luna_runtime(L);
 	std::string file_path = regularize_path(file_name);
-	std::string env_name = LUA_ENV_PREFIX;
+	std::string env_name = LUA_FILE_ENV_PREFIX;
 	time_t file_time = 0;
 	size_t file_size = 0;
 	char* buffer = nullptr;
@@ -296,7 +296,7 @@ exit0:
 
 void lua_reload_update(lua_State* L)
 {
-	lua_adpter_runtime* runtime = get_adpter_runtime(L);
+	auto runtime = get_luna_runtime(L);
 	for (auto& one : runtime->files)
 	{
 		const char* file_name = one.first.c_str();
@@ -315,7 +315,7 @@ bool lua_get_file_function(lua_State* L, const char file_name[], const char func
 {
 	bool result = false;
 	int top = lua_gettop(L);
-	std::string env_name = LUA_ENV_PREFIX;
+	std::string env_name = LUA_FILE_ENV_PREFIX;
 
 	env_name += regularize_path(file_name);
 	lua_getglobal(L, env_name.c_str());
@@ -377,24 +377,24 @@ bool lua_call_function(lua_State* L, int arg_count, int ret_count)
 
 void lua_set_error_func(lua_State* L, std::function<void(const char*)>& error_func)
 {
-	lua_adpter_runtime* runtime = get_adpter_runtime(L);
+	auto runtime = get_luna_runtime(L);
 	runtime->error_func = error_func;
 }
 
 void lua_set_file_time_func(lua_State* L, std::function<bool(time_t*, const char*)>& time_func)
 {
-	lua_adpter_runtime* runtime = get_adpter_runtime(L);
+	auto runtime = get_luna_runtime(L);
 	runtime->file_time_func = time_func;
 }
 
 void lua_set_file_size_func(lua_State* L, std::function<bool(size_t*, const char*)>& size_func)
 {
-	lua_adpter_runtime* runtime = get_adpter_runtime(L);
+	auto runtime = get_luna_runtime(L);
 	runtime->file_size_func = size_func;
 }
 
 void lua_set_file_data_func(lua_State* L, std::function<bool(char*, size_t, const char*)>& data_func)
 {
-	lua_adpter_runtime* runtime = get_adpter_runtime(L);
+	auto runtime = get_luna_runtime(L);
 	runtime->file_data_func = data_func;
 }
