@@ -75,7 +75,7 @@ EXPORT_LUA_STRING(m_name)
 EXPORT_CLASS_END()
 ```
 
-可以用带`_A`的导出宏指定别名导出,用带`_R`的宏指定导出为只读变量.
+可以用带`_AS`的导出宏指定别名导出,用带`_R`的宏指定导出为只读变量.
 
 -  不要对导出对象memset.
 -  已导出的对象,应该在关闭虚拟机之前析构,或者提前调用`lua_clear_ref`解除引用.
@@ -109,20 +109,22 @@ end
 
 那么,可以在C++中这样调用:
 
-``` c++
+```cpp
 int x, y;
 lua_guard_t g(L);
+// x,y用于接收返回值
 call_file_function(L, "test.lua", "some_func", std::tie(x, y), 11, 2);
 ```
 
 无返回,无参数:
 
-``` c++
+```cpp
 call_file_function(L, "test.lua", "some_func");
 ```
-无返回, 有参数:
 
-``` c++
+无返回, 有a,b,c三个参数:
+
+```cpp
 call_file_function(L, "test.lua", "some_func", std::tie(), a, b, c);
 ```
 
@@ -133,6 +135,7 @@ call_file_function(L, "test.lua", "some_func", std::tie(), a, b, c);
 local m = import("some_one.lua");
 m.some_function();
 ```
+
 实际上,import返回目标文件的环境表.
 如果目标文件未被加载,则会自动加载.
 已经import的文件不会重复加载.
