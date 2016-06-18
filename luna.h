@@ -1,4 +1,9 @@
-﻿#pragma once
+﻿/* 
+** repository: https://github.com/trumanzhao/luna
+** trumanzhao, 2016/06/18, trumanzhao@foxmail.com
+*/
+
+#pragma once
 
 #include <assert.h>
 #include <string.h>
@@ -157,7 +162,7 @@ int lua_member_index(lua_State* L)
 	lua_pop(L, 1);  // pop the userdata
 
 	key = lua_tostring(L, 2);
-	meta_name = obj->get_meta_name();
+	meta_name = obj->lua_get_meta_name();
 	if (key == nullptr || meta_name == nullptr)
 	{
 		lua_pushnil(L);
@@ -261,7 +266,7 @@ int lua_member_new_index(lua_State* L)
 	lua_pop(L, 1);
 
 	key = lua_tostring(L, 2);
-	meta_name = obj->get_meta_name();
+	meta_name = obj->lua_get_meta_name();
 	if (key == nullptr || meta_name == nullptr)
 		return 0;
 
@@ -358,8 +363,8 @@ template <typename T>
 void lua_register_class(lua_State* L, T* obj)
 {
 	int top = lua_gettop(L);
-	const char* meta_name = obj->get_meta_name();
-	lua_member_item* item = obj->get_meta_data();
+	const char* meta_name = obj->lua_get_meta_name();
+	lua_member_item* item = obj->lua_get_meta_data();
 
 	luaL_newmetatable(L, meta_name);
 	lua_pushstring(L, "__index");
@@ -423,7 +428,7 @@ void lua_push_object(lua_State* L, T obj)
 		return;
 	}
 
-	lua_obj_ref& ref = obj->get_obj_ref();
+	lua_obj_ref& ref = obj->lua_get_obj_ref();
 	if (ref.m_ref != LUA_NOREF)
 	{
 		assert(ref.m_lvm == L);
@@ -436,7 +441,7 @@ void lua_push_object(lua_State* L, T obj)
 	lua_pushlightuserdata(L, obj);
 	lua_settable(L, -3);
 
-	const char* meta_name = obj->get_meta_name();
+	const char* meta_name = obj->lua_get_meta_name();
 	luaL_getmetatable(L, meta_name);
 	if (lua_isnil(L, -1))
 	{
@@ -470,23 +475,14 @@ void lua_clear_ref(T* obj)
 	ref.release();
 }
 
-/*
-通过宏向导出的class内插入成员:
-注意,父类中可能也有这些定义,但并不冲突
-lua_obj_ref m_lua_obj_ref;
-virtual lua_obj_ref& get_obj_ref() { return m_lua_obj_ref; }
-virtual const char* get_meta_name() { return "_class_meta:some_fuck_class"; }
-virtual lua_member_item* get_meta_data(){ static lua_member_item items[] = {...}; return items; };
-*/
-
 #define DECLARE_LUA_CLASS(ClassName)    \
     lua_obj_ref m_lua_obj_ref;  \
-    virtual lua_obj_ref& get_obj_ref() { return m_lua_obj_ref; }    \
-    virtual const char* get_meta_name() { return "_class_meta:"#ClassName; }    \
-    virtual lua_member_item* get_meta_data();
+    lua_obj_ref& lua_get_obj_ref() { return m_lua_obj_ref; }    \
+    const char* lua_get_meta_name() { return "_class_meta:"#ClassName; }    \
+    lua_member_item* lua_get_meta_data();	\
 
 #define EXPORT_CLASS_BEGIN(ClassName)   \
-lua_member_item* ClassName::get_meta_data()   \
+lua_member_item* ClassName::lua_get_meta_data()   \
 {   \
     typedef ClassName   class_type;  \
     static lua_member_item s_member_list[] = \
