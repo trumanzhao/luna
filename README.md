@@ -3,11 +3,14 @@
 ## 用法
 
 直接将`luna.h`, `luna.cpp`两个文件拷贝添加到你自己的工程中去即可.
+
 注意,你的编译器必须支持C++14.
+
 我自己测试过的环境如下(都是64位编译,32位没测试过):
-Windows: Visual studio 2015
-Mac OS X: Apple (GCC) LLVM 7.0.0, 注意在编译参数中加入选项`-std=c++1y`
-GCC 5.3: 当然也要加`-std=c++1y`
+
+- Windows: Visual studio 2015
+- Mac OS X: Apple (GCC) LLVM 7.0.0, 注意在编译参数中加入选项`-std=c++1y`
+- GCC 5.3: 当然也要加`-std=c++1y`
 
 ## 创建luna运行时环境:
 
