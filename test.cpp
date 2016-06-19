@@ -62,7 +62,7 @@ void call_some_func(lua_State* L)
 	const char* msg = nullptr;
 	int len = 0;
 
-	if (call_file_function(L, "test.lua", "some_func", std::tie(msg, len), "hello", "world"))
+	if (lua_call_file_function(L, "test.lua", "some_func", std::tie(msg, len), "hello", "world"))
 		printf("msg=%s, len=%d\n", msg, len);
 }
 

@@ -610,7 +610,7 @@ void lua_to_native_mutil(lua_State* L, std::tuple<var_types&...>& vars, std::ind
 }
 
 template <typename... ret_types, typename... arg_types>
-bool call_file_function(lua_State* L, const char file_name[], const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
+bool lua_call_file_function(lua_State* L, const char file_name[], const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
 	if (!lua_get_file_function(L, file_name, function))
 		return false;
@@ -625,7 +625,7 @@ bool call_file_function(lua_State* L, const char file_name[], const char functio
 }
 
 template <typename... ret_types, typename... arg_types>
-bool call_table_function(lua_State* L, const char table[], const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
+bool lua_call_table_function(lua_State* L, const char table[], const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
 	if (!lua_get_table_function(L, table, function))
 		return false;
@@ -640,7 +640,7 @@ bool call_table_function(lua_State* L, const char table[], const char function[]
 }
 
 template <typename T, typename... ret_types, typename... arg_types>
-bool call_object_function(lua_State* L, T* o, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
+bool lua_call_object_function(lua_State* L, T* o, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
 	if (!lua_get_object_function(L, o, function))
 		return false;
@@ -655,7 +655,7 @@ bool call_object_function(lua_State* L, T* o, const char function[], std::tuple<
 }
 
 template <typename... ret_types, typename... arg_types>
-bool call_global_function(lua_State* L, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
+bool lua_call_global_function(lua_State* L, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
 	if (lua_getglobal(L, function) != LUA_OK || !lua_isfunction(L, -1))
 		return false;
@@ -669,10 +669,10 @@ bool call_global_function(lua_State* L, const char function[], std::tuple<ret_ty
 	return true;
 }
 
-inline bool call_file_function(lua_State* L, const char file_name[], const char function[]) { return call_file_function(L, file_name, function, std::tie()); }
-inline bool call_table_function(lua_State* L, const char table[], const char function[]) { return call_table_function(L, table, function, std::tie()); }
-template <typename T> inline bool call_object_function(lua_State* L, T* o, const char function[]) { return call_object_function(L, o, function, std::tie()); }
-inline bool call_global_function(lua_State* L, const char function[]) { return call_global_function(L, function, std::tie()); }
+inline bool lua_call_file_function(lua_State* L, const char file_name[], const char function[]) { return lua_call_file_function(L, file_name, function, std::tie()); }
+inline bool lua_call_table_function(lua_State* L, const char table[], const char function[]) { return lua_call_table_function(L, table, function, std::tie()); }
+template <typename T> inline bool lua_call_object_function(lua_State* L, T* o, const char function[]) { return lua_call_object_function(L, o, function, std::tie()); }
+inline bool lua_call_global_function(lua_State* L, const char function[]) { return lua_call_global_function(L, function, std::tie()); }
 
 class lua_guard_t
 {
