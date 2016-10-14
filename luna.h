@@ -1,4 +1,4 @@
-﻿/* 
+﻿/*
 ** repository: https://github.com/trumanzhao/luna
 ** trumanzhao, 2016/06/18, trumanzhao@foxmail.com
 */
@@ -359,6 +359,52 @@ int lua_member_new_index(lua_State* L)
 	return 0;
 }
 
+template<typename T>
+struct has_member_gc
+{
+	template<typename U> static auto check(int) -> decltype(std::declval<U>().gc(), std::true_type());
+	template<typename U> static std::false_type check(...);
+	// 注意编译器在check函数两个版本(int参数, ...参数)同时存在时,优先掉int参数版
+	enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
+};
+
+template <class T> typename std::enable_if<has_member_gc<T>::value, void>::type lua_handle__gc(T* obj)
+{
+	obj->gc();
+}
+
+// has_member_gc的实现关键就是调用一下gc方法.
+// 而之所以要实现为has_member_gc<T>::value,就是因为下面这句中,不能出现.gc的调用,因为它就是对应没有gc方法的情况嘛
+template <class T> typename std::enable_if<!has_member_gc<T>::value, void>::type lua_handle__gc(T* obj)
+{
+	delete obj;
+}
+
+
+template <typename T>
+int lua_object_gc(lua_State* L)
+{
+	if (!lua_istable(L, 1))
+	{
+		puts("__gc error: not a table !");
+		return 0;
+	}
+
+	lua_pushstring(L, LUA_NATIVE_POINTER);
+	lua_rawget(L, 1);
+
+	auto obj = (T*)lua_touserdata(L, -1);
+	if (obj == nullptr)
+	{
+		puts("__gc error: nullptr !");
+		return 0;
+	}
+ 
+	lua_handle__gc(obj);
+
+	return 0;
+}
+
 template <typename T>
 void lua_register_class(lua_State* L, T* obj)
 {
@@ -373,6 +419,10 @@ void lua_register_class(lua_State* L, T* obj)
 
 	lua_pushstring(L, "__newindex");
 	lua_pushcfunction(L, &lua_member_new_index<T>);
+	lua_rawset(L, -3);
+
+	lua_pushstring(L, "__gc");
+	lua_pushcfunction(L, &lua_object_gc<T>);
 	lua_rawset(L, -3);
 
 	while (item->type != lua_member_type::member_none)

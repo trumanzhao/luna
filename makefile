@@ -1,15 +1,15 @@
-product = test
+product = luna 
 # execute, dynamic_shared, static_shared
 target_type = execute
 define_macros =
-include_dir = . ./lua
+include_dir = . ./lua ./lz4
 # 依赖库列表,空格分开
 lib =
 # 编译期临时文件目录
 build_dir = ./build
 # 最终产品目录:
 # 注意,只是对可执行文件和动态库而言,静态库忽略此项
-target_dir = .
+target_dir = ./bin
 #src_root = ../src
 src_root = .
 # 依赖库目录,多个目录用空格分开:
