@@ -1,8 +1,8 @@
-product = luna 
+product = luna
 # execute, dynamic_shared, static_shared
 target_type = execute
 define_macros =
-include_dir = . ./lua ./lz4
+include_dir = . ./lua
 # 依赖库列表,空格分开
 lib =
 # 编译期临时文件目录
@@ -85,18 +85,17 @@ src_c = $(root_src_c:$(src_root)/%=%)
 src_cpp = $(root_src_cpp:$(src_root)/%=%)
 obj_list = $(addsuffix .o, $(src_c)) $(addsuffix .o, $(src_cpp))
 env_param = $(include_dir:%=-I%) $(define_macros:%=-D%)
-my_build_dir  = $(build_dir)/$(product)
 endif
 
 ifeq ($(do_file),yes)
-my_obj_list = $(obj_list:%=$(my_build_dir)/%)
+my_obj_list = $(obj_list:%=$(build_dir)/%)
 $(foreach obj, $(my_obj_list), $(shell mkdir -p $(dir $(obj))))
 ifeq ($(lib_out),)
 $(shell mkdir -p $(lib_out))
 endif
 $(shell mkdir -p $(target_dir))
 endif
- 
+
 comp_c_echo = @echo gcc $< ...
 comp_cxx_echo = @echo g++ $< ...
 
@@ -109,7 +108,7 @@ release: build_prompt $(target)
 .PHONY: clean
 clean:
 	rm -f $(target)
-	rm -rf $(build_dir)/$(product)
+	rm -rf $(build_dir)
 
 .PHONY: build_prompt
 build_prompt:
@@ -126,10 +125,10 @@ $(target): $(my_obj_list)
 	@$(link)
 	$(after_link)
 
-$(my_build_dir)/%.c.o: $(src_root)/%.c
+$(build_dir)/%.c.o: $(src_root)/%.c
 	$(comp_c_echo)
 	@$(CC) $(CFLAGS) $(env_param) -c -o $@ $<
 
-$(my_build_dir)/%.cpp.o: $(src_root)/%.cpp
+$(build_dir)/%.cpp.o: $(src_root)/%.cpp
 	$(comp_cxx_echo)
 	@$(CXX) $(CXXFLAGS) $(env_param) -c -o $@ $<

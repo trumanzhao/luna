@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <stddef.h>
+
 // 将整数编码为到变长字节数组:
 // 返回值: 成功,返回变长编码长度; 失败,返回0;
 size_t encode_u64(unsigned char* buffer, size_t buffer_size, uint64_t value);
