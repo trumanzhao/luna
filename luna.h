@@ -21,6 +21,7 @@ template <typename T> T lua_to_object(lua_State* L, int idx);
 template <typename T> T lua_to_native(lua_State* L, int i) { return lua_to_object<T>(L, i); }
 template <> inline  const char* lua_to_native<const char*>(lua_State* L, int i) { return lua_tostring(L, i); }
 template <> inline int64_t lua_to_native<int64_t>(lua_State* L, int i) { return lua_tointeger(L, i); }
+template <> inline long lua_to_native<long>(lua_State* L, int i) { return lua_tointeger(L, i); }
 template <> inline int lua_to_native<int>(lua_State* L, int i) { return (int)lua_tointeger(L, i); }
 template <> inline float lua_to_native<float>(lua_State* L, int i) { return (float)lua_tonumber(L, i); }
 template <> inline double lua_to_native<double>(lua_State* L, int i) { return lua_tonumber(L, i); }
@@ -35,6 +36,7 @@ void native_to_lua(lua_State* L, T* v) { lua_push_object(L, v); }
 inline void native_to_lua(lua_State* L, const char* v) { lua_pushstring(L, v); }
 inline void native_to_lua(lua_State* L, int v) { lua_pushinteger(L, v); }
 inline void native_to_lua(lua_State* L, int64_t v) { lua_pushinteger(L, v); }
+inline void native_to_lua(lua_State* L, long v) { lua_pushinteger(L, v); }
 inline void native_to_lua(lua_State* L, float v) { lua_pushnumber(L, v); }
 inline void native_to_lua(lua_State* L, double v) { lua_pushnumber(L, v); }
 inline void native_to_lua(lua_State* L, const std::string& v) { lua_pushstring(L, v.c_str()); }
@@ -399,7 +401,7 @@ int lua_object_gc(lua_State* L)
 		puts("__gc error: nullptr !");
 		return 0;
 	}
- 
+
 	lua_handle__gc(obj);
 
 	return 0;

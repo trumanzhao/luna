@@ -30,8 +30,7 @@ function import(filename)
         return nil;
     end
 
-    --todo:
-    local file_time = get_file_modify_time(filename);
+    local file_time = get_file_time(filename);
     luna_files[filename] = {filename=filename, time=file_time, env=env};
 
     local ok, err = pcall(trunk);
