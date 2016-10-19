@@ -11,17 +11,18 @@
 #include <string>
 #include <locale>
 #include <cstdint>
-#include <unistd.h>
 
 #ifdef _MSC_VER
 #include <windows.h>
 #endif
 
 #ifdef __linux
+#include <unistd.h>
 #include <dirent.h>
 #endif
 
 #ifdef __APPLE__
+#include <unistd.h>
 #include <mach/clock.h>
 #include <mach/mach.h>
 #endif
@@ -74,7 +75,7 @@ int64_t get_time_ms()
 int64_t get_time_ms() { return (int64_t)GetTickCount64(); }
 #endif
 
-void sleep_ms(int64_t ms)
+void sleep_ms(int ms)
 {
 #if defined(__linux) || defined(__APPLE__)
     usleep(ms * 1000);

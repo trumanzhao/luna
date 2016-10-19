@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <string.h>
-#include "luna.h"
+#include "lua/lua.hpp"
 #include "lua_archiver.h"
 #include "var_int.h"
 #include "lz4/lz4.h"
@@ -20,7 +20,7 @@ enum class ar_type
 };
 
 static const int small_int_max = UCHAR_MAX - (int)ar_type::count;
-static inline int normal_index(lua_State* L, int idx) { return idx >= 0 ? idx : lua_gettop(L) + idx + 1; }
+static int normal_index(lua_State* L, int idx) { return idx >= 0 ? idx : lua_gettop(L) + idx + 1; }
 
 lua_archiver::lua_archiver(size_t buffer_size, size_t compress_threhold)
 {

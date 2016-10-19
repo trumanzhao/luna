@@ -13,7 +13,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include "lua.hpp"
+#include "lua/lua.hpp"
 
 template <typename T> void lua_push_object(lua_State* L, T obj);
 template <typename T> T lua_to_object(lua_State* L, int idx);
@@ -21,7 +21,7 @@ template <typename T> T lua_to_object(lua_State* L, int idx);
 template <typename T> T lua_to_native(lua_State* L, int i) { return lua_to_object<T>(L, i); }
 template <> inline  const char* lua_to_native<const char*>(lua_State* L, int i) { return lua_tostring(L, i); }
 template <> inline int64_t lua_to_native<int64_t>(lua_State* L, int i) { return lua_tointeger(L, i); }
-template <> inline long lua_to_native<long>(lua_State* L, int i) { return lua_tointeger(L, i); }
+template <> inline long lua_to_native<long>(lua_State* L, int i) { return (long)lua_tointeger(L, i); }
 template <> inline int lua_to_native<int>(lua_State* L, int i) { return (int)lua_tointeger(L, i); }
 template <> inline float lua_to_native<float>(lua_State* L, int i) { return (float)lua_tonumber(L, i); }
 template <> inline double lua_to_native<double>(lua_State* L, int i) { return lua_tonumber(L, i); }

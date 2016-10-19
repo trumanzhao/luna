@@ -97,20 +97,31 @@ fucker* same_fucker(fucker* o)
 
 lua_State* g_lua = nullptr;
 
+#if defined(__linux) || defined(__APPLE__)
 static void on_quit_signal(int signo)
 {
     lua_call_global_function(g_lua, "on_quit_signal", std::tie(), signo);
 }
+#endif
 
 int main(int argc, const char* argv[])
 {
+#if defined(__linux) || defined(__APPLE__)
     tzset();
+#endif
+
+#ifdef _MSC_VER
+	_tzset();
+#endif
+
     setlocale(LC_ALL, "");
 
+#if defined(__linux) || defined(__APPLE__)
     signal(SIGINT, on_quit_signal);
     signal(SIGTERM, on_quit_signal);
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
+#endif
 
     if (argc != 2)
     {
