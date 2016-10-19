@@ -24,17 +24,15 @@ print("ms: "..get_time_ms());
 
 run_flag = true;
 
-_G.on_quit_signal = function (signo)
+_G.on_quit_signal = function(signo)
     print("on_quit_signal: "..signo);
     run_flag = false;
 end
 
-while run_flag do
-    sleep_ms(10);
+_G.main = function()
+    while run_flag do
+        sleep_ms(10);
+    end
 end
 
-print("collectgarbage");
-
 collectgarbage();
-
-print("exit main.lua");

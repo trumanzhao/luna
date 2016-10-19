@@ -131,6 +131,7 @@ int main(int argc, const char* argv[])
     lua_register_function(g_lua, "same_fucker", same_fucker);
 
     lua_call_global_function(g_lua, "import", std::tie(), argv[1]);
+    lua_call_global_function(g_lua, "main");
 
 	lua_close(g_lua);
 	return 0;
