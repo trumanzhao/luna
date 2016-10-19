@@ -22,6 +22,19 @@ print("sleep: 10");
 sleep_ms(10);
 print("ms: "..get_time_ms());
 
+run_flag = true;
+
+_G.on_quit_signal = function (signo)
+    print("on_quit_signal: "..signo);
+    run_flag = false;
+end
+
+while run_flag do
+    sleep_ms(10);
+end
+
+print("collectgarbage");
+
 collectgarbage();
 
 print("exit main.lua");
