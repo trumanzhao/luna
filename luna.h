@@ -679,7 +679,7 @@ bool lua_call_object_function(lua_State* L, T* o, const char function[], std::tu
 template <typename... ret_types, typename... arg_types>
 bool lua_call_global_function(lua_State* L, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
-	if (lua_getglobal(L, function) != LUA_OK || !lua_isfunction(L, -1))
+	if (lua_getglobal(L, function) != LUA_TFUNCTION || !lua_isfunction(L, -1))
 		return false;
 
 	int _0[] = { 0, (native_to_lua(L, args), 0)... };
