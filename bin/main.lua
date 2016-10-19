@@ -18,6 +18,8 @@ end
 test();
 
 print("ms: "..get_time_ms());
+print("sleep: 10");
+sleep_ms(10);
 print("ms: "..get_time_ms());
 
 collectgarbage();

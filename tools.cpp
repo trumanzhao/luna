@@ -11,10 +11,17 @@
 #include <string>
 #include <locale>
 #include <cstdint>
+#include <unistd.h>
+
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
+
 #ifdef __linux
 #include <dirent.h>
 #endif
-#ifdef __MACH__
+
+#ifdef __APPLE__
 #include <mach/clock.h>
 #include <mach/mach.h>
 #endif
@@ -38,27 +45,42 @@ time_t get_file_time(const char* file_name)
 #endif
 }
 
+#ifdef __linux
 int64_t get_time_ms()
 {
     timespec ts;
-
-#ifdef __linux
     clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    uint64_t iTime = ts.tv_sec;
+    return iTime * 1000 + ts.tv_nsec / 1000 / 1000;
+}
 #endif
 
+
 #ifdef __APPLE__
-    // OS X does not have clock_gettime, use clock_get_time
+int64_t get_time_ms()
+{
     clock_serv_t cclock;
     mach_timespec_t mts;
     host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
     clock_get_time(cclock, &mts);
     mach_port_deallocate(mach_task_self(), cclock);
-    ts.tv_sec = mts.tv_sec;
-    ts.tv_nsec = mts.tv_nsec;
+    uint64_t iTime = mts.tv_sec;
+    return iTime * 1000 + mts.tv_nsec / 1000 / 1000;
+}
 #endif
 
-    uint64_t iTime = ts.tv_sec;
-    return iTime * 1000 + ts.tv_nsec / 1000 / 1000;
+#ifdef _MSC_VER
+// just for developing :)
+int64_t get_time_ms() { return (int64_t)GetTickCount64(); }
+#endif
+
+void sleep_ms(int64_t ms)
+{
+#if defined(__linux) || defined(__APPLE__)
+    usleep(ms * 1000);
+#endif
+
+#ifdef _MSC_VER
+    Sleep(ms);
+#endif
 }
-
-

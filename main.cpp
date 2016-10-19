@@ -113,6 +113,7 @@ int main(int argc, const char* argv[])
 
     lua_register_function(L, "get_file_time", get_file_time);
     lua_register_function(L, "get_time_ms", get_time_ms);
+    lua_register_function(L, "sleep_ms", sleep_ms);
 
     lua_register_function(L, "get_fucker", get_fucker);
     lua_register_function(L, "same_fucker", same_fucker);
