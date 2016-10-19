@@ -45,8 +45,6 @@ int main(int argc, char* argv[])
 
 	luaL_openlibs(L);
 
-	lua_setup_env(L);
-
 	lua_register_function(L, "get_file_time", get_file_time);
 
     luaL_dofile(L, argv[1]);

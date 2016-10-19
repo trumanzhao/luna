@@ -603,8 +603,6 @@ lua_member_item* ClassName::lua_get_meta_data()   \
 #define EXPORT_LUA_FUNCTION(Member) EXPORT_LUA_FUNCTION_AS(Member, #Member)
 #define EXPORT_LUA_FUNCTION_R(Member) EXPORT_LUA_FUNCTION_AS_R(Member, #Member)
 
-void lua_setup_env(lua_State*);
-
 // 注册全局函数
 void lua_register_function(lua_State* L, const char* name, lua_global_function func);
 
@@ -614,18 +612,11 @@ void lua_register_function(lua_State* L, const char* name, T func)
 	lua_register_function(L, name, lua_adapter(func));
 }
 
-// 在一个指定环境表中执行脚本字符串
-// code_len为-1时,会按照strlen(code)计算.
-bool lua_load_string(lua_State* L, const char env[], const char code[], int code_len = -1);
+inline void lua_register_function(lua_State* L, const char* name, lua_CFunction func)
+{
+    lua_register(L, name, func);
+}
 
-// 加载文件,已加载的不会重复加载
-bool lua_load_script(lua_State* L, const char file_name[]);
-
-// 检查所有文件时间戳,重新加载已变更的文件
-void lua_reload_update(lua_State* L);
-
-// 从指定文件中获取函数,如果文件未加载则自动加载
-bool lua_get_file_function(lua_State* L, const char file_name[], const char function[]);
 
 // 从指定的全局table中获取函数
 bool lua_get_table_function(lua_State* L, const char table[], const char function[]);
@@ -648,32 +639,11 @@ bool lua_get_object_function(lua_State* L, T* object, const char function[])
 
 bool lua_call_function(lua_State* L, int arg_count, int ret_count);
 
-// 设置错误处理函数以及文件读取函数,默认调用c库相关函数:
-void lua_set_error_func(lua_State* L, std::function<void(const char*)>& error_func);
-void lua_set_file_time_func(lua_State* L, std::function<bool(time_t*, const char*)>& time_func);
-void lua_set_file_size_func(lua_State* L, std::function<bool(size_t*, const char*)>& size_func);
-void lua_set_file_data_func(lua_State* L, std::function<bool(char*, size_t, const char*)>& data_func);
-
 template<size_t... Integers, typename... var_types>
 void lua_to_native_mutil(lua_State* L, std::tuple<var_types&...>& vars, std::index_sequence<Integers...>&&)
 {
 	constexpr int ret_count = sizeof...(Integers);
 	int _[] = { 0, (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - ret_count), 0)... };
-}
-
-template <typename... ret_types, typename... arg_types>
-bool lua_call_file_function(lua_State* L, const char file_name[], const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
-{
-	if (!lua_get_file_function(L, file_name, function))
-		return false;
-
-	int _0[] = { 0, (native_to_lua(L, args), 0)... };
-	constexpr int ret_count = sizeof...(ret_types);
-	if (!lua_call_function(L, sizeof...(arg_types), ret_count))
-		return false;
-
-	lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
-	return true;
 }
 
 template <typename... ret_types, typename... arg_types>
@@ -721,7 +691,6 @@ bool lua_call_global_function(lua_State* L, const char function[], std::tuple<re
 	return true;
 }
 
-inline bool lua_call_file_function(lua_State* L, const char file_name[], const char function[]) { return lua_call_file_function(L, file_name, function, std::tie()); }
 inline bool lua_call_table_function(lua_State* L, const char table[], const char function[]) { return lua_call_table_function(L, table, function, std::tie()); }
 template <typename T> inline bool lua_call_object_function(lua_State* L, T* o, const char function[]) { return lua_call_object_function(L, o, function, std::tie()); }
 inline bool lua_call_global_function(lua_State* L, const char function[]) { return lua_call_global_function(L, function, std::tie()); }
