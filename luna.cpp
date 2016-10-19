@@ -36,9 +36,9 @@ static int Lua_global_bridge(lua_State* L)
 
 void lua_register_function(lua_State* L, const char* name, lua_global_function func)
 {
-	lua_push_object(L, new luna_function_wapper(func));
-	lua_pushcclosure(L, Lua_global_bridge, 1);
-	lua_setglobal(L, name);
+    lua_push_object(L, new luna_function_wapper(func));
+    lua_pushcclosure(L, Lua_global_bridge, 1);
+    lua_setglobal(L, name);
 }
 
 int Lua_object_bridge(lua_State* L)
@@ -54,37 +54,37 @@ int Lua_object_bridge(lua_State* L)
 
 bool lua_get_table_function(lua_State* L, const char table[], const char function[])
 {
-	lua_getglobal(L, table);
-	lua_getfield(L, -1, function);
-	lua_remove(L, -2);
-	if (!lua_isfunction(L, -1))
-	{
-		lua_pop(L, 1);
-		return false;
-	}
-	return true;
+    lua_getglobal(L, table);
+    lua_getfield(L, -1, function);
+    lua_remove(L, -2);
+    if (!lua_isfunction(L, -1))
+    {
+        lua_pop(L, 1);
+        return false;
+    }
+    return true;
 }
 
 bool lua_call_function(lua_State* L, int arg_count, int ret_count)
 {
-	int func_idx = lua_gettop(L) - arg_count;
-	if (func_idx <= 0 || !lua_isfunction(L, func_idx))
-	{
-		puts("call invalid function !");
-		return false;
-	}
+    int func_idx = lua_gettop(L) - arg_count;
+    if (func_idx <= 0 || !lua_isfunction(L, func_idx))
+    {
+        puts("call invalid function !");
+        return false;
+    }
 
-	lua_getglobal(L, "debug");
-	lua_getfield(L, -1, "traceback");
-	lua_remove(L, -2); // remove 'debug'
+    lua_getglobal(L, "debug");
+    lua_getfield(L, -1, "traceback");
+    lua_remove(L, -2); // remove 'debug'
 
-	lua_insert(L, func_idx);
-	if (lua_pcall(L, arg_count, ret_count, func_idx))
-	{
-		puts(lua_tostring(L, -1));
-		return false;
-	}
-	lua_remove(L, -ret_count - 1); // remove 'traceback'
-	return true;
+    lua_insert(L, func_idx);
+    if (lua_pcall(L, arg_count, ret_count, func_idx))
+    {
+        puts(lua_tostring(L, -1));
+        return false;
+    }
+    lua_remove(L, -ret_count - 1); // remove 'traceback'
+    return true;
 }
 

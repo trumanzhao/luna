@@ -27,8 +27,8 @@ template <> inline float lua_to_native<float>(lua_State* L, int i) { return (flo
 template <> inline double lua_to_native<double>(lua_State* L, int i) { return lua_tonumber(L, i); }
 template <> inline std::string lua_to_native<std::string>(lua_State* L, int i)
 {
-	const char* str = lua_tostring(L, i);
-	return str == nullptr ? "" : str;
+    const char* str = lua_tostring(L, i);
+    return str == nullptr ? "" : str;
 }
 
 template <typename T>
@@ -47,95 +47,95 @@ typedef std::function<int(void*, lua_State*)> lua_object_function;
 template<size_t... Integers, typename return_type, typename... arg_types>
 return_type call_helper(lua_State* L, return_type(*func)(arg_types...), std::index_sequence<Integers...>&&)
 {
-	return (*func)(lua_to_native<arg_types>(L, Integers + 1)...);
+    return (*func)(lua_to_native<arg_types>(L, Integers + 1)...);
 }
 
 template<size_t... Integers, typename return_type, typename class_type, typename... arg_types>
 return_type call_helper(lua_State* L, class_type* obj, return_type(class_type::*func)(arg_types...), std::index_sequence<Integers...>&&)
 {
-	return (obj->*func)(lua_to_native<arg_types>(L, Integers + 1)...);
+    return (obj->*func)(lua_to_native<arg_types>(L, Integers + 1)...);
 }
 
 template <typename return_type, typename... arg_types>
 lua_global_function lua_adapter(return_type(*func)(arg_types...))
 {
-	return [=](lua_State* L)
-	{
-		native_to_lua(L, call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>()));
-		return 1;
-	};
+    return [=](lua_State* L)
+    {
+        native_to_lua(L, call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>()));
+        return 1;
+    };
 }
 
 template <typename... arg_types>
 lua_global_function lua_adapter(void(*func)(arg_types...))
 {
-	return [=](lua_State* L)
-	{
-		call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>());
-		return 0;
-	};
+    return [=](lua_State* L)
+    {
+        call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>());
+        return 0;
+    };
 }
 
 template <>
 inline lua_global_function lua_adapter(int(*func)(lua_State* L))
 {
-	return func;
+    return func;
 }
 
 template <typename return_type, typename T, typename... arg_types>
 lua_object_function lua_adapter(return_type(T::*func)(arg_types...))
 {
-	return [=](void* obj, lua_State* L)
-	{
-		native_to_lua(L, call_helper(L, (T*)obj, func, std::make_index_sequence<sizeof...(arg_types)>()));
-		return 1;
-	};
+    return [=](void* obj, lua_State* L)
+    {
+        native_to_lua(L, call_helper(L, (T*)obj, func, std::make_index_sequence<sizeof...(arg_types)>()));
+        return 1;
+    };
 }
 
 template <typename T, typename... arg_types>
 lua_object_function lua_adapter(void(T::*func)(arg_types...))
 {
-	return [=](void* obj, lua_State* L)
-	{
-		call_helper(L, (T*)obj, func, std::make_index_sequence<sizeof...(arg_types)>());
-		return 0;
-	};
+    return [=](void* obj, lua_State* L)
+    {
+        call_helper(L, (T*)obj, func, std::make_index_sequence<sizeof...(arg_types)>());
+        return 0;
+    };
 }
 
 template <typename T>
 lua_object_function lua_adapter(int(T::*func)(lua_State* L))
 {
-	return [=](void* obj, lua_State* L)
-	{
-		T* this_ptr = (T*)obj;
-		return (this_ptr->*func)(L);
-	};
+    return [=](void* obj, lua_State* L)
+    {
+        T* this_ptr = (T*)obj;
+        return (this_ptr->*func)(L);
+    };
 }
 
 enum class lua_member_type
 {
-	member_none,
-	member_char,
-	member_short,
-	member_int,
-	member_int64,
-	member_time,
-	member_bool,
-	member_float,
-	member_double,
-	member_string,
-	member_std_str,
-	member_function
+    member_none,
+    member_char,
+    member_short,
+    member_int,
+    member_int64,
+    member_time,
+    member_bool,
+    member_float,
+    member_double,
+    member_string,
+    member_std_str,
+    member_function
 };
 
 struct lua_member_item
 {
-	const char* name;
-	lua_member_type type;
-	int offset;
-	size_t size;
-	bool readonly;
-	lua_object_function func;
+    const char* name;
+    lua_member_type type;
+    int offset;
+    size_t size;
+    bool readonly;
+    lua_object_function func;
 };
 
 int Lua_object_bridge(lua_State* L);
@@ -143,275 +143,270 @@ int Lua_object_bridge(lua_State* L);
 template <typename T>
 int lua_member_index(lua_State* L)
 {
-	T* obj = lua_to_object<T*>(L, 1);
-	if (obj == nullptr)
-	{
-		lua_pushnil(L);
-		return 1;
-	}
+    T* obj = lua_to_object<T*>(L, 1);
+    if (obj == nullptr)
+    {
+        lua_pushnil(L);
+        return 1;
+    }
 
     const char* key = lua_tostring(L, 2);
     const char* meta_name = obj->lua_get_meta_name();
-	if (key == nullptr || meta_name == nullptr)
-	{
-		lua_pushnil(L);
-		return 1;
-	}
+    if (key == nullptr || meta_name == nullptr)
+    {
+        lua_pushnil(L);
+        return 1;
+    }
 
-	luaL_getmetatable(L, meta_name);
-	lua_pushstring(L, key);
-	lua_rawget(L, -2);
+    luaL_getmetatable(L, meta_name);
+    lua_pushstring(L, key);
+    lua_rawget(L, -2);
 
-	auto item = (lua_member_item*)lua_touserdata(L, -1);
-	if (item == nullptr)
-	{
-		lua_pushnil(L);
-		return 1;
-	}
+    auto item = (lua_member_item*)lua_touserdata(L, -1);
+    if (item == nullptr)
+    {
+        lua_pushnil(L);
+        return 1;
+    }
 
-	lua_settop(L, 2);
+    lua_settop(L, 2);
 
-	char* addr = (char*)obj + item->offset;
+    char* addr = (char*)obj + item->offset;
 
-	switch (item->type)
-	{
-	case lua_member_type::member_char:
-		assert(item->size == sizeof(char));
-		lua_pushinteger(L, *(char*)addr);
-		break;
+    switch (item->type)
+    {
+    case lua_member_type::member_char:
+        assert(item->size == sizeof(char));
+        lua_pushinteger(L, *(char*)addr);
+        break;
 
-	case lua_member_type::member_short:
-		assert(item->size == sizeof(short));
-		lua_pushinteger(L, *(short*)addr);
-		break;
+    case lua_member_type::member_short:
+        assert(item->size == sizeof(short));
+        lua_pushinteger(L, *(short*)addr);
+        break;
 
-	case lua_member_type::member_int:
-		assert(item->size == sizeof(int));
-		lua_pushinteger(L, *(int*)addr);
-		break;
+    case lua_member_type::member_int:
+        assert(item->size == sizeof(int));
+        lua_pushinteger(L, *(int*)addr);
+        break;
 
-	case lua_member_type::member_int64:
-		assert(item->size == sizeof(int64_t));
-		lua_pushinteger(L, *(int64_t*)addr);
-		break;
+    case lua_member_type::member_int64:
+        assert(item->size == sizeof(int64_t));
+        lua_pushinteger(L, *(int64_t*)addr);
+        break;
 
-	case lua_member_type::member_time:
-		assert(item->size == sizeof(time_t));
-		lua_pushinteger(L, *(time_t*)addr);
-		break;
+    case lua_member_type::member_time:
+        assert(item->size == sizeof(time_t));
+        lua_pushinteger(L, *(time_t*)addr);
+        break;
 
-	case lua_member_type::member_bool:
-		assert(item->size == sizeof(bool));
-		lua_pushboolean(L, *(bool*)addr);
-		break;
+    case lua_member_type::member_bool:
+        assert(item->size == sizeof(bool));
+        lua_pushboolean(L, *(bool*)addr);
+        break;
 
-	case lua_member_type::member_float:
-		assert(item->size == sizeof(float));
-		lua_pushnumber(L, *(float*)addr);
-		break;
+    case lua_member_type::member_float:
+        assert(item->size == sizeof(float));
+        lua_pushnumber(L, *(float*)addr);
+        break;
 
-	case lua_member_type::member_double:
-		assert(item->size == sizeof(double));
-		lua_pushnumber(L, *(double*)addr);
-		break;
+    case lua_member_type::member_double:
+        assert(item->size == sizeof(double));
+        lua_pushnumber(L, *(double*)addr);
+        break;
 
-	case lua_member_type::member_string:
-		lua_pushstring(L, (const char*)addr);
-		break;
+    case lua_member_type::member_string:
+        lua_pushstring(L, (const char*)addr);
+        break;
 
-	case lua_member_type::member_std_str:
-		lua_pushstring(L, ((std::string*)addr)->c_str());
-		break;
+    case lua_member_type::member_std_str:
+        lua_pushstring(L, ((std::string*)addr)->c_str());
+        break;
 
-	case lua_member_type::member_function:
+    case lua_member_type::member_function:
         lua_pushlightuserdata(L, obj);
-		lua_pushlightuserdata(L, &item->func);
-		lua_pushcclosure(L, Lua_object_bridge, 2);
-		break;
+        lua_pushlightuserdata(L, &item->func);
+        lua_pushcclosure(L, Lua_object_bridge, 2);
+        break;
 
-	default:
-		lua_pushnil(L);
-	}
+    default:
+        lua_pushnil(L);
+    }
 
-	return 1;
+    return 1;
 }
 
 template <typename T>
 int lua_member_new_index(lua_State* L)
 {
     T* obj = lua_to_object<T*>(L, 1);
-	if (obj == nullptr)
-		return 0;
+    if (obj == nullptr)
+        return 0;
 
-	const char* key = lua_tostring(L, 2);
-	const char* meta_name = obj->lua_get_meta_name();
-	if (key == nullptr || meta_name == nullptr)
-		return 0;
+    const char* key = lua_tostring(L, 2);
+    const char* meta_name = obj->lua_get_meta_name();
+    if (key == nullptr || meta_name == nullptr)
+        return 0;
 
-	luaL_getmetatable(L, meta_name);
-	lua_pushvalue(L, 2);
-	lua_rawget(L, -2);
+    luaL_getmetatable(L, meta_name);
+    lua_pushvalue(L, 2);
+    lua_rawget(L, -2);
 
-	auto item = (lua_member_item*)lua_touserdata(L, -1);
-	lua_pop(L, 2);
-	if (item == nullptr)
-	{
-		lua_rawset(L, -3);
-		return 0;
-	}
+    auto item = (lua_member_item*)lua_touserdata(L, -1);
+    lua_pop(L, 2);
+    if (item == nullptr)
+    {
+        lua_rawset(L, -3);
+        return 0;
+    }
 
-	if (item->readonly)
-		return 0;
+    if (item->readonly)
+        return 0;
 
-	char* addr = (char*)obj + item->offset;
+    char* addr = (char*)obj + item->offset;
 
-	switch (item->type)
-	{
-	case lua_member_type::member_char:
-		assert(item->size == sizeof(char));
-		*addr = (char)lua_tointeger(L, -1);
-		break;
+    switch (item->type)
+    {
+    case lua_member_type::member_char:
+        assert(item->size == sizeof(char));
+        *addr = (char)lua_tointeger(L, -1);
+        break;
 
-	case lua_member_type::member_short:
-		assert(item->size == sizeof(short));
-		*(short*)addr = (short)lua_tointeger(L, -1);
-		break;
+    case lua_member_type::member_short:
+        assert(item->size == sizeof(short));
+        *(short*)addr = (short)lua_tointeger(L, -1);
+        break;
 
-	case lua_member_type::member_int:
-		assert(item->size == sizeof(int));
-		*(int*)addr = (int)lua_tointeger(L, -1);
-		break;
+    case lua_member_type::member_int:
+        assert(item->size == sizeof(int));
+        *(int*)addr = (int)lua_tointeger(L, -1);
+        break;
 
-	case lua_member_type::member_int64:
-		assert(item->size == sizeof(int64_t));
-		*(int64_t*)addr = (int64_t)lua_tointeger(L, -1);
-		break;
+    case lua_member_type::member_int64:
+        assert(item->size == sizeof(int64_t));
+        *(int64_t*)addr = (int64_t)lua_tointeger(L, -1);
+        break;
 
-	case lua_member_type::member_time:
-		assert(item->size == sizeof(time_t));
-		*(time_t*)addr = (time_t)lua_tointeger(L, -1);
-		break;
+    case lua_member_type::member_time:
+        assert(item->size == sizeof(time_t));
+        *(time_t*)addr = (time_t)lua_tointeger(L, -1);
+        break;
 
-	case lua_member_type::member_bool:
-		assert(item->size == sizeof(bool));
-		*(bool*)addr = !!lua_toboolean(L, -1);
-		break;
+    case lua_member_type::member_bool:
+        assert(item->size == sizeof(bool));
+        *(bool*)addr = !!lua_toboolean(L, -1);
+        break;
 
-	case lua_member_type::member_float:
-		assert(item->size == sizeof(float));
-		*(float*)addr = (float)lua_tonumber(L, -1);
-		break;
+    case lua_member_type::member_float:
+        assert(item->size == sizeof(float));
+        *(float*)addr = (float)lua_tonumber(L, -1);
+        break;
 
-	case lua_member_type::member_double:
-		assert(item->size == sizeof(double));
-		*(double*)addr = (double)lua_tonumber(L, -1);
-		break;
+    case lua_member_type::member_double:
+        assert(item->size == sizeof(double));
+        *(double*)addr = (double)lua_tonumber(L, -1);
+        break;
 
-	case lua_member_type::member_string:
-		if (lua_isstring(L, -1))
-		{
-			const char* str = lua_tostring(L, -1);
-			size_t str_len = strlen(str);
-			if (str_len < item->size)
-			{
-				strcpy(addr, str);
-			}
-		}
-		break;
+    case lua_member_type::member_string:
+        if (lua_isstring(L, -1))
+        {
+            const char* str = lua_tostring(L, -1);
+            size_t str_len = strlen(str);
+            if (str_len < item->size)
+            {
+                strcpy(addr, str);
+            }
+        }
+        break;
 
-	case lua_member_type::member_std_str:
-		if (lua_isstring(L, -1))
-		{
-			*(std::string*)addr = lua_tostring(L, -1);
-		}
-		break;
+    case lua_member_type::member_std_str:
+        if (lua_isstring(L, -1))
+        {
+            *(std::string*)addr = lua_tostring(L, -1);
+        }
+        break;
 
-	case lua_member_type::member_function:
-		lua_rawset(L, -3);
-		break;
+    case lua_member_type::member_function:
+        lua_rawset(L, -3);
+        break;
 
-	default:
-		break;
-	}
+    default:
+        break;
+    }
 
-	return 0;
+    return 0;
 }
 
 template<typename T>
 struct has_member_gc
 {
-	template<typename U> static auto check(int) -> decltype(std::declval<U>().gc(), std::true_type());
-	template<typename U> static std::false_type check(...);
-	// 注意编译器在check函数两个版本(int参数, ...参数)同时存在时,优先掉int参数版
-	enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
+    template<typename U> static auto check(int) -> decltype(std::declval<U>().gc(), std::true_type());
+    template<typename U> static std::false_type check(...);
+    // 注意编译器在check函数两个版本(int参数, ...参数)同时存在时,优先掉int参数版
+    enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
 };
 
-template <class T> typename std::enable_if<has_member_gc<T>::value, void>::type lua_handle__gc(T* obj)
-{
-	obj->gc();
-}
+template <class T>
+typename std::enable_if<has_member_gc<T>::value, void>::type lua_handle__gc(T* obj) { obj->gc(); }
 
 // has_member_gc的实现关键就是调用一下gc方法.
 // 而之所以要实现为has_member_gc<T>::value,就是因为下面这句中,不能出现.gc的调用,因为它就是对应没有gc方法的情况嘛
-template <class T> typename std::enable_if<!has_member_gc<T>::value, void>::type lua_handle__gc(T* obj)
-{
-	delete obj;
-}
-
+template <class T>
+typename std::enable_if<!has_member_gc<T>::value, void>::type lua_handle__gc(T* obj) { delete obj; }
 
 template <typename T>
 int lua_object_gc(lua_State* L)
 {
     T* obj = lua_to_object<T*>(L, 1);
-	if (obj == nullptr)
-	{
-		puts("__gc error: nullptr !");
-		return 0;
-	}
-	lua_handle__gc(obj);
-	return 0;
+    if (obj == nullptr)
+    {
+        puts("__gc error: nullptr !");
+        return 0;
+    }
+    lua_handle__gc(obj);
+    return 0;
 }
 
 template <typename T>
 void lua_register_class(lua_State* L, T* obj)
 {
-	int top = lua_gettop(L);
-	const char* meta_name = obj->lua_get_meta_name();
-	lua_member_item* item = obj->lua_get_meta_data();
+    int top = lua_gettop(L);
+    const char* meta_name = obj->lua_get_meta_name();
+    lua_member_item* item = obj->lua_get_meta_data();
 
-	luaL_newmetatable(L, meta_name);
-	lua_pushstring(L, "__index");
-	lua_pushcfunction(L, &lua_member_index<T>);
-	lua_rawset(L, -3);
+    luaL_newmetatable(L, meta_name);
+    lua_pushstring(L, "__index");
+    lua_pushcfunction(L, &lua_member_index<T>);
+    lua_rawset(L, -3);
 
-	lua_pushstring(L, "__newindex");
-	lua_pushcfunction(L, &lua_member_new_index<T>);
-	lua_rawset(L, -3);
+    lua_pushstring(L, "__newindex");
+    lua_pushcfunction(L, &lua_member_new_index<T>);
+    lua_rawset(L, -3);
 
-	lua_pushstring(L, "__gc");
-	lua_pushcfunction(L, &lua_object_gc<T>);
-	lua_rawset(L, -3);
+    lua_pushstring(L, "__gc");
+    lua_pushcfunction(L, &lua_object_gc<T>);
+    lua_rawset(L, -3);
 
-	while (item->type != lua_member_type::member_none)
-	{
-		lua_pushstring(L, item->name);
-		lua_pushlightuserdata(L, item);
-		lua_rawset(L, -3);
-		item++;
-	}
+    while (item->type != lua_member_type::member_none)
+    {
+        lua_pushstring(L, item->name);
+        lua_pushlightuserdata(L, item);
+        lua_rawset(L, -3);
+        item++;
+    }
 
-	lua_settop(L, top);
+    lua_settop(L, top);
 }
 
 
 template <typename T>
 void lua_push_object(lua_State* L, T obj)
 {
-	if (obj == nullptr)
-	{
-		lua_pushnil(L);
-		return;
-	}
+    if (obj == nullptr)
+    {
+        lua_pushnil(L);
+        return;
+    }
 
     if (lua_getglobal(L, "luna_export") != LUA_TFUNCTION)
     {
@@ -420,16 +415,16 @@ void lua_push_object(lua_State* L, T obj)
         return;
     }
 
-	lua_pushlightuserdata(L, obj);
+    lua_pushlightuserdata(L, obj);
 
-	const char* meta_name = obj->lua_get_meta_name();
-	luaL_getmetatable(L, meta_name);
-	if (lua_isnil(L, -1))
-	{
-		lua_remove(L, -1);
-		lua_register_class(L, obj);
-		luaL_getmetatable(L, meta_name);
-	}
+    const char* meta_name = obj->lua_get_meta_name();
+    luaL_getmetatable(L, meta_name);
+    if (lua_isnil(L, -1))
+    {
+        lua_remove(L, -1);
+        lua_register_class(L, obj);
+        luaL_getmetatable(L, meta_name);
+    }
     lua_pcall(L, 2, 1, -3);
 }
 
@@ -448,7 +443,7 @@ T lua_to_object(lua_State* L, int idx)
 
 #define DECLARE_LUA_CLASS(ClassName)    \
     const char* lua_get_meta_name() { return "_class_meta:"#ClassName; }    \
-    lua_member_item* lua_get_meta_data();	\
+    lua_member_item* lua_get_meta_data();   \
 
 #define EXPORT_CLASS_BEGIN(ClassName)   \
 lua_member_item* ClassName::lua_get_meta_data()   \
@@ -526,7 +521,7 @@ void lua_register_function(lua_State* L, const char* name, lua_global_function f
 template <typename T>
 void lua_register_function(lua_State* L, const char* name, T func)
 {
-	lua_register_function(L, name, lua_adapter(func));
+    lua_register_function(L, name, lua_adapter(func));
 }
 
 inline void lua_register_function(lua_State* L, const char* name, lua_CFunction func)
@@ -540,17 +535,17 @@ bool lua_get_table_function(lua_State* L, const char table[], const char functio
 template <typename T>
 bool lua_get_object_function(lua_State* L, T* object, const char function[])
 {
-	if (object == nullptr)
-		return false;
-	lua_push_object(L, object);
-	lua_getfield(L, -1, function);
-	if (!lua_isfunction(L, -1))
-	{
-		lua_pop(L, 2);
-		return false;
-	}
-	lua_remove(L, -2);
-	return true;
+    if (object == nullptr)
+        return false;
+    lua_push_object(L, object);
+    lua_getfield(L, -1, function);
+    if (!lua_isfunction(L, -1))
+    {
+        lua_pop(L, 2);
+        return false;
+    }
+    lua_remove(L, -2);
+    return true;
 }
 
 bool lua_call_function(lua_State* L, int arg_count, int ret_count);
@@ -558,53 +553,53 @@ bool lua_call_function(lua_State* L, int arg_count, int ret_count);
 template<size_t... Integers, typename... var_types>
 void lua_to_native_mutil(lua_State* L, std::tuple<var_types&...>& vars, std::index_sequence<Integers...>&&)
 {
-	constexpr int ret_count = sizeof...(Integers);
-	int _[] = { 0, (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - ret_count), 0)... };
+    constexpr int ret_count = sizeof...(Integers);
+    int _[] = { 0, (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - ret_count), 0)... };
 }
 
 template <typename... ret_types, typename... arg_types>
 bool lua_call_table_function(lua_State* L, const char table[], const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
-	if (!lua_get_table_function(L, table, function))
-		return false;
+    if (!lua_get_table_function(L, table, function))
+        return false;
 
-	int _0[] = { 0, (native_to_lua(L, args), 0)... };
-	constexpr int ret_count = sizeof...(ret_types);
-	if (!lua_call_function(L, sizeof...(arg_types), ret_count))
-		return false;
+    int _0[] = { 0, (native_to_lua(L, args), 0)... };
+    constexpr int ret_count = sizeof...(ret_types);
+    if (!lua_call_function(L, sizeof...(arg_types), ret_count))
+        return false;
 
-	lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
-	return true;
+    lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
+    return true;
 }
 
 template <typename T, typename... ret_types, typename... arg_types>
 bool lua_call_object_function(lua_State* L, T* o, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
-	if (!lua_get_object_function(L, o, function))
-		return false;
+    if (!lua_get_object_function(L, o, function))
+        return false;
 
-	int _0[] = { 0, (native_to_lua(L, args), 0)... };
-	constexpr int ret_count = sizeof...(ret_types);
-	if (!lua_call_function(L, sizeof...(arg_types), ret_count))
-		return false;
+    int _0[] = { 0, (native_to_lua(L, args), 0)... };
+    constexpr int ret_count = sizeof...(ret_types);
+    if (!lua_call_function(L, sizeof...(arg_types), ret_count))
+        return false;
 
-	lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
-	return true;
+    lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
+    return true;
 }
 
 template <typename... ret_types, typename... arg_types>
 bool lua_call_global_function(lua_State* L, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
-	if (lua_getglobal(L, function) != LUA_TFUNCTION || !lua_isfunction(L, -1))
-		return false;
+    if (lua_getglobal(L, function) != LUA_TFUNCTION || !lua_isfunction(L, -1))
+        return false;
 
-	int _0[] = { 0, (native_to_lua(L, args), 0)... };
-	constexpr int ret_count = sizeof...(ret_types);
-	if (!lua_call_function(L, sizeof...(arg_types), ret_count))
-		return false;
+    int _0[] = { 0, (native_to_lua(L, args), 0)... };
+    constexpr int ret_count = sizeof...(ret_types);
+    if (!lua_call_function(L, sizeof...(arg_types), ret_count))
+        return false;
 
-	lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
-	return true;
+    lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
+    return true;
 }
 
 inline bool lua_call_table_function(lua_State* L, const char table[], const char function[]) { return lua_call_table_function(L, table, function, std::tie()); }
@@ -613,9 +608,9 @@ inline bool lua_call_global_function(lua_State* L, const char function[]) { retu
 
 class lua_guard_t
 {
-	int m_top = 0;
-	lua_State* m_lvm = nullptr;
+    int m_top = 0;
+    lua_State* m_lvm = nullptr;
 public:
-	lua_guard_t(lua_State* L) : m_lvm(L) { m_top = lua_gettop(L); }
-	~lua_guard_t() { lua_settop(m_lvm, m_top); }
+    lua_guard_t(lua_State* L) : m_lvm(L) { m_top = lua_gettop(L); }
+    ~lua_guard_t() { lua_settop(m_lvm, m_top); }
 };
