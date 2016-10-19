@@ -27,7 +27,11 @@ EXPORT_CLASS_END()
 static int Lua_global_bridge(lua_State* L)
 {
     auto* wapper  = lua_to_object<luna_function_wapper*>(L, lua_upvalueindex(1));
-	return wapper->m_func(L);
+    if (wapper != nullptr)
+    {
+        return wapper->m_func(L);
+    }
+    return 0;
 }
 
 void lua_register_function(lua_State* L, const char* name, lua_global_function func)
@@ -39,9 +43,7 @@ void lua_register_function(lua_State* L, const char* name, lua_global_function f
 
 int Lua_object_bridge(lua_State* L)
 {
-    lua_pushstring(L, LUA_NATIVE_POINTER);
-    lua_rawget(L, lua_upvalueindex(1));
-    void* obj = lua_touserdata(L, -1);
+    void* obj = lua_touserdata(L, lua_upvalueindex(1));
     lua_object_function* func = (lua_object_function*)lua_touserdata(L, lua_upvalueindex(2));
     if (obj != nullptr && func != nullptr)
     {

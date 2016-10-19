@@ -138,33 +138,20 @@ struct lua_member_item
 	lua_object_function func;
 };
 
-#define LUA_NATIVE_POINTER "__native_pointer__"
-
 int Lua_object_bridge(lua_State* L);
 
 template <typename T>
 int lua_member_index(lua_State* L)
 {
-	T* obj = nullptr;
-	const char* key = nullptr;
-	const char* meta_name = nullptr;
-	lua_member_item* item = nullptr;
-	char* addr = nullptr;
-
-	lua_pushstring(L, LUA_NATIVE_POINTER);
-	lua_rawget(L, 1);
-
-	obj = (T*)lua_touserdata(L, -1);
+	T* obj = lua_to_object<T*>(L, 1);
 	if (obj == nullptr)
 	{
 		lua_pushnil(L);
 		return 1;
 	}
 
-	lua_pop(L, 1);  // pop the userdata
-
-	key = lua_tostring(L, 2);
-	meta_name = obj->lua_get_meta_name();
+    const char* key = lua_tostring(L, 2);
+    const char* meta_name = obj->lua_get_meta_name();
 	if (key == nullptr || meta_name == nullptr)
 	{
 		lua_pushnil(L);
@@ -175,7 +162,7 @@ int lua_member_index(lua_State* L)
 	lua_pushstring(L, key);
 	lua_rawget(L, -2);
 
-	item = (lua_member_item*)lua_touserdata(L, -1);
+	auto item = (lua_member_item*)lua_touserdata(L, -1);
 	if (item == nullptr)
 	{
 		lua_pushnil(L);
@@ -184,7 +171,7 @@ int lua_member_index(lua_State* L)
 
 	lua_settop(L, 2);
 
-	addr = (char*)obj + item->offset;
+	char* addr = (char*)obj + item->offset;
 
 	switch (item->type)
 	{
@@ -237,7 +224,7 @@ int lua_member_index(lua_State* L)
 		break;
 
 	case lua_member_type::member_function:
-		lua_pushvalue(L, 1);
+        lua_pushlightuserdata(L, obj);
 		lua_pushlightuserdata(L, &item->func);
 		lua_pushcclosure(L, Lua_object_bridge, 2);
 		break;
@@ -252,23 +239,12 @@ int lua_member_index(lua_State* L)
 template <typename T>
 int lua_member_new_index(lua_State* L)
 {
-	T* obj = nullptr;
-	const char* meta_name = nullptr;
-	const char* key = nullptr;
-	char* addr = nullptr;
-	lua_member_item* item = nullptr;
-
-	lua_pushstring(L, LUA_NATIVE_POINTER);
-	lua_rawget(L, 1);
-
-	obj = (T*)lua_touserdata(L, -1);
+    T* obj = lua_to_object<T*>(L, 1);
 	if (obj == nullptr)
 		return 0;
 
-	lua_pop(L, 1);
-
-	key = lua_tostring(L, 2);
-	meta_name = obj->lua_get_meta_name();
+	const char* key = lua_tostring(L, 2);
+	const char* meta_name = obj->lua_get_meta_name();
 	if (key == nullptr || meta_name == nullptr)
 		return 0;
 
@@ -276,7 +252,7 @@ int lua_member_new_index(lua_State* L)
 	lua_pushvalue(L, 2);
 	lua_rawget(L, -2);
 
-	item = (lua_member_item*)lua_touserdata(L, -1);
+	auto item = (lua_member_item*)lua_touserdata(L, -1);
 	lua_pop(L, 2);
 	if (item == nullptr)
 	{
@@ -287,7 +263,7 @@ int lua_member_new_index(lua_State* L)
 	if (item->readonly)
 		return 0;
 
-	addr = (char*)obj + item->offset;
+	char* addr = (char*)obj + item->offset;
 
 	switch (item->type)
 	{
@@ -386,24 +362,13 @@ template <class T> typename std::enable_if<!has_member_gc<T>::value, void>::type
 template <typename T>
 int lua_object_gc(lua_State* L)
 {
-	if (!lua_istable(L, 1))
-	{
-		puts("__gc error: not a table !");
-		return 0;
-	}
-
-	lua_pushstring(L, LUA_NATIVE_POINTER);
-	lua_rawget(L, 1);
-
-	auto obj = (T*)lua_touserdata(L, -1);
+    T* obj = lua_to_object<T*>(L, 1);
 	if (obj == nullptr)
 	{
 		puts("__gc error: nullptr !");
 		return 0;
 	}
-
 	lua_handle__gc(obj);
-
 	return 0;
 }
 
@@ -438,38 +403,6 @@ void lua_register_class(lua_State* L, T* obj)
 	lua_settop(L, top);
 }
 
-struct lua_obj_ref
-{
-	lua_obj_ref() {}
-	lua_obj_ref(lua_obj_ref const&) = delete;
-	lua_obj_ref& operator = (lua_obj_ref const&) { return *this; }
-
-	~lua_obj_ref()
-	{
-		release();
-	}
-
-	void release()
-	{
-		if (m_lvm == nullptr || m_ref == LUA_NOREF)
-			return;
-
-		int top = lua_gettop(m_lvm);
-		lua_rawgeti(m_lvm, LUA_REGISTRYINDEX, m_ref);
-		if (lua_istable(m_lvm, -1))
-		{
-			lua_pushstring(m_lvm, LUA_NATIVE_POINTER);
-			lua_pushnil(m_lvm);
-			lua_rawset(m_lvm, -3);
-			luaL_unref(m_lvm, LUA_REGISTRYINDEX, m_ref);
-		}
-		lua_settop(m_lvm, top);
-		m_lvm = nullptr;
-		m_ref = LUA_NOREF;
-	}
-	lua_State* m_lvm = nullptr;
-	int m_ref = LUA_NOREF;
-};
 
 template <typename T>
 void lua_push_object(lua_State* L, T obj)
@@ -480,18 +413,14 @@ void lua_push_object(lua_State* L, T obj)
 		return;
 	}
 
-	lua_obj_ref& ref = obj->lua_get_obj_ref();
-	if (ref.m_ref != LUA_NOREF)
-	{
-		assert(ref.m_lvm == L);
-		lua_rawgeti(L, LUA_REGISTRYINDEX, ref.m_ref);
-		return;
-	}
+    if (lua_getglobal(L, "luna_export") != LUA_TFUNCTION)
+    {
+        lua_pop(L, 1);
+        lua_pushnil(L);
+        return;
+    }
 
-	lua_newtable(L);
-	lua_pushstring(L, LUA_NATIVE_POINTER);
 	lua_pushlightuserdata(L, obj);
-	lua_settable(L, -3);
 
 	const char* meta_name = obj->lua_get_meta_name();
 	luaL_getmetatable(L, meta_name);
@@ -501,35 +430,23 @@ void lua_push_object(lua_State* L, T obj)
 		lua_register_class(L, obj);
 		luaL_getmetatable(L, meta_name);
 	}
-	lua_setmetatable(L, -2);
-	lua_pushvalue(L, -1);
-	ref.m_lvm = L;
-	ref.m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_pcall(L, 2, 1, -3);
 }
 
 template <typename T>
 T lua_to_object(lua_State* L, int idx)
 {
-	T obj = nullptr;
-	if (lua_istable(L, idx))
-	{
-		lua_getfield(L, idx, LUA_NATIVE_POINTER);
-		obj = (T)lua_touserdata(L, -1);
-		lua_pop(L, 1);
-	}
-	return obj;
-}
-
-template <typename T>
-void lua_clear_ref(T* obj)
-{
-	lua_obj_ref& ref = obj->get_obj_ref();
-	ref.release();
+    T obj = nullptr;
+     if (lua_istable(L, idx))
+     {
+         lua_getfield(L, idx, "__pointer__");
+         obj = (T)lua_touserdata(L, -1);
+         lua_pop(L, 1);
+     }
+     return obj;
 }
 
 #define DECLARE_LUA_CLASS(ClassName)    \
-    lua_obj_ref m_lua_obj_ref;  \
-    lua_obj_ref& lua_get_obj_ref() { return m_lua_obj_ref; }    \
     const char* lua_get_meta_name() { return "_class_meta:"#ClassName; }    \
     lua_member_item* lua_get_meta_data();	\
 
@@ -616,7 +533,6 @@ inline void lua_register_function(lua_State* L, const char* name, lua_CFunction 
 {
     lua_register(L, name, func);
 }
-
 
 // 从指定的全局table中获取函数
 bool lua_get_table_function(lua_State* L, const char table[], const char function[]);

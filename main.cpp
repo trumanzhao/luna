@@ -43,7 +43,7 @@ setmetatable(luna_objects, {__mode = "v"});
 function luna_export(ptr, meta)
     local tab = luna_objects[ptr];
     if not tab then
-        tab = {};
+        tab = {__pointer__=ptr};
         setmetatable(tab, meta);
         luna_objects[ptr] = tab;
     end
@@ -80,6 +80,44 @@ function import(filename)
 end
 )---";
 
+
+struct fucker
+{
+    fucker(int id) : m_id(id) {}
+
+    int add(int a, int b)
+    {
+        printf("add id=%d\n", m_id);
+        return a + b;
+    }
+
+    void gc()
+    {
+        printf("gc id=%d\n", m_id);
+    }
+
+    int m_id;
+    DECLARE_LUA_CLASS(fucker);
+};
+
+EXPORT_CLASS_BEGIN(fucker)
+EXPORT_LUA_FUNCTION(add)
+EXPORT_LUA_INT(m_id)
+EXPORT_CLASS_END()
+
+int get_fucker(lua_State* L)
+{
+    lua_push_object(L, new fucker(123));
+    lua_push_object(L, new fucker(456));
+    return 2;
+}
+
+fucker* same_fucker(fucker* o)
+{
+    printf("same %d\n", o->m_id);
+    return o;
+}
+
 int main(int argc, const char* argv[])
 {
     if (argc != 2)
@@ -91,10 +129,11 @@ int main(int argc, const char* argv[])
 	lua_State* L = luaL_newstate();
 
 	luaL_openlibs(L);
-
-	lua_register_function(L, "get_file_time", get_file_time);
-
     luaL_dostring(L, g_code);
+
+    lua_register_function(L, "get_file_time", get_file_time);
+    lua_register_function(L, "get_fucker", get_fucker);
+    lua_register_function(L, "same_fucker", same_fucker);
 
     lua_call_global_function(L, "import", std::tie(), argv[1]);
 

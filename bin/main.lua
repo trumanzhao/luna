@@ -1,7 +1,10 @@
 
 print("hello !");
 
-print(get_file_time("main.lua"));
+local a, b = get_fucker();
 
-print(tostring(import));
+print(a.add(1, 2));
+print(b.add(10, 20));
 
+local c = same_fucker(a);
+print(a.add(100, 200));
