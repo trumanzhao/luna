@@ -1,10 +1,22 @@
 
 print("hello !");
 
-local a, b = get_fucker();
+function test()
+    print("enter test");
 
-print(a.add(1, 2));
-print(b.add(10, 20));
+    local a, b = get_fucker();
 
-local c = same_fucker(a);
-print(a.add(100, 200));
+    print(a.add(1, 2));
+    print(b.add(10, 20));
+
+    local c = same_fucker(a);
+    print(a.add(100, 200));
+
+    print("leave test");
+end
+
+test();
+
+collectgarbage();
+
+print("exit main.lua");
