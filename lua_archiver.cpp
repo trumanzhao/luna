@@ -1,3 +1,8 @@
+/*
+** repository: https://github.com/trumanzhao/luna
+** trumanzhao, 2016/10/19, trumanzhao@foxmail.com
+*/
+
 #include <assert.h>
 #include <string.h>
 #include "lua/lua.hpp"
