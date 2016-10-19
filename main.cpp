@@ -1,34 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <string.h>
 #include <string>
 #include <locale>
 #include <cstdint>
-#ifdef __linux
-#include <dirent.h>
-#endif
 #include "luna.h"
-
-static time_t get_file_time(const char* file_name, time_t n)
-{
-    if (file_name == nullptr)
-        return 0;
-
-    struct stat file_info;
-    int ret = stat(file_name, &file_info);
-    if (ret != 0)
-        return 0;
-
-#ifdef __APPLE__
-    return file_info.st_mtimespec.tv_sec;
-#endif
-
-#if defined(_MSC_VER) || defined(__linux)
-    return file_info.st_mtime;
-#endif
-}
+#include "tools.h"
 
 static const char* g_usage =
 u8R"---(usage: luna main.lua)---";
@@ -120,6 +97,9 @@ fucker* same_fucker(fucker* o)
 
 int main(int argc, const char* argv[])
 {
+    tzset();
+    setlocale(LC_ALL, "");
+
     if (argc != 2)
     {
         puts(g_usage);
@@ -132,6 +112,8 @@ int main(int argc, const char* argv[])
     luaL_dostring(L, g_code);
 
     lua_register_function(L, "get_file_time", get_file_time);
+    lua_register_function(L, "get_time_ms", get_time_ms);
+
     lua_register_function(L, "get_fucker", get_fucker);
     lua_register_function(L, "same_fucker", same_fucker);
 

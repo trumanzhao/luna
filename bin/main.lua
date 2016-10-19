@@ -17,6 +17,9 @@ end
 
 test();
 
+print("ms: "..get_time_ms());
+print("ms: "..get_time_ms());
+
 collectgarbage();
 
 print("exit main.lua");
