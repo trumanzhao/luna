@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include <functional>
 
 struct ISocketStream 
 {
 	virtual void Send(const void* pvData, size_t uDataLen) = 0;
-	virtual void SetDataCallback(const std::function<void(BYTE* pbyData, size_t uDataLen)>& callback) = 0;
+	virtual void SetDataCallback(const std::function<void(BYTE*, size_t)>& callback) = 0;
 	virtual void SetErrorCallback(const std::function<void()>& callback) = 0;
 	virtual const char* GetRemoteAddress() = 0;
 	virtual const char* GetError(int* pnError = nullptr) = 0;
@@ -15,7 +15,6 @@ struct ISocketStream
 struct ISocketListener
 {
 	virtual void SetStreamCallback(const std::function<void(ISocketStream* pSocket)>& callback) = 0;
-	// 设计不希望StreamSocket在运行中动态修改缓冲区大小,所以只能在这里设置
 	virtual void SetStreamBufferSize(size_t uRecvBufferSize, size_t uSendBufferSize) = 0;
 	virtual void Close() = 0;
 };
@@ -38,4 +37,4 @@ struct ISocketManager
 	virtual void Release() = 0;
 };
 
-ISocketManager* CreateSocketManager();
+ISocketManager* create_socket_mgr(int max_connection);

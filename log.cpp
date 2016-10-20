@@ -1,5 +1,6 @@
 ﻿#include <stdarg.h>
 #include <assert.h>
+#include <string.h>
 #if defined(__linux) || defined(__APPLE__)
 #include <unistd.h>
 #endif

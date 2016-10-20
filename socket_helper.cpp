@@ -1,8 +1,14 @@
-﻿#include "base/Base.h"
-#include "SocketHelper.h"
+﻿#ifdef _MSC_VER
+#include <Winsock2.h>
+#include <Ws2tcpip.h>
+#include <windows.h>
+#endif
+#include <string.h>
+#include "tools.h"
+#include "socket_helper.h"
 
 #if defined(__linux) || defined(__APPLE__)
-void SetSocketNoneBlock(SOCKET nSocket)
+void SetSocketNoneBlock(socket_t nSocket)
 {
     int     nOption  = 0;
 
@@ -12,18 +18,18 @@ void SetSocketNoneBlock(SOCKET nSocket)
 #endif
 
 #ifdef _MSC_VER
-void SetSocketNoneBlock(SOCKET nSocket)
+void SetSocketNoneBlock(socket_t nSocket)
 {
     u_long  ulOption = 1;
     ioctlsocket(nSocket, FIONBIO, &ulOption);
 }
 #endif
 
-SOCKET ConnectSocket(const char szIP[], int nPort)
+socket_t ConnectSocket(const char szIP[], int nPort)
 {
-	SOCKET              nResult = INVALID_SOCKET;
+	socket_t              nResult = INVALID_SOCKET;
 	int                 nRetCode = false;
-	SOCKET              nSocket = INVALID_SOCKET;
+	socket_t              nSocket = INVALID_SOCKET;
 	hostent*            pHost = NULL;
 	sockaddr_in         serverAddr;
 
@@ -69,7 +75,7 @@ Exit0:
 }
 
 // nTimeout: 单位ms,传入-1表示阻塞到永远
-bool CheckSocketWriteable(int* pnError, SOCKET nSocket, int nTimeout)
+bool CheckSocketWriteable(int* pnError, socket_t nSocket, int nTimeout)
 {
 	bool bResult = false;
 	int	nRetCode = 0;

@@ -4,6 +4,7 @@
 #include <string>
 #include <locale>
 #include <cstdint>
+#include <signal.h>
 #include "luna.h"
 #include "tools.h"
 

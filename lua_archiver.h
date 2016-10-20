@@ -14,7 +14,7 @@ public:
     ~lua_archiver();
 
 public:
-    size_t save(unsigned char* buffer, size_t buffer_size, lua_State* L, int first, int last);
+    size_t save(BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last);
 private:
     bool save_value(lua_State* L, int idx);
     bool save_number(double v);
@@ -26,16 +26,15 @@ private:
     int find_shared_str(const char* str);
 
 public:
-    int load(lua_State* L, unsigned char* data, size_t data_len);
+    int load(lua_State* L, BYTE* data, size_t data_len);
 private:
     bool load_value(lua_State* L);
 
 private:
-    using byte = unsigned char;
-    byte* m_buffer = nullptr;
+	BYTE* m_buffer = nullptr;
     size_t m_buffer_size = 0;
-    byte* m_pos = nullptr;
-    byte* m_end = nullptr;
+	BYTE* m_pos = nullptr;
+	BYTE* m_end = nullptr;
     size_t m_compress_threhold = 4096;
     std::vector<const char*> m_shared_string;
     std::vector<size_t> m_shared_strlen;

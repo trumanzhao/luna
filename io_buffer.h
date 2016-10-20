@@ -1,5 +1,8 @@
 #pragma once
 
+#include <assert.h>
+#include <string.h>
+
 struct XSocketBuffer
 {
 	XSocketBuffer() { }
@@ -22,11 +25,11 @@ struct XSocketBuffer
 			return;
 
 		size_t uDataLen = 0;
-		char* pbyData = GetData(&uDataLen);
-		size_t uCopyLen = std::min(uDataLen, uSize);
+		BYTE* pbyData = GetData(&uDataLen);
+		size_t uCopyLen = uDataLen <= uSize ? uDataLen : uSize;
 		if (uCopyLen > 0)
 		{
-			char* pbyBuffer = new char[uSize];
+			BYTE* pbyBuffer = new BYTE[uSize];
 			memcpy(pbyBuffer, pbyData, uCopyLen);
 			if (m_pbyBuffer)
             {
@@ -48,7 +51,7 @@ struct XSocketBuffer
 			Alloc();
 
 		size_t uSpaceSize = 0;
-		char* pbySpace = GetSpace(&uSpaceSize);
+		BYTE* pbySpace = GetSpace(&uSpaceSize);
 		if (uSpaceSize < uDataLen)
 			return false;
 
@@ -84,17 +87,17 @@ struct XSocketBuffer
 		m_pbyDataEnd = m_pbyDataBegin + uLen;
 	}
 
-	char* GetSpace(size_t* puSize)
+	BYTE* GetSpace(size_t* puSize)
 	{
 		if (m_pbyBuffer == nullptr)
 			Alloc();
 
-		char* pbyEnd = m_pbyBuffer + m_uBufferSize;
+		BYTE* pbyEnd = m_pbyBuffer + m_uBufferSize;
 		*puSize = (size_t)(pbyEnd - m_pbyDataEnd);
 		return m_pbyDataEnd;
 	}
 
-	char* GetData(size_t* puSize)
+	BYTE* GetData(size_t* puSize)
 	{
 		*puSize = (size_t)(m_pbyDataEnd - m_pbyDataBegin);
 		return m_pbyDataBegin;
@@ -103,16 +106,16 @@ struct XSocketBuffer
 private:
 	void Alloc()
 	{
-		m_pbyBuffer = new char[m_uBufferSize];
+		m_pbyBuffer = new BYTE[m_uBufferSize];
 		m_pbyDataBegin = m_pbyBuffer;
 		m_pbyDataEnd = m_pbyDataBegin;
 	}
 
 private:
 
-	char* m_pbyDataBegin = nullptr;
-	char* m_pbyDataEnd = nullptr;
+	BYTE* m_pbyDataBegin = nullptr;
+	BYTE* m_pbyDataEnd = nullptr;
 
-	char* m_pbyBuffer = nullptr;
+	BYTE* m_pbyBuffer = nullptr;
 	size_t m_uBufferSize = 4096;
 };
