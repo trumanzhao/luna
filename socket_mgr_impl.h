@@ -55,7 +55,7 @@ struct XSocketManager : ISocketManager
 #endif
 
 	char m_szError[128];
-	int m_nLastError = 0;
+	int m_nError = 0;
 	int m_max_connection = 0;
 
 	std::list<XConnectingStream> m_ConnectingQueue;

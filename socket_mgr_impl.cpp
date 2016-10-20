@@ -265,23 +265,27 @@ const char* XSocketManager::GetError(int* pnError)
 {
 	if (pnError)
 	{
-		*pnError = m_nLastError;
+		*pnError = m_nError;
 	}
 	return m_szError;
 }
 
 void XSocketManager::SetError(int nError)
 {
-	m_nLastError = nError ? nError : GetSocketError();
-#ifdef _MSC_VER
+	m_nError = nError ? nError : GetSocketError();
 	m_szError[0] = 0;
-	FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, m_nLastError, 0, m_szError, sizeof(m_szError), nullptr);
+#ifdef _MSC_VER
+	FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, m_nError, 0, m_szError, sizeof(m_szError), nullptr);
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+        strerror_r(m_nError, m_szError, sizeof(m_szError));
 #endif
 }
 
 void XSocketManager::SetError(const char szUserError[])
 {
-	m_nLastError = 0;
+	m_nError = 0;
 	safe_cpy(m_szError, szUserError);
 }
 

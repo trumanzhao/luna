@@ -377,9 +377,13 @@ void XSocketStream::SetError(int nError)
 	{
 		m_bErrored = true;
 		m_nError = nError ? nError : GetSocketError();
-#ifdef _MSC_VER
 		m_szError[0] = 0;
+#ifdef _MSC_VER
 		FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, m_nError, 0, m_szError, sizeof(m_szError), nullptr);
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+        strerror_r(m_nError, m_szError, sizeof(m_szError));
 #endif
 	}
 }
