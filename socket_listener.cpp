@@ -6,6 +6,11 @@
 #ifdef __linux
 #include <sys/epoll.h>
 #endif
+#ifdef __APPLE__
+#include <sys/types.h>
+#include <sys/event.h>
+#include <sys/time.h>
+#endif
 #if defined(__linux) || defined(__APPLE__)
 #include <sys/socket.h>
 #include <netinet/in.h>

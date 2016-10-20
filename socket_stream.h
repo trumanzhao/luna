@@ -54,6 +54,10 @@ struct XSocketStream : ISocketStream
 	bool m_bRecvComplete = true;
 #endif
 
+#if defined(__linux) || defined(__APPLE__)
+	bool m_bWriteAble = true;
+#endif
+
 	std::function<void(BYTE*, size_t)> m_DataCallback;
 	std::function<void()> m_ErrorCallback;
 };

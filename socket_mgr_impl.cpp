@@ -5,6 +5,15 @@
 #endif
 #ifdef __linux
 #include <sys/epoll.h>
+#endif
+#ifdef __APPLE__
+#include <sys/types.h>
+#include <sys/event.h>
+#include <sys/time.h>
+#endif
+#if defined(__linux) || defined(__APPLE__)
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
 #include "tools.h"
@@ -167,7 +176,11 @@ void XSocketManager::Query(int nTimeout)
 
 		pStream->Activate();
 
-		if (pStream->m_bUserClosed && pStream->m_bRecvComplete && pStream->m_bSendComplete)
+		if (pStream->m_bUserClosed 
+#ifdef _MSC_VER
+		&& pStream->m_bRecvComplete && pStream->m_bSendComplete
+#endif
+        )
 		{
 			delete pStream;
 			stream_it = m_StreamTable.erase(stream_it);
@@ -234,7 +247,7 @@ void XSocketManager::ProcessAsyncConnect()
 			continue;
 		}
 
-		if (it->nTimeout >= 0 && dwTimeNow - it->dwBeginTime > (DWORD)it->nTimeout)
+		if (it->nTimeout >= 0 && dwTimeNow - it->dwBeginTime > it->nTimeout)
 		{
 			SetError("Request timeout !");
 			it->callback(nullptr);
@@ -260,8 +273,10 @@ const char* XSocketManager::GetError(int* pnError)
 void XSocketManager::SetError(int nError)
 {
 	m_nLastError = nError ? nError : GetSocketError();
+#ifdef _MSC_VER
 	m_szError[0] = 0;
 	FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, m_nLastError, 0, m_szError, sizeof(m_szError), nullptr);
+#endif
 }
 
 void XSocketManager::SetError(const char szUserError[])
@@ -313,7 +328,7 @@ void XSocketManager::ProcessSocketEvent(int nTimeout)
 	for (int i = 0; i < nCount; i++)
 	{
 		struct kevent& ev = m_Events[i];
-		auto& pStream = (ISocketStream*)ev.udata;
+		auto pStream = (XSocketStream*)ev.udata;
 		assert(ev.filter == EVFILT_READ || ev.filter == EVFILT_WRITE);
 		if (ev.filter == EVFILT_READ)
 		{

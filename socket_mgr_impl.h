@@ -2,6 +2,7 @@
 
 #include <list>
 #include <vector>
+#include <string>
 
 #include "socket_helper.h"
 #include "socket_mgr.h"
@@ -50,7 +51,7 @@ struct XSocketManager : ISocketManager
 
 #ifdef __APPLE__
 	int m_nKQ = -1;
-	std::vector<kevent> m_Events;
+	std::vector<struct kevent> m_Events;
 #endif
 
 	char m_szError[128];

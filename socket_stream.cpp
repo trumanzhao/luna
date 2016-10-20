@@ -78,7 +78,6 @@ void XSocketStream::StreamSend(const void* pvData, size_t uDataLen)
 	}
 #endif
 
-
 	const char*	pbyData = (char*)pvData;
 	while (uDataLen > 0)
 	{
@@ -111,13 +110,7 @@ void XSocketStream::StreamSend(const void* pvData, size_t uDataLen)
 
 				if (!m_SendBuffer.PushData(pbyData, uDataLen))
 				{
-					SetError("Send cache is full !");
-					return;
-				}
-
-				if (!m_pMgr->WatchForSend(this, true))
-				{
-					SetError();
+					SetError("send_cache_full");
 				}
 				return;
 			}
@@ -279,14 +272,10 @@ void XSocketStream::OnSendAble()
 		if (uDataLen == 0)
 		{
 			m_bWriteAble = true;
-			if (!m_pMgr->WatchForSend(this, false))
-			{
-				SetError();
-			}
 			break;
 		}
 
-		size_t uTryLen = Min(MAX_SIZE_PER_SEND, uDataLen);
+		size_t uTryLen = uDataLen < MAX_SIZE_PER_SEND ? uDataLen : MAX_SIZE_PER_SEND;
 		int nSend = send(m_nSocket, pbyData, uTryLen, 0);
 		if (nSend == -1)
 		{
@@ -386,10 +375,12 @@ void XSocketStream::SetError(int nError)
 {
 	if (!m_bErrored)
 	{
+		m_bErrored = true;
 		m_nError = nError ? nError : GetSocketError();
+#ifdef _MSC_VER
 		m_szError[0] = 0;
 		FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, m_nError, 0, m_szError, sizeof(m_szError), nullptr);
-		m_bErrored = true;
+#endif
 	}
 }
 
