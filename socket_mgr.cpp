@@ -19,7 +19,7 @@
 #include "tools.h"
 #include "socket_helper.h"
 #include "io_buffer.h"
-#include "socket_mgr_impl.h"
+#include "socket_mgr.h"
 #include "socket_listener.h"
 #include "socket_stream.h"
 

@@ -6,7 +6,7 @@
 #include <assert.h>
 #include "tools.h"
 #include "var_int.h"
-#include "socket_mgr_impl.h"
+#include "socket_mgr.h"
 #include "socket_stream.h"
 
 XSocketStream::~XSocketStream()

@@ -18,7 +18,7 @@
 #endif
 #include <string.h>
 #include "tools.h"
-#include "socket_mgr_impl.h"
+#include "socket_mgr.h"
 #include "socket_listener.h"
 
 XSocketListener::XSocketListener(XSocketManager* pMgr, socket_t nSocket)
