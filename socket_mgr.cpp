@@ -91,6 +91,7 @@ bool XSocketManager::Setup(int max_connection)
 
 	m_max_connection = max_connection;
 	m_Events.resize(max_connection);
+
 	return true;
 }
 
@@ -138,6 +139,11 @@ Exit0:
 		SAFE_DELETE(pSocket);
 	}
 	return pResult;
+}
+
+connector_t* XSocketManager::connect(const char node[], const char service[], int timeout)
+{
+	return nullptr;
 }
 
 void XSocketManager::ConnectAsync(const char szIP[], int nPort, const connecting_callback_t& callback, int nTimeout, size_t uRecvBufferSize, size_t uSendBufferSize)

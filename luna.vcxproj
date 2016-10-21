@@ -182,6 +182,7 @@
     <ClCompile Include="luna.cpp" />
     <ClCompile Include="lz4\lz4.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="socket_connector.cpp" />
     <ClCompile Include="socket_helper.cpp" />
     <ClCompile Include="socket_listener.cpp" />
     <ClCompile Include="socket_mgr.cpp" />
@@ -221,6 +222,7 @@
     <ClInclude Include="lua_archiver.h" />
     <ClInclude Include="luna.h" />
     <ClInclude Include="lz4\lz4.h" />
+    <ClInclude Include="socket_connector.h" />
     <ClInclude Include="socket_helper.h" />
     <ClInclude Include="socket_io.h" />
     <ClInclude Include="socket_listener.h" />

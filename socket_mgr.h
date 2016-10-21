@@ -15,6 +15,9 @@ struct XSocketManager : ISocketManager
 	bool Setup(int max_connection);
 
 	ISocketListener* Listen(const char szIP[], int nPort) override;
+
+	connector_t* connect(const char node[], const char service[], int timeout) override;
+
 	void ConnectAsync(const char szIP[], int nPort, const connecting_callback_t& callback, int nTimeout, size_t uRecvBufferSize, size_t uSendBufferSize) override;
 	void Wait(int nTimeout = 16) override;
 	void Release() override { delete this; }

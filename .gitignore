@@ -31,3 +31,7 @@
 /.vs/luna/v14
 /luna.VC.db
 /luna.VC.VC.opendb
+/x64/Debug/luna.ilk
+/x64/Debug/luna.log
+/x64/Debug/luna.pdb
+/x64/Debug/luna.Build.CppClean.log
