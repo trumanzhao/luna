@@ -7,18 +7,6 @@
 #include "socket_helper.h"
 #include "socket_io.h"
 
-struct XConnectingStream
-{
-	std::function<void(ISocketStream*)> callback;
-	int nTimeout;
-	size_t uRecvBufferSize;
-	size_t uSendBufferSize;
-	int64_t dwBeginTime;
-	socket_t nSocket;
-	std::string strRemoteIP;
-	int nPort;
-};
-
 struct XSocketManager : ISocketManager
 {
 	XSocketManager();
@@ -27,13 +15,9 @@ struct XSocketManager : ISocketManager
 	bool Setup(int max_connection);
 
 	ISocketListener* Listen(const char szIP[], int nPort) override;
-	void ConnectAsync(const char szIP[], int nPort, const std::function<void(ISocketStream*)>& callback, int nTimeout, size_t uRecvBufferSize, size_t uSendBufferSize) override;
-	void Query(int nTimeout = 16) override;
-	const char* GetError(int* pnError) override;
+	void ConnectAsync(const char szIP[], int nPort, const connecting_callback_t& callback, int nTimeout, size_t uRecvBufferSize, size_t uSendBufferSize) override;
+	void Wait(int nTimeout = 16) override;
 	void Release() override { delete this; }
-
-	void SetError(int nError = 0);
-	void SetError(const char szUserError[]);
 
 	void ProcessAsyncConnect();
 	ISocketStream* CreateStreamSocket(socket_t nSocket, size_t uRecvBufferSize, size_t uSendBufferSize, const std::string& strRemoteIP);
@@ -54,11 +38,21 @@ struct XSocketManager : ISocketManager
 	std::vector<struct kevent> m_Events;
 #endif
 
-	char m_szError[128];
-	int m_nError = 0;
+	char m_szError[64];
 	int m_max_connection = 0;
 
-	std::list<XConnectingStream> m_ConnectingQueue;
+	struct XAsyncConnecting
+	{
+		connecting_callback_t callback;
+		int nTimeout;
+		size_t uRecvBufferSize;
+		size_t uSendBufferSize;
+		int64_t dwBeginTime;
+		socket_t nSocket;
+		std::string strRemoteIP;
+		int nPort;
+	};
+	std::list<XAsyncConnecting> m_ConnectingQueue;
 	std::list<struct XSocketStream*> m_StreamTable;
 	std::list<struct XSocketListener*> m_ListenTable;
 };

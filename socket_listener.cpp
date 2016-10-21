@@ -35,25 +35,29 @@ XSocketListener::~XSocketListener()
 		m_nSocket = INVALID_SOCKET;
 	}
 }
-
+// todo: ipv6 support
+// http://www.ibm.com/support/knowledgecenter/ssw_i5_54/rzab6/xacceptboth.htm
 void XSocketListener::TryAccept()
 {
-	sockaddr_in remoteAddr;
+	sockaddr_in6 clientaddr;
+	char ip[INET6_ADDRSTRLEN];
 
 	while (!m_bUserClosed)
 	{
 		socket_t nSocket = INVALID_SOCKET;
-		socklen_t nAddrLen = sizeof(sockaddr_in);
+		socklen_t nAddrLen = sizeof(clientaddr);
 
-		memset(&remoteAddr, 0, sizeof(sockaddr_in));
+		memset(&clientaddr, 0, sizeof(clientaddr));
 
-		nSocket = accept(m_nSocket, (sockaddr*)&remoteAddr, &nAddrLen);
+		nSocket = accept(m_nSocket, (sockaddr*)&clientaddr, &nAddrLen);
 		if (nSocket == INVALID_SOCKET)
 			break;
 
 		SetSocketNoneBlock(nSocket);
 
-		ISocketStream* pStream = m_pSocketMgr->CreateStreamSocket(nSocket, m_uStreamRecvBufferSize, m_uStreamSendBufferSize, inet_ntoa(remoteAddr.sin_addr));
+		inet_ntop(AF_INET6, &clientaddr.sin6_addr, ip, sizeof(ip));
+
+		ISocketStream* pStream = m_pSocketMgr->CreateStreamSocket(nSocket, m_uStreamRecvBufferSize, m_uStreamSendBufferSize, ip);
 		if (pStream == nullptr)
 		{
 			CloseSocketHandle(nSocket);

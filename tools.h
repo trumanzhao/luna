@@ -113,3 +113,5 @@ inline uint64_t get_thread_id() { return (uint64_t)pthread_self(); }
 template <typename T, int N>
 constexpr int _countof(T(&_array)[N]) { return N; }
 #endif
+
+char* get_error_string(char buffer[], int len, int no);

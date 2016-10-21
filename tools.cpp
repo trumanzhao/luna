@@ -85,3 +85,18 @@ void sleep_ms(int ms)
     Sleep(ms);
 #endif
 }
+
+char* get_error_string(char buffer[], int len, int no)
+{
+	buffer[0] = '\0';
+
+#ifdef _MSC_VER
+	FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, no, 0, buffer, len, nullptr);
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+	strerror_r(no, buffer, len);
+#endif
+
+	return buffer;
+}

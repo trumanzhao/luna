@@ -7,6 +7,7 @@
 #include <signal.h>
 #include "luna.h"
 #include "tools.h"
+#include "socket_io.h"
 
 static const char* g_usage =
 u8R"---(usage: luna main.lua)---";
@@ -123,6 +124,26 @@ int main(int argc, const char* argv[])
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
 #endif
+
+	ISocketManager* mgr = create_socket_mgr(1000);
+
+	//mgr->ConnectAsync("::ffff:127.0.0.1", 80, [](auto a, auto b) {});
+	auto listener = mgr->Listen("", 8080);
+
+	if (!listener)
+	{
+		puts("failed listen");
+		return 0;
+	}
+
+	listener->SetStreamCallback([](auto sm) {
+		printf("new connection\n");
+	});
+
+	while (true)
+	{
+		mgr->Wait(10);
+	}
 
     if (argc != 2)
     {

@@ -15,12 +15,14 @@ inline int GetSocketError() { return WSAGetLastError(); }
 inline void CloseSocketHandle(socket_t nSocket) { closesocket(nSocket); }
 #endif
 
+bool make_ip_addr(sockaddr_storage& addr, const char ip[], int port);
+
 // 返回的Socket未必是已经完成连接的,还需用CheckSocketConnected检查
 // 返回的Socket已经设置为异步模式
 socket_t ConnectSocket(const char szIP[], int nPort);
 
 // nTimeout: 单位ms,传入-1表示阻塞到永远
-bool CheckSocketWriteable(int* pnError, socket_t nSocket, int nTimeout);
+bool CheckSocketWriteable(socket_t nSocket, int nTimeout);
 
 void SetSocketNoneBlock(socket_t nSocket);
 

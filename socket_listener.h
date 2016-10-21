@@ -16,7 +16,7 @@ struct XSocketListener : ISocketListener
 
 	void TryAccept();
 
-	std::function<void(ISocketStream* pSocket)> m_StreamCallback;
+	std::function<void(ISocketStream*)> m_StreamCallback;
 	size_t m_uStreamRecvBufferSize = 4096;
 	size_t m_uStreamSendBufferSize = 4096;
 

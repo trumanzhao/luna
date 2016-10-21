@@ -109,10 +109,10 @@
     </ClCompile>
     <ClCompile Include="tools.cpp" />
     <ClCompile Include="socket_helper.cpp" />
-    <ClCompile Include="socket_mgr_impl.cpp" />
     <ClCompile Include="socket_listener.cpp" />
     <ClCompile Include="socket_stream.cpp" />
     <ClCompile Include="log.cpp" />
+    <ClCompile Include="socket_mgr.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lua\lapi.h">
@@ -203,10 +203,10 @@
     <ClInclude Include="io_buffer.h" />
     <ClInclude Include="socket_helper.h" />
     <ClInclude Include="socket_mgr.h" />
-    <ClInclude Include="socket_mgr_impl.h" />
     <ClInclude Include="socket_listener.h" />
     <ClInclude Include="socket_stream.h" />
     <ClInclude Include="log.h" />
+    <ClInclude Include="socket_io.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lua">
