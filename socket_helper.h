@@ -5,14 +5,14 @@
 using socket_t = int;
 const socket_t INVALID_SOCKET = -1;
 const int SOCKET_ERROR = -1;
-inline int GetSocketError() { return errno; }
-inline void CloseSocketHandle(socket_t nSocket) { close(nSocket); }
+inline int get_socket_error() { return errno; }
+inline void close_socket_handle(socket_t fd) { close(fd); }
 #endif
 
 #ifdef _MSC_VER
 using socket_t = SOCKET;
-inline int GetSocketError() { return WSAGetLastError(); }
-inline void CloseSocketHandle(socket_t nSocket) { closesocket(nSocket); }
+inline int get_socket_error() { return WSAGetLastError(); }
+inline void close_socket_handle(socket_t fd) { closesocket(fd); }
 #endif
 
 bool make_ip_addr(sockaddr_storage& addr, const char ip[], int port);
@@ -21,10 +21,10 @@ bool make_ip_addr(sockaddr_storage& addr, const char ip[], int port);
 // 返回的Socket已经设置为异步模式
 socket_t ConnectSocket(const char szIP[], int nPort);
 
-// nTimeout: 单位ms,传入-1表示阻塞到永远
-bool CheckSocketWriteable(socket_t nSocket, int nTimeout);
+// timeout: 单位ms,传入-1表示阻塞到永远
+bool check_can_write(socket_t fd, int timeout);
 
-void SetSocketNoneBlock(socket_t nSocket);
+void set_none_block(socket_t nSocket);
 
 
 #define MAX_HEADER_LEN	16

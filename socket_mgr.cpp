@@ -53,7 +53,7 @@ XSocketManager::~XSocketManager()
 
 	for (auto it : m_ConnectingQueue)
 	{
-		CloseSocketHandle(it.nSocket);
+		close_socket_handle(it.nSocket);
 	}
 	m_ConnectingQueue.clear();
 
@@ -111,7 +111,7 @@ ISocketListener* XSocketManager::Listen(const char szIP[], int nPort)
 	nSocket = socket(addr.ss_family, SOCK_STREAM, IPPROTO_IP);
 	FAILED_JUMP(nSocket != INVALID_SOCKET);
 
-	SetSocketNoneBlock(nSocket);
+	set_none_block(nSocket);
 
 	nRetCode = setsockopt(nSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&nOne, sizeof(nOne));
 	FAILED_JUMP(nRetCode != SOCKET_ERROR);
@@ -129,10 +129,10 @@ ISocketListener* XSocketManager::Listen(const char szIP[], int nPort)
 Exit0:
 	if (pResult == nullptr)
 	{
-		get_error_string(m_szError, sizeof(m_szError), GetSocketError());
+		get_error_string(m_szError, sizeof(m_szError), get_socket_error());
 		if (nSocket != INVALID_SOCKET)
 		{
-			CloseSocketHandle(nSocket);
+			close_socket_handle(nSocket);
 			nSocket = INVALID_SOCKET;
 		}
 		SAFE_DELETE(pSocket);
@@ -210,14 +210,14 @@ void XSocketManager::ProcessAsyncConnect()
 			it->nSocket = ConnectSocket(it->strRemoteIP.c_str(), it->nPort);
 			if (it->nSocket == INVALID_SOCKET)
 			{
-				get_error_string(m_szError, _countof(m_szError), GetSocketError());
+				get_error_string(m_szError, _countof(m_szError), get_socket_error());
 				it->callback(nullptr, m_szError);
 				it = m_ConnectingQueue.erase(it);
 				continue;
 			}
 		}
 
-		if (CheckSocketWriteable(it->nSocket, 0))
+		if (check_can_write(it->nSocket, 0))
 		{
 			int nError = 0;
 			ISocketStream* pSocket = nullptr;
@@ -234,7 +234,7 @@ void XSocketManager::ProcessAsyncConnect()
 
 			if (pSocket == nullptr)
 			{
-				CloseSocketHandle(it->nSocket);
+				close_socket_handle(it->nSocket);
 			}
 
 			it->callback(pSocket, m_szError);
@@ -245,7 +245,7 @@ void XSocketManager::ProcessAsyncConnect()
 		if (it->nTimeout >= 0 && dwTimeNow - it->dwBeginTime > it->nTimeout)
 		{
 			it->callback(nullptr, "request_timeout");
-			CloseSocketHandle(it->nSocket);
+			close_socket_handle(it->nSocket);
 			it = m_ConnectingQueue.erase(it);
 			continue;
 		}
@@ -316,7 +316,7 @@ ISocketStream* XSocketManager::CreateStreamSocket(socket_t nSocket, size_t uRecv
 {
 	XSocketStream* pStream = new XSocketStream();
 
-	SetSocketNoneBlock(nSocket);
+	set_none_block(nSocket);
 
 #ifdef _MSC_VER
 	HANDLE hHandle = CreateIoCompletionPort((HANDLE)nSocket, m_hCompletionPort, (ULONG_PTR)pStream, 0);
@@ -336,7 +336,7 @@ ISocketStream* XSocketManager::CreateStreamSocket(socket_t nSocket, size_t uRecv
 	int nRetCode = epoll_ctl(m_nEpoll, EPOLL_CTL_ADD, nSocket, &ev);
 	if (nRetCode == -1)
 	{
-		get_error_string(m_szError, _countof(m_szError), GetSocketError());
+		get_error_string(m_szError, _countof(m_szError), get_socket_error());
 		delete pStream;
 		return nullptr;
 	}
@@ -350,7 +350,7 @@ ISocketStream* XSocketManager::CreateStreamSocket(socket_t nSocket, size_t uRecv
 	int nRetCode = kevent(m_nKQ, ev, _countof(ev), nullptr, 0, nullptr);
 	if (nRetCode == -1)
 	{
-		get_error_string(m_szError, _countof(m_szError), GetSocketError());
+		get_error_string(m_szError, _countof(m_szError), get_socket_error());
 		delete pStream;
 		return nullptr;
 	}

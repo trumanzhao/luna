@@ -31,7 +31,7 @@ XSocketListener::~XSocketListener()
 {
 	if (m_nSocket != INVALID_SOCKET)
 	{
-		CloseSocketHandle(m_nSocket);
+		close_socket_handle(m_nSocket);
 		m_nSocket = INVALID_SOCKET;
 	}
 }
@@ -53,14 +53,14 @@ void XSocketListener::TryAccept()
 		if (nSocket == INVALID_SOCKET)
 			break;
 
-		SetSocketNoneBlock(nSocket);
+		set_none_block(nSocket);
 
 		inet_ntop(AF_INET6, &clientaddr.sin6_addr, ip, sizeof(ip));
 
 		ISocketStream* pStream = m_pSocketMgr->CreateStreamSocket(nSocket, m_uStreamRecvBufferSize, m_uStreamSendBufferSize, ip);
 		if (pStream == nullptr)
 		{
-			CloseSocketHandle(nSocket);
+			close_socket_handle(nSocket);
 			continue;
 		}
 

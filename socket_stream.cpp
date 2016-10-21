@@ -13,7 +13,7 @@ XSocketStream::~XSocketStream()
 {
 	if (m_nSocket != INVALID_SOCKET)
 	{
-		CloseSocketHandle(m_nSocket);
+		close_socket_handle(m_nSocket);
 		m_nSocket = INVALID_SOCKET;
 	}
 }
@@ -44,7 +44,7 @@ void XSocketStream::Close()
 	// Windows下要等IO完成,不能立即关闭?
 	if (m_nSocket != INVALID_SOCKET)
 	{
-		CloseSocketHandle(m_nSocket);
+		close_socket_handle(m_nSocket);
 		m_nSocket = INVALID_SOCKET;
 	}
 #endif
@@ -85,7 +85,7 @@ void XSocketStream::StreamSend(const void* pvData, size_t uDataLen)
 		int nSend = send(m_nSocket, pbyData, (int)uTryLen, 0);
 		if (nSend == -1)
 		{
-			int nErr = GetSocketError();
+			int nErr = get_socket_error();
 
 #ifdef _MSC_VER
 			if (nErr == WSAEWOULDBLOCK)
@@ -156,7 +156,7 @@ void XSocketStream::AsyncSend()
 	nRetCode = WSASend(m_nSocket, &wsBuf, 1, &dwSendBytes, 0, &m_wsSendOVL, nullptr);
 	if (nRetCode == SOCKET_ERROR)
 	{
-		int nErr = GetSocketError();
+		int nErr = get_socket_error();
 		if (nErr != WSA_IO_PENDING)
 		{
 			m_bSendComplete = true;
@@ -194,7 +194,7 @@ void XSocketStream::AsyncRecv()
 	nRetCode = WSARecv(m_nSocket, &wsBuf, 1, &dwRecvBytes, &dwFlags, &m_wsRecvOVL, nullptr);
 	if (nRetCode == SOCKET_ERROR)
 	{
-		int nErr = GetSocketError();
+		int nErr = get_socket_error();
 		if (nErr != WSA_IO_PENDING)
 		{
 			m_bRecvComplete = true;
@@ -279,7 +279,7 @@ void XSocketStream::OnSendAble()
 		int nSend = send(m_nSocket, pbyData, uTryLen, 0);
 		if (nSend == -1)
 		{
-			int nErr = GetSocketError();
+			int nErr = get_socket_error();
 			if (nErr == EINTR)
 				continue;
 
@@ -321,7 +321,7 @@ void XSocketStream::OnRecvAble()
 		int nRecv = recv(m_nSocket, pbySpace, uSpaceSize, 0);
 		if (nRecv == -1)
 		{
-			int nErr = GetSocketError();
+			int nErr = get_socket_error();
 			if (nErr == EINTR)
 				continue;
 
@@ -376,7 +376,7 @@ void XSocketStream::SetError(int nError)
 	if (!m_bErrored)
 	{
 		m_bErrored = true;
-		m_nError = nError ? nError : GetSocketError();
+		m_nError = nError ? nError : get_socket_error();
 		get_error_string(m_szError, _countof(m_szError), m_nError);
 	}
 }

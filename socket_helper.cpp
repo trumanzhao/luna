@@ -8,20 +8,17 @@
 #include "socket_helper.h"
 
 #if defined(__linux) || defined(__APPLE__)
-void SetSocketNoneBlock(socket_t nSocket)
+void set_none_block(socket_t fd)
 {
-    int     nOption  = 0;
-
-    nOption = fcntl(nSocket, F_GETFL, 0);
-    fcntl(nSocket, F_SETFL, nOption | O_NONBLOCK);
+    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
 }
 #endif
 
 #ifdef _MSC_VER
-void SetSocketNoneBlock(socket_t nSocket)
+void set_none_block(socket_t fd)
 {
-    u_long  ulOption = 1;
-    ioctlsocket(nSocket, FIONBIO, &ulOption);
+    u_long  opt = 1;
+    ioctlsocket(fd, FIONBIO, &opt);
 }
 #endif
 
@@ -66,12 +63,12 @@ socket_t ConnectSocket(const char szIP[], int nPort)
 	nSocket = socket(addr.ss_family, SOCK_STREAM, IPPROTO_IP);
 	FAILED_JUMP(nSocket != INVALID_SOCKET);
 
-	SetSocketNoneBlock(nSocket);
+	set_none_block(nSocket);
 
 	nRetCode = connect(nSocket, (sockaddr*)&addr, sizeof(addr));
 	if (nRetCode == SOCKET_ERROR)
 	{
-		nRetCode = GetSocketError();
+		nRetCode = get_socket_error();
 
 #ifdef _MSC_VER
 		FAILED_JUMP(nRetCode == WSAEWOULDBLOCK);
@@ -88,22 +85,20 @@ Exit0:
 	{
 		if (nSocket != INVALID_SOCKET)
 		{
-			CloseSocketHandle(nSocket);
+			close_socket_handle(nSocket);
 			nSocket = INVALID_SOCKET;
 		}
 	}
 	return nResult;
 }
 
-// nTimeout: 单位ms,传入-1表示阻塞到永远
-bool CheckSocketWriteable(socket_t nSocket, int nTimeout)
+bool check_can_write(socket_t fd, int timeout)
 {
-	timeval timeoutValue = { nTimeout / 1000, 1000 * (nTimeout % 1000) };
-	fd_set writeSet;
+	timeval tv = { timeout / 1000, 1000 * (timeout % 1000) };
+	fd_set wset;
 
-	FD_ZERO(&writeSet);
-	FD_SET(nSocket, &writeSet);
+	FD_ZERO(&wset);
+	FD_SET(fd, &wset);
 
-	int nRetCode = select((int)nSocket + 1, NULL, &writeSet, NULL, &timeoutValue);
-	return (nRetCode == 1);
+	return select((int)fd + 1, nullptr, &wset, nullptr, &tv) == 1;
 }
