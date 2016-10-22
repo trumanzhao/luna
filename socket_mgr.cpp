@@ -121,8 +121,9 @@ ISocketListener* XSocketManager::Listen(const char szIP[], int nPort)
 	socket_t nSocket = INVALID_SOCKET;
 	XSocketListener* pSocket = nullptr;
 	sockaddr_storage addr;
+	size_t addr_len = 0;
 
-	nRetCode = make_ip_addr(addr, szIP, nPort);
+	nRetCode = make_ip_addr(&addr, &addr_len, szIP, nPort);
 	FAILED_JUMP(nRetCode);
 
 	nSocket = socket(addr.ss_family, SOCK_STREAM, IPPROTO_IP);
@@ -133,8 +134,8 @@ ISocketListener* XSocketManager::Listen(const char szIP[], int nPort)
 	nRetCode = setsockopt(nSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&nOne, sizeof(nOne));
 	FAILED_JUMP(nRetCode != SOCKET_ERROR);
 
-	// mac 下面不能传入 sizeof(addr),而是要按实际使用长度传,比如 ipv4只能传 sizeof(sockaddr_in)
-	nRetCode = bind(nSocket, (sockaddr*)&addr, sizeof(addr));
+	// macOSX对地址数据结构的长度,不能传入sizeof(addr),而要按实际使用长度传(ipv4/ipv6)
+	nRetCode = bind(nSocket, (sockaddr*)&addr, (int)addr_len);
 	FAILED_JUMP(nRetCode != SOCKET_ERROR);
 
 	nRetCode = listen(nSocket, 16);

@@ -35,3 +35,7 @@
 /x64/Debug/luna.log
 /x64/Debug/luna.pdb
 /x64/Debug/luna.Build.CppClean.log
+*.ilk
+*.pdb
+*.tlog
+*.idb
