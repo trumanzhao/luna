@@ -35,7 +35,7 @@ xconnector_t::~xconnector_t()
 {
 	m_thread.join();
 
-	if (m_socket = INVALID_SOCKET)
+	if (m_socket != INVALID_SOCKET)
 	{
 		close_socket_handle(m_socket);
 		m_socket = INVALID_SOCKET;
@@ -56,9 +56,12 @@ bool xconnector_t::update()
 
 	if (!m_user_closed)
 	{
-		while (m_socket == INVALID_SOCKET && !m_callbacked)
+		while (!m_callbacked)
 		{
 			do_connect();
+
+			if (m_socket != INVALID_SOCKET)
+				break;
 		}
 	}
 

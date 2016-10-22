@@ -3,6 +3,9 @@
 #include <Ws2tcpip.h>
 #include <windows.h>
 #endif
+#if defined(__linux) || defined(__APPLE__)
+#include <arpa/inet.h>
+#endif
 #include <string.h>
 #include "tools.h"
 #include "socket_helper.h"

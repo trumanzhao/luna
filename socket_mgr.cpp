@@ -74,6 +74,14 @@ XSocketManager::~XSocketManager()
 		m_nEpoll = -1;
 	}
 #endif
+
+#ifdef __APPLE__
+	if (m_nKQ != -1)
+	{
+		close(m_nKQ);
+		m_nKQ = -1;
+	}
+#endif	
 }
 
 bool XSocketManager::Setup(int max_connection)
@@ -89,6 +97,13 @@ bool XSocketManager::Setup(int max_connection)
 	if (m_nEpoll == -1)
 		return false;
 #endif
+
+#ifdef __APPLE__
+	m_nKQ = kqueue();
+	if (m_nKQ == -1)
+		return false;
+#endif
+
 
 	m_max_connection = max_connection;
 	m_Events.resize(max_connection);
@@ -118,6 +133,7 @@ ISocketListener* XSocketManager::Listen(const char szIP[], int nPort)
 	nRetCode = setsockopt(nSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&nOne, sizeof(nOne));
 	FAILED_JUMP(nRetCode != SOCKET_ERROR);
 
+	// mac 下面不能传入 sizeof(addr),而是要按实际使用长度传,比如 ipv4只能传 sizeof(sockaddr_in)
 	nRetCode = bind(nSocket, (sockaddr*)&addr, sizeof(addr));
 	FAILED_JUMP(nRetCode != SOCKET_ERROR);
 
@@ -262,8 +278,6 @@ ISocketStream* XSocketManager::CreateStreamSocket(socket_t nSocket, size_t uRecv
 {
 	XSocketStream* pStream = new XSocketStream();
 
-	set_none_block(nSocket);
-
 #ifdef _MSC_VER
 	HANDLE hHandle = CreateIoCompletionPort((HANDLE)nSocket, m_hCompletionPort, (ULONG_PTR)pStream, 0);
 	if (hHandle != m_hCompletionPort)
@@ -297,6 +311,7 @@ ISocketStream* XSocketManager::CreateStreamSocket(socket_t nSocket, size_t uRecv
 	if (nRetCode == -1)
 	{
 		get_error_string(m_szError, _countof(m_szError), get_socket_error());
+		puts(m_szError);
 		delete pStream;
 		return nullptr;
 	}

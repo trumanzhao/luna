@@ -152,7 +152,7 @@ int main(int argc, const char* argv[])
 	
 	while (true)
 	{
-		mgr->Wait(10);
+		mgr->Wait(100);
 	}
 
     if (argc != 2)
