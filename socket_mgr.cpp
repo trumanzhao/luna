@@ -21,6 +21,7 @@
 #include "io_buffer.h"
 #include "socket_mgr.h"
 #include "socket_listener.h"
+#include "socket_connector.h"
 #include "socket_stream.h"
 
 #ifdef _MSC_VER
@@ -39,23 +40,23 @@ XSocketManager::XSocketManager()
 
 XSocketManager::~XSocketManager()
 {
-	for (auto pStreamSocket : m_StreamTable)
+	for (auto stream : m_streams)
 	{
-		delete pStreamSocket;
+		delete stream;
 	}
-	m_StreamTable.clear();
+	m_streams.clear();
 
-	for (auto pListenSocket : m_ListenTable)
+	for (auto listener : m_listeners)
 	{
-		delete pListenSocket;
+		delete listener;
 	}
-	m_ListenTable.clear();
+	m_listeners.clear();
 
-	for (auto it : m_ConnectingQueue)
+	for (auto connector : m_connectors)
 	{
-		close_socket_handle(it.nSocket);
+		delete connector;
 	}
-	m_ConnectingQueue.clear();
+	m_connectors.clear();
 
 #ifdef _MSC_VER
 	if (m_hCompletionPort != INVALID_HANDLE_VALUE)
@@ -124,7 +125,7 @@ ISocketListener* XSocketManager::Listen(const char szIP[], int nPort)
 	FAILED_JUMP(nRetCode != SOCKET_ERROR);
 
 	pSocket = new XSocketListener(this, nSocket);
-	m_ListenTable.push_back(pSocket);
+	m_listeners.push_back(pSocket);
 
 	pResult = pSocket;
 Exit0:
@@ -141,35 +142,32 @@ Exit0:
 	return pResult;
 }
 
-connector_t* XSocketManager::connect(const char node[], const char service[], int timeout)
+connector_t* XSocketManager::connect(const char node[], const char service[])
 {
-	return nullptr;
-}
-
-void XSocketManager::ConnectAsync(const char szIP[], int nPort, const connecting_callback_t& callback, int nTimeout, size_t uRecvBufferSize, size_t uSendBufferSize)
-{
-	XAsyncConnecting cs;
-
-	cs.callback = callback;
-	cs.nSocket = INVALID_SOCKET;
-	cs.dwBeginTime = get_time_ms();
-	cs.nTimeout = nTimeout;
-	cs.uRecvBufferSize = uRecvBufferSize;
-	cs.uSendBufferSize = uSendBufferSize;
-	cs.strRemoteIP = szIP;
-	cs.nPort = nPort;
-
-	m_ConnectingQueue.push_back(cs);
+	xconnector_t* connector = new xconnector_t(this, node, service);
+	m_connectors.push_back(connector);
+	return connector;
 }
 
 void XSocketManager::Wait(int nTimeout)
 {
 	ProcessSocketEvent(nTimeout);
 
-	ProcessAsyncConnect();
+	auto it = m_connectors.begin();
+	while (it != m_connectors.end())
+	{
+		auto connector = *it;
+		if (!connector->update())
+		{
+			it = m_connectors.erase(it);
+			delete connector;
+			continue;
+		}
+		++it;
+	}
 
-	auto stream_it = m_StreamTable.begin();
-	while (stream_it != m_StreamTable.end())
+	auto stream_it = m_streams.begin();
+	while (stream_it != m_streams.end())
 	{
 		XSocketStream* pStream = *stream_it;
 
@@ -182,84 +180,26 @@ void XSocketManager::Wait(int nTimeout)
         )
 		{
 			delete pStream;
-			stream_it = m_StreamTable.erase(stream_it);
+			stream_it = m_streams.erase(stream_it);
 			continue;
 		}
 		++stream_it;
 	}
 
-	auto listen_it = m_ListenTable.begin();
-	while (listen_it != m_ListenTable.end())
+	auto listen_it = m_listeners.begin();
+	while (listen_it != m_listeners.end())
 	{
 		XSocketListener* pListenSocket = *listen_it;
 		pListenSocket->TryAccept();
-		if (pListenSocket->m_bUserClosed)
+		if (pListenSocket->m_user_closed)
 		{
 			delete pListenSocket;
-			listen_it = m_ListenTable.erase(listen_it);
+			listen_it = m_listeners.erase(listen_it);
 			continue;
 		}
 		++listen_it;
 	}
 }
-
-void XSocketManager::ProcessAsyncConnect()
-{
-	int nRetCode = 0;
-	int64_t dwTimeNow = get_time_ms();
-
-	auto it = m_ConnectingQueue.begin();
-	while (it != m_ConnectingQueue.end())
-	{
-		if (it->nSocket == INVALID_SOCKET)
-		{
-			it->nSocket = ConnectSocket(it->strRemoteIP.c_str(), it->nPort);
-			if (it->nSocket == INVALID_SOCKET)
-			{
-				get_error_string(m_szError, _countof(m_szError), get_socket_error());
-				it->callback(nullptr, m_szError);
-				it = m_ConnectingQueue.erase(it);
-				continue;
-			}
-		}
-
-		if (check_can_write(it->nSocket, 0))
-		{
-			int nError = 0;
-			ISocketStream* pSocket = nullptr;
-			socklen_t nSockLen = sizeof(nError);
-			nRetCode = getsockopt(it->nSocket, SOL_SOCKET, SO_ERROR, (char*)&nError, &nSockLen);
-			if (nRetCode == 0 && nError == 0)
-			{
-				pSocket = CreateStreamSocket(it->nSocket, it->uRecvBufferSize, it->uSendBufferSize, it->strRemoteIP);
-			}
-			else
-			{
-				get_error_string(m_szError, _countof(m_szError), nError);
-			}
-
-			if (pSocket == nullptr)
-			{
-				close_socket_handle(it->nSocket);
-			}
-
-			it->callback(pSocket, m_szError);
-			it = m_ConnectingQueue.erase(it);
-			continue;
-		}
-
-		if (it->nTimeout >= 0 && dwTimeNow - it->dwBeginTime > it->nTimeout)
-		{
-			it->callback(nullptr, "request_timeout");
-			close_socket_handle(it->nSocket);
-			it = m_ConnectingQueue.erase(it);
-			continue;
-		}
-
-		++it;
-	}
-}
-
 
 void XSocketManager::ProcessSocketEvent(int nTimeout)
 {
@@ -366,7 +306,7 @@ ISocketStream* XSocketManager::CreateStreamSocket(socket_t nSocket, size_t uRecv
 	pStream->m_nSocket = nSocket;
 	pStream->m_RecvBuffer.SetSize(uRecvBufferSize);
 	pStream->m_SendBuffer.SetSize(uSendBufferSize);
-	m_StreamTable.push_back(pStream);
+	m_streams.push_back(pStream);
 
 #ifdef _MSC_VER
 	pStream->AsyncRecv();

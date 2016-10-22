@@ -127,8 +127,7 @@ int main(int argc, const char* argv[])
 
 	ISocketManager* mgr = create_socket_mgr(1000);
 
-	//mgr->ConnectAsync("::ffff:127.0.0.1", 80, [](auto a, auto b) {});
-	auto listener = mgr->Listen("", 8080);
+	auto listener = mgr->Listen("127.0.0.1", 8080);
 
 	if (!listener)
 	{
@@ -140,6 +139,17 @@ int main(int argc, const char* argv[])
 		printf("new connection\n");
 	});
 
+
+	auto connector = mgr->connect("127.0.0.1", "8080");
+	connector->on_connect([](auto stream) {
+		printf("connect ok\n");
+	});
+
+	connector->on_error([](auto err) {
+		printf("connect err: %s\n", err);
+	});
+
+	
 	while (true)
 	{
 		mgr->Wait(10);

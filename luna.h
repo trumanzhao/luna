@@ -312,11 +312,12 @@ int lua_member_new_index(lua_State* L)
         {
             const char* str = lua_tostring(L, -1);
             size_t str_len = strlen(str);
-            if (str_len < item->size)
+            if (str_len >= item->size)
             {
-                strcpy(addr, str);
+				str_len = item->size - 1;
             }
-        }
+			memcpy(addr, str, str_len + 1);
+		}
         break;
 
     case lua_member_type::member_std_str:

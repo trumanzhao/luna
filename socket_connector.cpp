@@ -22,17 +22,24 @@
 #include "socket_connector.h"
 
 
-xconnector_t::xconnector_t(const char node[], const char service[])
+xconnector_t::xconnector_t(XSocketManager* mgr, const char node[], const char service[])
 {
+	m_mgr = mgr;
 	m_node = node;
 	m_service = service;
+	m_start_time = get_time_ms();
 	m_thread = std::thread(&xconnector_t::work, this);
 }
 
 xconnector_t::~xconnector_t()
 {
-	m_start_time = get_time_ms();
 	m_thread.join();
+
+	if (m_socket = INVALID_SOCKET)
+	{
+		close_socket_handle(m_socket);
+		m_socket = INVALID_SOCKET;
+	}
 
 	if (m_addr)
 	{
@@ -48,7 +55,12 @@ bool xconnector_t::update()
 		return true;
 
 	if (!m_user_closed)
-		do_connect();
+	{
+		while (m_socket == INVALID_SOCKET && !m_callbacked)
+		{
+			do_connect();
+		}
+	}
 
 	return !m_user_closed;
 }
@@ -78,9 +90,6 @@ void xconnector_t::work()
 
 void xconnector_t::do_connect()
 {
-	if (m_callbacked)
-		return;
-
 	if (m_addr == nullptr)
 	{
 		m_error_cb(m_dns_error.c_str());
@@ -129,8 +138,9 @@ void xconnector_t::do_connect()
 
 			close_socket_handle(m_socket);
 			m_socket = INVALID_SOCKET;
-			m_next = m_next->ai_next;
 		}
+
+		m_next = m_next->ai_next;
 	}
 
 	if (m_socket == INVALID_SOCKET)
@@ -143,7 +153,7 @@ void xconnector_t::do_connect()
 	if (!check_can_write(m_socket, 0))
 	{
 		int64_t now = get_time_ms();
-		if (now > m_start_time + m_timeout)
+		if (m_timeout >= 0 && now > m_start_time + m_timeout)
 		{
 			close_socket_handle(m_socket);
 			m_socket = INVALID_SOCKET;
@@ -159,10 +169,15 @@ void xconnector_t::do_connect()
 	if (ret == 0 && err == 0)
 	{
 		char ip[INET6_ADDRSTRLEN];
-		inet_ntop(m_next->ai_family, m_next->ai_addr, ip, sizeof(ip));
-		auto stream = m_mgr->CreateStreamSocket(m_socket, 0, 0, ip);
+		sockaddr_storage addr;
+		socklen_t len = sizeof(addr);
+		memset(&addr, 0, sizeof(addr));
+		getpeername(m_socket, (struct sockaddr*)&addr, &len);
+		get_ip_string(ip, sizeof(ip), addr);
+		auto stream = m_mgr->CreateStreamSocket(m_socket, m_recv_buffer_size, m_send_buffer_size, ip);
 		if (stream)
 		{
+			m_socket = INVALID_SOCKET;
 			m_connect_cb(stream);
 		}
 		else

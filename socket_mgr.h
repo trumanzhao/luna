@@ -7,6 +7,8 @@
 #include "socket_helper.h"
 #include "socket_io.h"
 
+class xconnector_t;
+
 struct XSocketManager : ISocketManager
 {
 	XSocketManager();
@@ -16,13 +18,11 @@ struct XSocketManager : ISocketManager
 
 	ISocketListener* Listen(const char szIP[], int nPort) override;
 
-	connector_t* connect(const char node[], const char service[], int timeout) override;
+	connector_t* connect(const char node[], const char service[]) override;
 
-	void ConnectAsync(const char szIP[], int nPort, const connecting_callback_t& callback, int nTimeout, size_t uRecvBufferSize, size_t uSendBufferSize) override;
 	void Wait(int nTimeout = 16) override;
 	void Release() override { delete this; }
 
-	void ProcessAsyncConnect();
 	ISocketStream* CreateStreamSocket(socket_t nSocket, size_t uRecvBufferSize, size_t uSendBufferSize, const std::string& strRemoteIP);
 	void ProcessSocketEvent(int nTimeout);
 
@@ -44,18 +44,7 @@ struct XSocketManager : ISocketManager
 	char m_szError[64];
 	int m_max_connection = 0;
 
-	struct XAsyncConnecting
-	{
-		connecting_callback_t callback;
-		int nTimeout;
-		size_t uRecvBufferSize;
-		size_t uSendBufferSize;
-		int64_t dwBeginTime;
-		socket_t nSocket;
-		std::string strRemoteIP;
-		int nPort;
-	};
-	std::list<XAsyncConnecting> m_ConnectingQueue;
-	std::list<struct XSocketStream*> m_StreamTable;
-	std::list<struct XSocketListener*> m_ListenTable;
+	std::list<xconnector_t*> m_connectors;
+	std::list<struct XSocketStream*> m_streams;
+	std::list<struct XSocketListener*> m_listeners;
 };

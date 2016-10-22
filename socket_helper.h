@@ -16,6 +16,8 @@ inline void close_socket_handle(socket_t fd) { closesocket(fd); }
 #endif
 
 bool make_ip_addr(sockaddr_storage& addr, const char ip[], int port);
+// ip字符串建议大小: char ip[INET6_ADDRSTRLEN];
+bool get_ip_string(char ip[], size_t len, const sockaddr_storage& addr);
 
 // 返回的Socket未必是已经完成连接的,还需用CheckSocketConnected检查
 // 返回的Socket已经设置为异步模式

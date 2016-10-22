@@ -41,6 +41,22 @@ bool make_ip_addr(sockaddr_storage& addr, const char ip[], int port)
 	return inet_pton(AF_INET, ip, &ipv4->sin_addr) == 1;
 }
 
+bool get_ip_string(char ip[], size_t len, const sockaddr_storage& addr)
+{
+	socklen_t socklen = sizeof(addr);
+	if (addr.ss_family == AF_INET)
+	{
+		sockaddr_in* ipv4 = (sockaddr_in*)&addr;
+		return inet_ntop(ipv4->sin_family, &ipv4->sin_addr, ip, len) != nullptr;
+	}
+	else if (addr.ss_family == AF_INET6)
+	{
+		sockaddr_in6* ipv6 = (sockaddr_in6*)&addr;
+		return inet_ntop(ipv6->sin6_family, &ipv6->sin6_addr, ip, len) != nullptr;
+	}
+	ip[0] = '\0';
+	return false;
+}
 
 // http://beej.us/guide/bgnet/output/html/multipage/getaddrinfoman.html
 // http://man7.org/linux/man-pages/man3/getaddrinfo.3.html
@@ -100,5 +116,5 @@ bool check_can_write(socket_t fd, int timeout)
 	FD_ZERO(&wset);
 	FD_SET(fd, &wset);
 
-	return select((int)fd + 1, nullptr, &wset, nullptr, &tv) == 1;
+	return select((int)fd + 1, nullptr, &wset, nullptr, timeout >= 0 ? &tv : nullptr) == 1;
 }

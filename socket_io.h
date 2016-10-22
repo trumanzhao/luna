@@ -28,8 +28,6 @@ struct connector_t
 	virtual void close() = 0;
 };
 
-using connecting_callback_t = std::function<void(ISocketStream* pStream, const char* pszErr)>;
-
 struct ISocketManager
 {
 	virtual ISocketListener* Listen(const char szIP[], int nPort) = 0;
@@ -37,13 +35,7 @@ struct ISocketManager
 	// node: 可以为域名或者ip
 	// service: 可以为数字端口如"80"或者为服务名如"http", "ftp"
 	// timeout: 单位ms,-1表示永远
-	virtual connector_t* connect(const char node[], const char service[], int timeout = -1) = 0;
-
-	// nTimeout: 单位ms,-1表示无限
-	// uSendBufferSize,指网络库内部使用的发送缓冲区大小
-	// uRecvBufferSize,指网络库内部使用的缓冲区大小,至少要能容纳一个最大网络包
-	// 无论成败,(在稍后的Wait中)回调一定会发生
-	virtual void ConnectAsync(const char szIP[], int nPort, const connecting_callback_t& callback, int nTimeout = 2000, size_t uRecvBufferSize = 4096, size_t uSendBufferSize = 4096) = 0;
+	virtual connector_t* connect(const char node[], const char service[]) = 0;
 
 	// nTimeout: 单位ms,-1表示无限
 	virtual void Wait(int nTimeout = 50) = 0;

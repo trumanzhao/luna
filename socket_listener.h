@@ -11,16 +11,16 @@ struct XSocketListener : ISocketListener
 	~XSocketListener();
 
 	void SetStreamCallback(const std::function<void(ISocketStream* pSocket)>& callback) override { m_StreamCallback = callback; }
-	void SetStreamBufferSize(size_t uRecvBufferSize, size_t uSendBufferSize) override { m_uStreamRecvBufferSize = uRecvBufferSize; m_uStreamSendBufferSize = uSendBufferSize; }
-	void Close() override { m_bUserClosed = true; }
+	void SetStreamBufferSize(size_t uRecvBufferSize, size_t uSendBufferSize) override { m_recv_buffer_size = uRecvBufferSize; m_send_buffer_size = uSendBufferSize; }
+	void Close() override { m_user_closed = true; }
 
 	void TryAccept();
 
 	std::function<void(ISocketStream*)> m_StreamCallback;
-	size_t m_uStreamRecvBufferSize = 4096;
-	size_t m_uStreamSendBufferSize = 4096;
+	size_t m_recv_buffer_size = 4096;
+	size_t m_send_buffer_size = 4096;
 
-	bool m_bUserClosed = false;
+	bool m_user_closed = false;
 	XSocketManager* m_pSocketMgr = nullptr;
-	socket_t m_nSocket = INVALID_SOCKET;
+	socket_t m_socket = INVALID_SOCKET;
 };
