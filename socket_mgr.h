@@ -3,9 +3,11 @@
 #include <list>
 #include <vector>
 #include <string>
-
+#include <thread>
+#include <mutex>
 #include "socket_helper.h"
 #include "socket_io.h"
+#include "dns_resolver.h"
 
 class xconnector_t;
 
@@ -25,6 +27,8 @@ struct XSocketManager : ISocketManager
 
 	ISocketStream* CreateStreamSocket(socket_t nSocket, size_t uRecvBufferSize, size_t uSendBufferSize, const std::string& strRemoteIP);
 	void ProcessSocketEvent(int nTimeout);
+
+	void work();
 
 #ifdef _MSC_VER
 	HANDLE m_hCompletionPort = INVALID_HANDLE_VALUE;
@@ -47,4 +51,5 @@ struct XSocketManager : ISocketManager
 	std::list<xconnector_t*> m_connectors;
 	std::list<struct XSocketStream*> m_streams;
 	std::list<struct XSocketListener*> m_listeners;
+	dns_resolver m_dns;
 };

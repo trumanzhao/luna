@@ -161,6 +161,13 @@ Exit0:
 
 connector_t* XSocketManager::connect(const char node[], const char service[])
 {
+	dns_request_t* req = new dns_request_t;
+	req->node = node;
+	req->service = service;
+	req->dns_cb = [](addrinfo* addr) {};
+	req->err_cb = [](const char* err) {};
+	m_dns.request(req);
+	//--
 	xconnector_t* connector = new xconnector_t(this, node, service);
 	m_connectors.push_back(connector);
 	return connector;
@@ -169,6 +176,8 @@ connector_t* XSocketManager::connect(const char node[], const char service[])
 void XSocketManager::Wait(int nTimeout)
 {
 	ProcessSocketEvent(nTimeout);
+
+	m_dns.update();
 
 	auto it = m_connectors.begin();
 	while (it != m_connectors.end())
@@ -329,6 +338,12 @@ ISocketStream* XSocketManager::CreateStreamSocket(socket_t nSocket, size_t uRecv
 #endif
 
 	return pStream;
+}
+
+
+void XSocketManager::work()
+{
+
 }
 
 ISocketManager* create_socket_mgr(int max_connection)
