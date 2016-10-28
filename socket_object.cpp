@@ -223,11 +223,11 @@ void socket_stream::send(const void* data, size_t data_len)
 
 	BYTE  header[MAX_HEADER_LEN];
 	size_t header_len = encode_u64(header, sizeof(header), data_len);
-	StreamSend(header, header_len);
-	StreamSend(data, data_len);
+	stream_send(header, header_len);
+	stream_send(data, data_len);
 }
 
-void socket_stream::StreamSend(const void* pvData, size_t uDataLen)
+void socket_stream::stream_send(const void* pvData, size_t uDataLen)
 {
 	if (m_closed)
 		return;
@@ -235,7 +235,7 @@ void socket_stream::StreamSend(const void* pvData, size_t uDataLen)
 #ifdef _MSC_VER
 	if (!m_send_complete)
 	{
-		if (!m_SendBuffer.PushData(pvData, uDataLen))
+		if (!m_send_buffer.PushData(pvData, uDataLen))
 		{
 			call_error("send_cache_full");
 		}
@@ -246,7 +246,7 @@ void socket_stream::StreamSend(const void* pvData, size_t uDataLen)
 #if defined(__linux) || defined(__APPLE__)
 	if (!m_bWriteAble)
 	{
-		if (!m_SendBuffer.PushData(pvData, uDataLen))
+		if (!m_send_buffer.PushData(pvData, uDataLen))
 		{
 			call_error("send_cache_full");
 		}
@@ -266,7 +266,7 @@ void socket_stream::StreamSend(const void* pvData, size_t uDataLen)
 #ifdef _MSC_VER
 			if (nErr == WSAEWOULDBLOCK)
 			{
-				if (!m_SendBuffer.PushData(pbyData, uDataLen))
+				if (!m_send_buffer.PushData(pbyData, uDataLen))
 				{
 					call_error("send_cache_full");
 					return;
@@ -284,7 +284,7 @@ void socket_stream::StreamSend(const void* pvData, size_t uDataLen)
 			{
 				m_bWriteAble = false;
 
-				if (!m_SendBuffer.PushData(pbyData, uDataLen))
+				if (!m_send_buffer.PushData(pbyData, uDataLen))
 				{
 					call_error("send_cache_full");
 				}
@@ -318,7 +318,7 @@ void socket_stream::AsyncSend()
 
 	assert(m_send_complete);
 
-	pbyData = m_SendBuffer.GetData(&uDataLen);
+	pbyData = m_send_buffer.GetData(&uDataLen);
 	if (uDataLen == 0)
 		return;
 
@@ -352,7 +352,7 @@ void socket_stream::AsyncRecv()
 
 	assert(m_recv_complete);
 
-	pbySpace = m_RecvBuffer.GetSpace(&uSpaceLen);
+	pbySpace = m_recv_buffer.GetSpace(&uSpaceLen);
 	if (uSpaceLen == 0)
 	{
 		call_error("recv_package_too_large");
@@ -402,9 +402,9 @@ void socket_stream::OnRecvComplete(size_t uLen)
 		return;
 	}
 
-	m_RecvBuffer.PopSpace(uLen);
+	m_recv_buffer.PopSpace(uLen);
 
-	DispatchPackage();
+	dispatch_package();
 
 	AsyncRecv();
 }
@@ -421,8 +421,8 @@ void socket_stream::OnSendComplete(size_t uLen)
 		return;
 	}
 
-	m_SendBuffer.PopData(uLen);
-	m_SendBuffer.MoveDataToFront();
+	m_send_buffer.PopData(uLen);
+	m_send_buffer.MoveDataToFront();
 
 	AsyncSend();
 }
@@ -434,7 +434,7 @@ void socket_stream::OnSendAble()
 	while (!m_closed)
 	{
 		size_t uDataLen = 0;
-		BYTE* pbyData = m_SendBuffer.GetData(&uDataLen);
+		BYTE* pbyData = m_send_buffer.GetData(&uDataLen);
 
 		if (uDataLen == 0)
 		{
@@ -463,10 +463,10 @@ void socket_stream::OnSendAble()
 			return;
 		}
 
-		m_SendBuffer.PopData((size_t)nSend);
+		m_send_buffer.PopData((size_t)nSend);
 	}
 
-	m_SendBuffer.MoveDataToFront();
+	m_send_buffer.MoveDataToFront();
 }
 
 void socket_stream::OnRecvAble()
@@ -474,7 +474,7 @@ void socket_stream::OnRecvAble()
 	while (!m_closed)
 	{
 		size_t uSpaceSize = 0;
-		BYTE* pbySpace = m_RecvBuffer.GetSpace(&uSpaceSize);
+		BYTE* pbySpace = m_recv_buffer.GetSpace(&uSpaceSize);
 
 		if (uSpaceSize == 0)
 		{
@@ -502,21 +502,21 @@ void socket_stream::OnRecvAble()
 			return;
 		}
 
-		m_RecvBuffer.PopSpace(nRecv);
+		m_recv_buffer.PopSpace(nRecv);
 
-		DispatchPackage();
+		dispatch_package();
 	}
 }
 #endif
 
-void socket_stream::DispatchPackage()
+void socket_stream::dispatch_package()
 {
 	while (!m_closed)
 	{
 		BYTE* pbyData = nullptr;
 		size_t uDataLen = 0;
 
-		pbyData = m_RecvBuffer.GetData(&uDataLen);
+		pbyData = m_recv_buffer.GetData(&uDataLen);
 
 		uint64_t uPackageSize = 0;
 		size_t uHeaderLen = decode_u64(&uPackageSize, pbyData, uDataLen);
@@ -529,10 +529,10 @@ void socket_stream::DispatchPackage()
 
 		m_package_cb(pbyData + uHeaderLen, (size_t)uPackageSize);
 
-		m_RecvBuffer.PopData(uHeaderLen + (size_t)uPackageSize);
+		m_recv_buffer.PopData(uHeaderLen + (size_t)uPackageSize);
 	}
 
-	m_RecvBuffer.MoveDataToFront();
+	m_recv_buffer.MoveDataToFront();
 }
 
 void socket_stream::call_error(int err)

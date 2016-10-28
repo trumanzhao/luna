@@ -63,11 +63,11 @@ struct socket_stream : public socket_object
 	bool update(socket_manager*) override;
 	void set_package_callback(const std::function<void(BYTE*, size_t)>& cb) override { m_package_cb = cb; }
 	void set_error_callback(const std::function<void(const char*)>& cb) override { m_error_cb = cb; }
-	void set_send_cache(size_t size) override { m_SendBuffer.Resize(size); }
-	void set_recv_cache(size_t size) override { m_RecvBuffer.Resize(size); }
+	void set_send_cache(size_t size) override { m_send_buffer.Resize(size); }
+	void set_recv_cache(size_t size) override { m_recv_buffer.Resize(size); }
 	void send(const void* data, size_t data_len) override;
 
-	void StreamSend(const void* pvData, size_t uDataLen);
+	void stream_send(const void* pvData, size_t uDataLen);
 
 #ifdef _MSC_VER
 	void AsyncSend();
@@ -82,14 +82,14 @@ struct socket_stream : public socket_object
 	void OnRecvAble();
 #endif
 
-	void DispatchPackage();
+	void dispatch_package();
 	void call_error(int err);
 	void call_error(const char err[]);
 
 	char m_ip[INET6_ADDRSTRLEN];
 	socket_t m_socket = INVALID_SOCKET;
-	XSocketBuffer m_RecvBuffer;
-	XSocketBuffer m_SendBuffer;
+	XSocketBuffer m_recv_buffer;
+	XSocketBuffer m_send_buffer;
 
 #ifdef _MSC_VER
 	DWORD m_dwCompletionKey = 0;
