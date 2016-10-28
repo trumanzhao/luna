@@ -2,45 +2,27 @@
 
 #include <functional>
 
-struct ISocketStream 
+struct socket_mgr 
 {
-	virtual void Send(const void* pvData, size_t uDataLen) = 0;
-	virtual void SetDataCallback(const std::function<void(BYTE*, size_t)>& callback) = 0;
-	virtual void SetErrorCallback(const std::function<void()>& callback) = 0;
-	virtual const char* GetRemoteAddress() = 0;
-	virtual const char* GetError(int* pnError = nullptr) = 0;
-	virtual void Close() = 0;
+	virtual void reference() = 0;
+	virtual void release() = 0;
+
+	virtual void wait(int timeout) = 0;
+
+	// 注意: connect总是异步的,这里只是返回一个connector,不能用于发送数据,完成后,connector自动关闭
+	virtual int64_t connect(std::string& err, const char domain[], const char service[], int timeout) = 0;
+	virtual int64_t listen(std::string& err, const char ip[], int port) = 0;
+
+	virtual void set_send_cache(int64_t token, size_t size) = 0;
+	virtual void set_recv_cache(int64_t token, size_t size) = 0;
+	virtual void send(int64_t token, const void* data, size_t data_len) = 0;
+	virtual void close(int64_t token) = 0;
+	virtual bool get_remote_ip(std::string& ip, int64_t token) = 0;
+
+	virtual void set_listen_callback(int64_t token, const std::function<void(int64_t)>& cb) = 0;
+	virtual void set_connect_callback(int64_t token, const std::function<void(int64_t)>& cb) = 0;
+	virtual void set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb) = 0;
+	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) = 0;
 };
 
-struct ISocketListener
-{
-	virtual void SetStreamCallback(const std::function<void(ISocketStream* pSocket)>& callback) = 0;
-	virtual void SetStreamBufferSize(size_t uRecvBufferSize, size_t uSendBufferSize) = 0;
-	virtual void Close() = 0;
-};
-
-// 每个异步connect返回一个连接器,在回调后(on_connect或on_error),用户应该close.
-// 在等待connect完成期间,可以主动close,从而取消connect.
-struct connector_t
-{
-	virtual void on_connect(const std::function<void(ISocketStream*)>& cb) = 0;
-	virtual void on_error(const std::function<void(const char*)>& cb) = 0;
-	virtual void close() = 0;
-};
-
-struct ISocketManager
-{
-	virtual ISocketListener* Listen(const char szIP[], int nPort) = 0;
-
-	// node: 可以为域名或者ip
-	// service: 可以为数字端口如"80"或者为服务名如"http", "ftp"
-	// timeout: 单位ms,-1表示永远
-	virtual connector_t* connect(const char node[], const char service[]) = 0;
-
-	// nTimeout: 单位ms,-1表示无限
-	virtual void Wait(int nTimeout = 50) = 0;
-
-	virtual void Release() = 0;
-};
-
-ISocketManager* create_socket_mgr(int max_connection);
+socket_mgr* create_socket_mgr(int max_fd);

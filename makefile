@@ -4,7 +4,7 @@ target_type = execute
 define_macros =
 include_dir = . ./lua
 # 依赖库列表,空格分开
-lib =
+lib = dl pthread
 # 编译期临时文件目录
 build_dir = ./build
 # 最终产品目录:
@@ -20,6 +20,12 @@ lib_out =
 CC = gcc
 CXX = g++
 CFLAGS = -m64
+
+OS := $(shell uname)
+ifeq ($(OS), Linux)
+CFLAGS += -DLUA_USE_LINUX
+endif
+
 CXXFLAGS = $(CFLAGS) -Wno-invalid-offsetof -Wno-deprecated-declarations -std=c++1y
 
 #----------------- 下面部分通常不用改 --------------------------

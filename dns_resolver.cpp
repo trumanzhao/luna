@@ -64,7 +64,7 @@ void dns_resolver::work()
 			continue;
 		}
 
-		for_each(reqs.begin(), reqs.end(), [this](auto req) { resolve(req); });
+		for_each(reqs.begin(), reqs.end(), [this](auto req) { this->resolve(req); });
 	}
 }
 

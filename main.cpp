@@ -125,34 +125,32 @@ int main(int argc, const char* argv[])
     signal(SIGCHLD, SIG_IGN);
 #endif
 
-	ISocketManager* mgr = create_socket_mgr(1000);
+	std::string err;
+	auto* mgr = create_socket_mgr(1000);
 
-	auto listener = mgr->Listen("127.0.0.1", 8080);
-
+	auto listener = mgr->listen(err, "127.0.0.1", 8080);
 	if (!listener)
 	{
 		puts("failed listen");
 		return 0;
 	}
 
-	listener->SetStreamCallback([](auto sm) {
-		printf("new connection\n");
+	mgr->set_listen_callback(listener, [](auto sm) {
+		printf("new connection: %lld\n", sm);
 	});
 
-
-	auto connector = mgr->connect("127.0.0.1", "8080");
-	connector->on_connect([](auto stream) {
-		printf("connect ok\n");
+	auto connector = mgr->connect(err, "127.0.0.1", "8080", 1000);
+	mgr->set_connect_callback(connector, [](auto sm) {
+		printf("connect ok: %lld\n", sm);
 	});
 
-	connector->on_error([](auto err) {
+	mgr->set_error_callback(connector, [](auto err) {
 		printf("connect err: %s\n", err);
 	});
-
 	
 	while (true)
 	{
-		mgr->Wait(100);
+		mgr->wait(100);
 	}
 
     if (argc != 2)

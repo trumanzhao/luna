@@ -19,26 +19,31 @@ struct XSocketBuffer
 		m_pbyDataEnd = nullptr;
 	}
 
-	void SetSize(size_t uSize)
+	void Resize(size_t uSize)
 	{
-		if (uSize == m_uBufferSize)
-			return;
-
 		size_t uDataLen = 0;
 		BYTE* pbyData = GetData(&uDataLen);
-		size_t uCopyLen = uDataLen <= uSize ? uDataLen : uSize;
-		if (uCopyLen > 0)
+
+		if (uSize == m_uBufferSize || uSize < uDataLen)
+			return;
+
+		if (uDataLen > 0)
 		{
 			BYTE* pbyBuffer = new BYTE[uSize];
-			memcpy(pbyBuffer, pbyData, uCopyLen);
-			if (m_pbyBuffer)
-            {
-                delete[] m_pbyBuffer;
-                m_pbyBuffer = nullptr;
-            }
+			memcpy(pbyBuffer, pbyData, uDataLen);
+			delete[] m_pbyBuffer;
 			m_pbyBuffer = pbyBuffer;
 			m_pbyDataBegin = m_pbyBuffer;
-			m_pbyDataEnd = m_pbyDataBegin + uCopyLen;
+			m_pbyDataEnd = m_pbyDataBegin + uDataLen;
+		}
+		else
+		{
+			// 这里只释放而不分配新的缓冲区,在需要用到的时候懒惰分配
+			if (m_pbyBuffer != nullptr)
+			{
+				delete[] m_pbyBuffer;
+				m_pbyBuffer = nullptr;
+			}
 		}
 		m_uBufferSize = uSize;
 	}
