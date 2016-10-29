@@ -108,6 +108,8 @@ struct XSocketBuffer
 		return m_pbyDataBegin;
 	}
 
+	bool HasData() { return m_pbyDataEnd > m_pbyDataBegin; }
+
 private:
 	void Alloc()
 	{

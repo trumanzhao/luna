@@ -94,7 +94,7 @@ void dns_resolver::resolve(dns_request_t* req)
 	else
 	{
 		std::lock_guard<std::mutex> g(m_rep_lock);
-		m_reps.push_back([=, cb = std::move(req->dns_cb)](){ cb(addr); freeaddrinfo(addr); });
+		m_reps.push_back([=, cb = std::move(req->dns_cb)](){ cb(addr);});
 	}
 	delete req;
 }

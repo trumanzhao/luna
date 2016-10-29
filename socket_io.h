@@ -9,9 +9,9 @@ struct socket_mgr
 
 	virtual void wait(int timeout) = 0;
 
-	// 注意: connect总是异步的,这里只是返回一个connector,不能用于发送数据,完成后,connector自动关闭
-	virtual int64_t connect(std::string& err, const char domain[], const char service[], int timeout) = 0;
 	virtual int64_t listen(std::string& err, const char ip[], int port) = 0;
+	// 注意: connect总是异步的,这里只是返回一个connector,不能用于发送数据,完成后,connector会自动关闭
+	virtual int64_t connect(std::string& err, const char domain[], const char service[], int timeout) = 0;
 
 	virtual void set_send_cache(int64_t token, size_t size) = 0;
 	virtual void set_recv_cache(int64_t token, size_t size) = 0;

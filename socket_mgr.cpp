@@ -32,7 +32,6 @@ socket_manager::socket_manager()
 	WSADATA wsaData;
 	WSAStartup(wVersion, &wsaData);
 #endif
-	m_szError[0] = '\0';
 }
 
 socket_manager::~socket_manager()
@@ -94,9 +93,60 @@ bool socket_manager::setup(int max_connection)
 	return true;
 }
 
-void socket_manager::wait(int nTimeout)
+void socket_manager::wait(int timeout)
 {
-	poll_event(nTimeout);
+#ifdef _MSC_VER
+	ULONG event_count = 0;
+	int ret = GetQueuedCompletionStatusEx(m_handle, &m_events[0], (ULONG)m_events.size(), &event_count, (DWORD)timeout, false);
+	if (ret)
+	{
+		for (ULONG i = 0; i < event_count; i++)
+		{
+			OVERLAPPED_ENTRY& oe = m_events[i];
+			auto stream = (socket_stream*)oe.lpCompletionKey;
+			stream->OnComplete(oe.lpOverlapped, oe.dwNumberOfBytesTransferred);
+		}
+	}
+#endif
+
+#ifdef __linux
+	int event_count = epoll_wait(m_handle, &m_events[0], (int)m_events.size(), timeout);
+	for (int i = 0; i < event_count; i++)
+	{
+		epoll_event& ev = m_events[i];
+		auto stream = (socket_stream*)ev.data.ptr;
+		if (ev.events & EPOLLIN)
+		{
+			stream->on_recvable();
+		}
+		if (ev.events & EPOLLOUT)
+		{
+			stream->on_sendable();
+		}
+	}
+#endif
+
+#ifdef __APPLE__
+	timespec time_wait;
+	time_wait.tv_sec = timeout / 1000;
+	time_wait.tv_nsec = (timeout % 1000) * 1000000;
+	int event_count = kevent(m_handle, nullptr, 0, &m_events[0], (int)m_events.size(), timeout >= 0 ? &time_wait : nullptr);
+	for (int i = 0; i < event_count; i++)
+	{
+		struct kevent& ev = m_events[i];
+		auto stream = (socket_stream*)ev.udata;
+		assert(ev.filter == EVFILT_READ || ev.filter == EVFILT_WRITE);
+		if (ev.filter == EVFILT_READ)
+		{
+			stream->on_recvable();
+		}
+		else if (ev.filter == EVFILT_WRITE)
+		{
+			stream->on_sendable();
+		}
+	}
+#endif
+
 	m_dns.update();
 
 	auto it = m_objects.begin(), end = m_objects.end();
@@ -113,12 +163,25 @@ void socket_manager::wait(int nTimeout)
 	}
 }
 
+int64_t socket_manager::listen(std::string& err, const char ip[], int port)
+{
+	socket_listener* listener = new socket_listener();
+	if (!listener->listen(err, ip, port))
+	{
+		delete listener;
+		return 0;
+	}
+	int64_t token = new_token();
+	m_objects[token] = listener;
+	return token;
+}
+
 int64_t socket_manager::connect(std::string& err, const char domain[], const char service[], int timeout)
 {
 	int64_t token = new_token();
 	socket_connector* connector = new socket_connector();
-
 	dns_request_t* req = new dns_request_t;
+
 	req->node = domain;
 	req->service = service;
 
@@ -147,51 +210,6 @@ int64_t socket_manager::connect(std::string& err, const char domain[], const cha
 	m_dns.request(req);
 	m_objects[token] = connector;
 
-	return token;
-}
-
-int64_t socket_manager::listen(std::string& err, const char ip[], int port)
-{
-	int64_t token = 0;
-	int nRetCode = false;
-	int nOne = 1;
-	socket_t nSocket = INVALID_SOCKET;
-	sockaddr_storage addr;
-	size_t addr_len = 0;
-	socket_listener* listener = nullptr;
-
-	nRetCode = make_ip_addr(&addr, &addr_len, ip, port);
-	FAILED_JUMP(nRetCode);
-
-	nSocket = socket(addr.ss_family, SOCK_STREAM, IPPROTO_IP);
-	FAILED_JUMP(nSocket != INVALID_SOCKET);
-
-	set_none_block(nSocket);
-
-	nRetCode = setsockopt(nSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&nOne, sizeof(nOne));
-	FAILED_JUMP(nRetCode != SOCKET_ERROR);
-
-	// macOSX对地址数据结构的长度,不能传入sizeof(addr),而要按实际使用长度传(ipv4/ipv6)
-	nRetCode = bind(nSocket, (sockaddr*)&addr, (int)addr_len);
-	FAILED_JUMP(nRetCode != SOCKET_ERROR);
-
-	nRetCode = ::listen(nSocket, 16);
-	FAILED_JUMP(nRetCode != SOCKET_ERROR);
-
-	listener = new socket_listener(nSocket);
-	token = new_token();
-	m_objects[token] = listener;
-Exit0:
-	if (token == 0)
-	{
-		get_error_string(m_szError, sizeof(m_szError), get_socket_error());
-		err = m_szError;
-		if (nSocket != INVALID_SOCKET)
-		{
-			close_socket_handle(nSocket);
-			nSocket = INVALID_SOCKET;
-		}
-	}
 	return token;
 }
 
@@ -272,88 +290,27 @@ void socket_manager::set_error_callback(int64_t token, const std::function<void(
 	}
 }
 
-void socket_manager::poll_event(int nTimeout)
-{
-#ifdef _MSC_VER
-	ULONG uEventCount;
-	int nRetCode = GetQueuedCompletionStatusEx(m_handle, &m_events[0], (ULONG)m_events.size(), &uEventCount, (DWORD)nTimeout, false);
-	if (!nRetCode)
-		return;
-
-	for (ULONG i = 0; i < uEventCount; i++)
-	{
-		OVERLAPPED_ENTRY& oe = m_events[i];
-		socket_stream* pStream = (socket_stream*)oe.lpCompletionKey;
-		pStream->OnComplete(oe.lpOverlapped, oe.dwNumberOfBytesTransferred);
-	}
-#endif
-
-#ifdef __linux
-	int nCount = epoll_wait(m_handle, &m_events[0], (int)m_events.size(), nTimeout);
-	for (int i = 0; i < nCount; i++)
-	{
-		epoll_event& ev = m_events[i];
-		auto pStream = (socket_stream*)ev.data.ptr;
-
-		if (ev.events & EPOLLIN)
-		{
-			pStream->OnRecvAble();
-		}
-
-		if (ev.events & EPOLLOUT)
-		{
-			pStream->OnSendAble();
-		}
-	}
-#endif
-
-#ifdef __APPLE__
-	timespec time_wait;
-	time_wait.tv_sec = nTimeout / 1000;
-	time_wait.tv_nsec = (nTimeout % 1000) * 1000000;
-	int nCount = kevent(m_handle, nullptr, 0, &m_events[0], (int)m_events.size(), nTimeout >= 0 ? &time_wait : nullptr);
-	for (int i = 0; i < nCount; i++)
-	{
-		struct kevent& ev = m_events[i];
-		auto pStream = (socket_stream*)ev.udata;
-		assert(ev.filter == EVFILT_READ || ev.filter == EVFILT_WRITE);
-		if (ev.filter == EVFILT_READ)
-		{
-			pStream->OnRecvAble();
-		}
-		else if (ev.filter == EVFILT_WRITE)
-		{
-			pStream->OnSendAble();
-		}
-	}
-#endif
-}
-
 int64_t socket_manager::new_stream(socket_t fd)
 {
 	int64_t token = new_token();
 	socket_stream* stm = new socket_stream(fd);
 
 #ifdef _MSC_VER
-	HANDLE hHandle = CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)stm, 0);
-	if (hHandle != m_handle)
+	HANDLE handle = CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)stm, 0);
+	if (handle != m_handle || !stm->queue_recv())
 	{
-		get_error_string(m_szError, _countof(m_szError), GetLastError());
 		delete stm;
 		return 0;
 	}
-	stm->AsyncRecv();
 #endif
 
 #ifdef __linux
 	epoll_event ev;
 	ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
 	ev.data.ptr = stm;
-
 	int nRetCode = epoll_ctl(m_handle, EPOLL_CTL_ADD, fd, &ev);
 	if (nRetCode == -1)
 	{
-		get_error_string(m_szError, _countof(m_szError), get_socket_error());
 		delete stm;
 		return 0;
 	}
@@ -361,13 +318,11 @@ int64_t socket_manager::new_stream(socket_t fd)
 
 #ifdef __APPLE__
 	struct kevent ev[2];
-	// EV_CLEAR 可以边沿触发? 注意读写标志不能按位与
 	EV_SET(&ev[0], fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, stm);
 	EV_SET(&ev[1], fd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, stm);
 	int nRetCode = kevent(m_handle, ev, _countof(ev), nullptr, 0, nullptr);
 	if (nRetCode == -1)
 	{
-		get_error_string(m_szError, _countof(m_szError), get_socket_error());
 		delete stm;
 		return 0;
 	}

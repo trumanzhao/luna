@@ -44,8 +44,9 @@ struct socket_connector : public socket_object
 
 struct socket_listener : public socket_object
 {
-	socket_listener(socket_t fd) : m_socket(fd) {};
+	socket_listener() {};
 	~socket_listener() override;
+	bool listen(std::string& err, const char ip[], int port);
 	bool update(socket_manager* mgr) override;
 	void set_listen_callback(const std::function<void(int64_t)>& cb) override { m_accept_cb = cb; }
 	void set_error_callback(const std::function<void(const char*)>& cb) override { m_error_cb = cb; }
@@ -60,27 +61,23 @@ struct socket_stream : public socket_object
 	socket_stream(socket_t fd);
 	~socket_stream() override;
 
-	bool update(socket_manager*) override;
+	bool update(socket_manager*) override { return !m_closed; };
 	void set_package_callback(const std::function<void(BYTE*, size_t)>& cb) override { m_package_cb = cb; }
 	void set_error_callback(const std::function<void(const char*)>& cb) override { m_error_cb = cb; }
 	void set_send_cache(size_t size) override { m_send_buffer.Resize(size); }
 	void set_recv_cache(size_t size) override { m_recv_buffer.Resize(size); }
 	void send(const void* data, size_t data_len) override;
 
-	void stream_send(const void* pvData, size_t uDataLen);
+	void stream_send(const char* data, size_t data_len);
 
 #ifdef _MSC_VER
-	void AsyncSend();
-	void AsyncRecv();
+	bool queue_send();
+	bool queue_recv();
 	void OnComplete(WSAOVERLAPPED* pOVL, DWORD dwLen);
-	void OnRecvComplete(size_t uLen);
-	void OnSendComplete(size_t uLen);
 #endif
 
-#if defined(__linux) || defined(__APPLE__)
-	void OnSendAble();
-	void OnRecvAble();
-#endif
+	void on_sendable();
+	void on_recvable();
 
 	void dispatch_package();
 	void call_error(int err);
@@ -92,15 +89,8 @@ struct socket_stream : public socket_object
 	XSocketBuffer m_send_buffer;
 
 #ifdef _MSC_VER
-	DWORD m_dwCompletionKey = 0;
-	WSAOVERLAPPED m_wsSendOVL;
-	WSAOVERLAPPED m_wsRecvOVL;
-	bool m_send_complete = true;
-	bool m_recv_complete = true;
-#endif
-
-#if defined(__linux) || defined(__APPLE__)
-	bool m_bWriteAble = true;
+	WSAOVERLAPPED m_send_ovl;
+	WSAOVERLAPPED m_recv_ovl;
 #endif
 
 	std::function<void(BYTE*, size_t)> m_package_cb;

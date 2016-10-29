@@ -16,12 +16,13 @@ struct socket_manager : socket_mgr
 
 	bool setup(int max_connection);
 
-	virtual void reference() override {}
-	virtual void release() override { delete this; }
+	virtual void reference() override { ++m_ref; }
+	virtual void release() override { if (--m_ref == 0) delete this; }
+
 	virtual void wait(int timout) override;
 
-	virtual int64_t connect(std::string& err, const char domain[], const char service[], int timeout) override;
 	virtual int64_t listen(std::string& err, const char ip[], int port) override;
+	virtual int64_t connect(std::string& err, const char domain[], const char service[], int timeout) override;
 
 	virtual void set_send_cache(int64_t token, size_t size) override;
 	virtual void set_recv_cache(int64_t token, size_t size) override;
@@ -34,8 +35,9 @@ struct socket_manager : socket_mgr
 	virtual void set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb) override;
 	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) override;
 
-	void poll_event(int nTimeout);
 	int64_t new_stream(socket_t fd);
+
+private:
 
 #ifdef _MSC_VER
 	HANDLE m_handle = INVALID_HANDLE_VALUE;
@@ -71,7 +73,6 @@ struct socket_manager : socket_mgr
 		return m_token;
 	}
 
-	char m_szError[128];
 	int m_max_connection = 0;
 	int m_ref = 1;
 	int64_t m_token = 0;

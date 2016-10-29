@@ -23,6 +23,8 @@ using uint64_t = unsigned long long;
 using BYTE = unsigned char;
 #endif
 
+#include <string>
+
 time_t get_file_time(const char* file_name);
 int64_t get_time_ms();
 void sleep_ms(int ms);
@@ -114,4 +116,7 @@ template <typename T, int N>
 constexpr int _countof(T(&_array)[N]) { return N; }
 #endif
 
+#define MAX_ERROR_TXT 128
+
 char* get_error_string(char buffer[], int len, int no);
+void get_error_string(std::string& err, int no);

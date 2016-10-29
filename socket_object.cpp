@@ -122,6 +122,7 @@ bool socket_connector::update(socket_manager* mgr)
 		int64_t token = mgr->new_stream(m_socket);
 		if (token != 0)
 		{
+			m_socket = INVALID_SOCKET;
 			m_connect_cb(token);
 		}
 		else
@@ -160,6 +161,41 @@ socket_listener::~socket_listener()
 		close_socket_handle(m_socket);
 		m_socket = INVALID_SOCKET;
 	}
+}
+
+bool socket_listener::listen(std::string& err, const char ip[], int port)
+{
+	bool result = false;
+	int ret = false;
+	sockaddr_storage addr;
+	size_t addr_len = 0;
+	int one = 1;
+
+	ret = make_ip_addr(&addr, &addr_len, ip, port);
+	FAILED_JUMP(ret);
+
+	m_socket = socket(addr.ss_family, SOCK_STREAM, IPPROTO_IP);
+	FAILED_JUMP(m_socket != INVALID_SOCKET);
+
+	set_none_block(m_socket);
+
+	ret = setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one));
+	FAILED_JUMP(ret != SOCKET_ERROR);
+
+	// macOSX require addr_len to be the real len (ipv4/ipv6)
+	ret = bind(m_socket, (sockaddr*)&addr, (int)addr_len);
+	FAILED_JUMP(ret != SOCKET_ERROR);
+
+	ret = ::listen(m_socket, 16);
+	FAILED_JUMP(ret != SOCKET_ERROR);
+
+	result = true;
+Exit0:
+	if (!result)
+	{
+		get_error_string(err, get_socket_error());
+	}
+	return result;
 }
 
 bool socket_listener::update(socket_manager* mgr)
@@ -205,17 +241,6 @@ socket_stream::~socket_stream()
 	}
 }
 
-bool socket_stream::update(socket_manager*)
-{
-#ifdef _MSC_VER
-	return !(m_closed && m_recv_complete && m_send_complete);
-#endif
-
-#if defined(__linux) || defined(__APPLE__)
-	return !m_closed;
-#endif
-}
-
 void socket_stream::send(const void* data, size_t data_len)
 {
 	if (m_closed)
@@ -223,68 +248,52 @@ void socket_stream::send(const void* data, size_t data_len)
 
 	BYTE  header[MAX_HEADER_LEN];
 	size_t header_len = encode_u64(header, sizeof(header), data_len);
-	stream_send(header, header_len);
-	stream_send(data, data_len);
+	stream_send((char*)header, header_len);
+	stream_send((char*)data, data_len);
 }
 
-void socket_stream::stream_send(const void* pvData, size_t uDataLen)
+void socket_stream::stream_send(const char* data, size_t data_len)
 {
 	if (m_closed)
 		return;
 
-#ifdef _MSC_VER
-	if (!m_send_complete)
+	if (m_send_buffer.HasData())
 	{
-		if (!m_send_buffer.PushData(pvData, uDataLen))
+		if (!m_send_buffer.PushData(data, data_len))
 		{
 			call_error("send_cache_full");
 		}
 		return;
 	}
-#endif
 
-#if defined(__linux) || defined(__APPLE__)
-	if (!m_bWriteAble)
+	while (data_len > 0)
 	{
-		if (!m_send_buffer.PushData(pvData, uDataLen))
+		size_t try_len = data_len < MAX_SIZE_PER_SEND ? data_len : MAX_SIZE_PER_SEND;
+		int send_len = ::send(m_socket, data, (int)try_len, 0);
+		if (send_len == -1)
 		{
-			call_error("send_cache_full");
-		}
-		return;
-	}
-#endif
-
-	const char*	pbyData = (char*)pvData;
-	while (uDataLen > 0)
-	{
-		size_t uTryLen = uDataLen < MAX_SIZE_PER_SEND ? uDataLen : MAX_SIZE_PER_SEND;
-		int nSend = ::send(m_socket, pbyData, (int)uTryLen, 0);
-		if (nSend == -1)
-		{
-			int nErr = get_socket_error();
+			int err = get_socket_error();
 
 #ifdef _MSC_VER
-			if (nErr == WSAEWOULDBLOCK)
+			if (err == WSAEWOULDBLOCK)
 			{
-				if (!m_send_buffer.PushData(pbyData, uDataLen))
+				if (!m_send_buffer.PushData(data, data_len))
 				{
 					call_error("send_cache_full");
 					return;
 				}
-				AsyncSend();
+				queue_send();
 				return;
 			}
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-			if (nErr == EINTR)
+			if (err == EINTR)
 				continue;
 
-			if (nErr == EAGAIN)
+			if (err == EAGAIN)
 			{
-				m_bWriteAble = false;
-
-				if (!m_send_buffer.PushData(pbyData, uDataLen))
+				if (!m_send_buffer.PushData(data, data_len))
 				{
 					call_error("send_cache_full");
 				}
@@ -292,244 +301,185 @@ void socket_stream::stream_send(const void* pvData, size_t uDataLen)
 			}
 #endif
 
-			call_error(nErr);
+			call_error(err);
 			return;
 		}
 
-		if (nSend == 0)
+		if (send_len == 0)
 		{
 			call_error("connection_lost");
 			return;
 		}
 
-		pbyData += nSend;
-		uDataLen -= nSend;
+		data += send_len;
+		data_len -= send_len;
 	}
 }
 
 #ifdef _MSC_VER
-void socket_stream::AsyncSend()
+static char s_zero = 0;
+bool socket_stream::queue_send()
 {
-	int nRetCode = 0;
-	DWORD dwSendBytes = 0;
-	BYTE* pbyData = nullptr;
-	size_t uDataLen = 0;
-	WSABUF wsBuf;
+	DWORD bytes = 0;
+	WSABUF ws_buf = {0, &s_zero};
 
-	assert(m_send_complete);
+	memset(&m_send_ovl, 0, sizeof(m_send_ovl));
+	int ret = WSASend(m_socket, &ws_buf, 1, &bytes, 0, &m_send_ovl, nullptr);
+	if (ret == SOCKET_ERROR)
+	{
+		int nErr = get_socket_error();
+		if (nErr == WSA_IO_PENDING)
+		{
+			return true;
+		}
+	}
+	return false;
+}
 
-	pbyData = m_send_buffer.GetData(&uDataLen);
-	if (uDataLen == 0)
-		return;
+bool socket_stream::queue_recv()
+{
+	DWORD bytes = 0;
+	DWORD flags = 0;
+	WSABUF ws_buf = {0, &s_zero};
 
-	wsBuf.len = (u_long)uDataLen;
-	wsBuf.buf = (CHAR*)pbyData;
-
-	memset(&m_wsSendOVL, 0, sizeof(m_wsSendOVL));
-
-	m_send_complete = false;
-
-	nRetCode = WSASend(m_socket, &wsBuf, 1, &dwSendBytes, 0, &m_wsSendOVL, nullptr);
+	memset(&m_recv_ovl, 0, sizeof(m_recv_ovl));
+	int nRetCode = WSARecv(m_socket, &ws_buf, 1, &bytes, &flags, &m_recv_ovl, nullptr);
 	if (nRetCode == SOCKET_ERROR)
 	{
 		int nErr = get_socket_error();
-		if (nErr != WSA_IO_PENDING)
+		if (nErr == WSA_IO_PENDING)
 		{
-			m_send_complete = true;
-			call_error(nErr);
+			return true;
 		}
 	}
+	return false;
 }
 
-void socket_stream::AsyncRecv()
+void socket_stream::OnComplete(WSAOVERLAPPED* pOVL, DWORD)
 {
-	int nRetCode = 0;
-	DWORD dwRecvBytes = 0;
-	DWORD dwFlags = 0;
-	BYTE* pbySpace = nullptr;
-	size_t uSpaceLen = 0;
-	WSABUF wsBuf;
-
-	assert(m_recv_complete);
-
-	pbySpace = m_recv_buffer.GetSpace(&uSpaceLen);
-	if (uSpaceLen == 0)
+	if (pOVL == &m_recv_ovl)
 	{
-		call_error("recv_package_too_large");
-		return;
+		on_recvable();
 	}
-
-	wsBuf.len = (u_long)uSpaceLen;
-	wsBuf.buf = (CHAR*)pbySpace;
-
-	memset(&m_wsRecvOVL, 0, sizeof(m_wsRecvOVL));
-
-	m_recv_complete = false;
-
-	nRetCode = WSARecv(m_socket, &wsBuf, 1, &dwRecvBytes, &dwFlags, &m_wsRecvOVL, nullptr);
-	if (nRetCode == SOCKET_ERROR)
+	else
 	{
-		int nErr = get_socket_error();
-		if (nErr != WSA_IO_PENDING)
-		{
-			m_recv_complete = true;
-			call_error(nErr);
-		}
+		assert(pOVL == &m_send_ovl);
+		on_sendable();
 	}
-}
-
-void socket_stream::OnComplete(WSAOVERLAPPED* pOVL, DWORD dwLen)
-{
-	if (pOVL == &m_wsRecvOVL)
-	{
-		OnRecvComplete((size_t)dwLen);
-		return;
-	}
-
-	assert(pOVL == &m_wsSendOVL);
-	OnSendComplete((size_t)dwLen);
-}
-
-void socket_stream::OnRecvComplete(size_t uLen)
-{
-	m_recv_complete = true;
-	if (m_closed)
-		return;
-
-	if (uLen == 0)
-	{
-		call_error("connection_lost");
-		return;
-	}
-
-	m_recv_buffer.PopSpace(uLen);
-
-	dispatch_package();
-
-	AsyncRecv();
-}
-
-void socket_stream::OnSendComplete(size_t uLen)
-{
-	m_send_complete = true;
-	if (m_closed)
-		return;
-
-	if (uLen == 0)
-	{
-		call_error("connection_lost");
-		return;
-	}
-
-	m_send_buffer.PopData(uLen);
-	m_send_buffer.MoveDataToFront();
-
-	AsyncSend();
 }
 #endif
 
-#if defined(__linux) || defined(__APPLE__)
-void socket_stream::OnSendAble()
+void socket_stream::on_sendable()
 {
 	while (!m_closed)
 	{
-		size_t uDataLen = 0;
-		BYTE* pbyData = m_send_buffer.GetData(&uDataLen);
+		size_t data_len = 0;
+		auto* data = m_send_buffer.GetData(&data_len);
 
-		if (uDataLen == 0)
-		{
-			m_bWriteAble = true;
+		if (data_len == 0)
 			break;
-		}
 
-		size_t uTryLen = uDataLen < MAX_SIZE_PER_SEND ? uDataLen : MAX_SIZE_PER_SEND;
-		int nSend = ::send(m_socket, pbyData, uTryLen, 0);
-		if (nSend == -1)
+		size_t try_len = data_len < MAX_SIZE_PER_SEND ? data_len : MAX_SIZE_PER_SEND;
+		int send_len = ::send(m_socket, (char*)data, (int)try_len, 0);
+		if (send_len == SOCKET_ERROR)
 		{
-			int nErr = get_socket_error();
-			if (nErr == EINTR)
+			int err = get_socket_error();
+
+#ifdef _MSC_VER
+			if (err == WSAEWOULDBLOCK)
+				break;
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+			if (err == EINTR)
 				continue;
 
-			if (nErr == EAGAIN)
+			if (nEerrrr == EAGAIN)
 				break;
+#endif
 
-			call_error(nErr);
+			call_error(err);
 			return;
 		}
 
-		if (nSend == 0)
+		if (send_len == 0)
 		{
-			call_error("Send 0, connection lost !");
+			call_error("connection_lost");
 			return;
 		}
 
-		m_send_buffer.PopData((size_t)nSend);
+		m_send_buffer.PopData((size_t)send_len);
 	}
 
 	m_send_buffer.MoveDataToFront();
 }
 
-void socket_stream::OnRecvAble()
+void socket_stream::on_recvable()
 {
 	while (!m_closed)
 	{
-		size_t uSpaceSize = 0;
-		BYTE* pbySpace = m_recv_buffer.GetSpace(&uSpaceSize);
+		size_t space_len = 0;
+		auto* space = m_recv_buffer.GetSpace(&space_len);
 
-		if (uSpaceSize == 0)
+		if (space_len == 0)
 		{
-			call_error("Recv package too large !");
+			call_error("package_too_long");
 			return;
 		}
 
-		int nRecv = recv(m_socket, pbySpace, uSpaceSize, 0);
-		if (nRecv == -1)
+		int recv_len = recv(m_socket, (char*)space, (int)space_len, 0);
+		if (recv_len == -1)
 		{
-			int nErr = get_socket_error();
-			if (nErr == EINTR)
+			int err = get_socket_error();
+
+#ifdef _MSC_VER
+			if (err == WSAEWOULDBLOCK)
+				break;
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+			if (err == EINTR)
 				continue;
 
-			if (nErr == EAGAIN)
-				return;
+			if (err == EAGAIN)
+				break;
+#endif
 
-			call_error(nErr);
+			call_error(err);
 			return;
 		}
 
-		if (nRecv == 0)
+		if (recv_len == 0)
 		{
-			call_error("Recv 0, connection lost !");
+			call_error("connection_lost");
 			return;
 		}
 
-		m_recv_buffer.PopSpace(nRecv);
+		m_recv_buffer.PopSpace(recv_len);
 
 		dispatch_package();
 	}
 }
-#endif
 
 void socket_stream::dispatch_package()
 {
 	while (!m_closed)
 	{
-		BYTE* pbyData = nullptr;
-		size_t uDataLen = 0;
+		size_t data_len = 0;
+		auto* data = m_recv_buffer.GetData(&data_len);
 
-		pbyData = m_recv_buffer.GetData(&uDataLen);
-
-		uint64_t uPackageSize = 0;
-		size_t uHeaderLen = decode_u64(&uPackageSize, pbyData, uDataLen);
-		if (uHeaderLen == 0)
+		uint64_t package_size = 0;
+		size_t header_len = decode_u64(&package_size, data, data_len);
+		if (header_len == 0)
 			break;
 
 		// 数据包还没有收完整
-		if (uDataLen < uHeaderLen + uPackageSize)
+		if (data_len < header_len + package_size)
 			break;
 
-		m_package_cb(pbyData + uHeaderLen, (size_t)uPackageSize);
+		m_package_cb(data + header_len, (size_t)package_size);
 
-		m_recv_buffer.PopData(uHeaderLen + (size_t)uPackageSize);
+		m_recv_buffer.PopData(header_len + (size_t)package_size);
 	}
 
 	m_recv_buffer.MoveDataToFront();
@@ -537,7 +487,7 @@ void socket_stream::dispatch_package()
 
 void socket_stream::call_error(int err)
 {
-	char txt[128];
+	char txt[MAX_ERROR_TXT];
 	get_error_string(txt, _countof(txt), err);
 	call_error(txt);
 }

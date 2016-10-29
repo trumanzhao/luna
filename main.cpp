@@ -139,9 +139,12 @@ int main(int argc, const char* argv[])
 		printf("new connection: %lld\n", sm);
 	});
 
+	auto on_err = [](auto err) { puts(err); };
+
 	auto connector = mgr->connect(err, "127.0.0.1", "8080", 1000);
-	mgr->set_connect_callback(connector, [](auto sm) {
+	mgr->set_connect_callback(connector, [=](auto sm) {
 		printf("connect ok: %lld\n", sm);
+		mgr->set_error_callback(sm, on_err);
 	});
 
 	mgr->set_error_callback(connector, [](auto err) {

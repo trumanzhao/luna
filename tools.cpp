@@ -11,21 +11,19 @@
 #include <string>
 #include <locale>
 #include <cstdint>
-
 #ifdef _MSC_VER
 #include <windows.h>
 #endif
-
 #ifdef __linux
 #include <unistd.h>
 #include <dirent.h>
 #endif
-
 #ifdef __APPLE__
 #include <unistd.h>
 #include <mach/clock.h>
 #include <mach/mach.h>
 #endif
+#include "tools.h"
 
 time_t get_file_time(const char* file_name)
 {
@@ -99,4 +97,11 @@ char* get_error_string(char buffer[], int len, int no)
 #endif
 
 	return buffer;
+}
+
+void get_error_string(std::string& err, int no)
+{
+	char txt[MAX_ERROR_TXT];
+	get_error_string(txt, sizeof(txt), no);
+	err = txt;
 }
