@@ -175,7 +175,6 @@ int64_t socket_manager::listen(std::string& err, const char ip[], int port)
 	size_t addr_len = 0;
 	int one = 1;	
 	auto* listener = new socket_listener();
-	int64_t token = 0;
 
 	ret = make_ip_addr(&addr, &addr_len, ip, port);
 	FAILED_JUMP(ret);
@@ -195,27 +194,22 @@ int64_t socket_manager::listen(std::string& err, const char ip[], int port)
 	ret = ::listen(fd, 16);
 	FAILED_JUMP(ret != SOCKET_ERROR);
 
-	token = register_object(fd, listener, false);
-	FAILED_JUMP(token != 0);
-
-	if (!listener->setup(fd))
+	if (watch(fd, listener, false) && listener->setup(fd))
 	{
-		m_objects.erase(token);
-		token = 0;
+		int64_t token = new_token();
+		m_objects[token] = listener;
+		return token;
 	}
 
 Exit0:
-	if (token == 0)
+	get_error_string(err, get_socket_error());
+	delete listener;
+	if (fd != INVALID_SOCKET)
 	{
-		get_error_string(err, get_socket_error());
-		delete listener;
-		if (fd != INVALID_SOCKET)
-		{
-			close_socket_handle(fd);
-			fd = INVALID_SOCKET;
-		}
+		close_socket_handle(fd);
+		fd = INVALID_SOCKET;
 	}
-	return token;
+	return 0;
 }
 
 int64_t socket_manager::connect(std::string& err, const char domain[], const char service[], int timeout)
@@ -332,12 +326,12 @@ void socket_manager::set_error_callback(int64_t token, const std::function<void(
 	}
 }
 
-int64_t socket_manager::register_object(socket_t fd, socket_object* object, bool with_write)
+bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_write)
 {
 #ifdef _MSC_VER
 	auto ret = CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)object, 0);
 	if (ret != m_handle)
-		return 0;
+		return false;
 #endif
 
 #ifdef __linux
@@ -352,7 +346,7 @@ int64_t socket_manager::register_object(socket_t fd, socket_object* object, bool
 
 	auto ret = epoll_ctl(m_handle, EPOLL_CTL_ADD, fd, &ev);
 	if (ret != 0)
-		return 0;
+		return false;
 #endif
 
 #ifdef __APPLE__
@@ -361,32 +355,23 @@ int64_t socket_manager::register_object(socket_t fd, socket_object* object, bool
 	EV_SET(&ev[1], fd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, object);
 	auto ret = kevent(m_handle, ev, with_write ? 2 : 1, nullptr, 0, nullptr);
 	if (ret != 0)
-		return 0;
+		return false;
 #endif
 
-	auto token = new_token();
-	m_objects[token] = object;
-	return token;
+	return true;
 }
 
 int64_t socket_manager::new_stream(socket_t fd)
 {
 	auto* stm = new socket_stream();
-	auto token = register_object(fd, stm, true);
-	if (token == 0)
+	if (watch(fd, stm, true) && stm->setup(fd))
 	{
-		delete stm;
-		return 0;
+		auto token = new_token();
+		m_objects[token] = stm;
+		return token;
 	}
-
-	if (!stm->setup(fd))
-	{
-		m_objects.erase(token);
-		delete stm;
-		return 0;
-	}
-
-	return token;
+	delete stm;
+	return 0;
 }
 
 socket_mgr* create_socket_mgr(int max_fd)

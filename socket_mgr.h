@@ -62,8 +62,7 @@ struct socket_manager : socket_mgr
 	virtual void set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb) override;
 	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) override;
 
-	//  connector刚刚创建的时候,还没有fd(还在等待DNS),所以...,不能把fd watch和obj register混为一谈
-	int64_t register_object(socket_t fd, socket_object* object, bool with_write);
+	bool watch(socket_t fd, socket_object* object, bool watch_write);
 	int64_t new_stream(socket_t fd);
 
 private:
