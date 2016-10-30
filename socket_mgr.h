@@ -62,7 +62,7 @@ struct socket_manager : socket_mgr
 	virtual void set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb) override;
 	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) override;
 
-	bool watch(socket_t fd, socket_object* object, bool watch_write);
+	bool watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send);
 	int64_t new_stream(socket_t fd);
 
 private:

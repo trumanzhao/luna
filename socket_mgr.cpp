@@ -194,7 +194,7 @@ int64_t socket_manager::listen(std::string& err, const char ip[], int port)
 	ret = ::listen(fd, 16);
 	FAILED_JUMP(ret != SOCKET_ERROR);
 
-	if (watch(fd, listener, false) && listener->setup(fd))
+	if (watch(fd, listener, true, false) && listener->setup(fd))
 	{
 		int64_t token = new_token();
 		m_objects[token] = listener;
@@ -326,7 +326,7 @@ void socket_manager::set_error_callback(int64_t token, const std::function<void(
 	}
 }
 
-bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_write)
+bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send)
 {
 #ifdef _MSC_VER
 	auto ret = CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)object, 0);
@@ -336,10 +336,17 @@ bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_write)
 
 #ifdef __linux
 	epoll_event ev;
-	ev.events = EPOLLIN | EPOLLET;
 	ev.data.ptr = object;
+	ev.events = EPOLLET;
 
-	if (with_write)
+	assert(watch_recv || watch_send);
+
+	if (watch_recv)
+	{
+		ev.events |= EPOLLIN;
+	}
+
+	if (watch_send)
 	{
 		ev.events |= EPOLLOUT;
 	}
@@ -351,9 +358,23 @@ bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_write)
 
 #ifdef __APPLE__
 	struct kevent ev[2];
-	EV_SET(&ev[0], fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, object);
-	EV_SET(&ev[1], fd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, object);
-	auto ret = kevent(m_handle, ev, with_write ? 2 : 1, nullptr, 0, nullptr);
+	struct kevent* pev = ev;
+
+	assert(watch_recv || watch_send);
+
+	if (watch_recv)
+	{
+		EV_SET(pev, fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, object);
+		pev++;
+	}
+
+	if (watch_send)
+	{
+		EV_SET(pev, fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, object);
+		pev++;
+	}
+
+	auto ret = kevent(m_handle, ev, (int)(pev - ev), nullptr, 0, nullptr);
 	if (ret != 0)
 		return false;
 #endif
@@ -364,7 +385,7 @@ bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_write)
 int64_t socket_manager::new_stream(socket_t fd)
 {
 	auto* stm = new socket_stream();
-	if (watch(fd, stm, true) && stm->setup(fd))
+	if (watch(fd, stm, true, true) && stm->setup(fd))
 	{
 		auto token = new_token();
 		m_objects[token] = stm;
