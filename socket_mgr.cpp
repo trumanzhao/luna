@@ -1,6 +1,7 @@
 #ifdef _MSC_VER
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
+#include <mswsock.h>
 #include <windows.h>
 #endif
 #ifdef __linux
@@ -103,8 +104,8 @@ void socket_manager::wait(int timeout)
 		for (ULONG i = 0; i < event_count; i++)
 		{
 			OVERLAPPED_ENTRY& oe = m_events[i];
-			auto stream = (socket_stream*)oe.lpCompletionKey;
-			stream->OnComplete(oe.lpOverlapped, oe.dwNumberOfBytesTransferred);
+			auto object = (socket_object*)oe.lpCompletionKey;
+			object->on_complete(this, oe.lpOverlapped);
 		}
 	}
 #endif
@@ -117,11 +118,11 @@ void socket_manager::wait(int timeout)
 		auto stream = (socket_stream*)ev.data.ptr;
 		if (ev.events & EPOLLIN)
 		{
-			stream->on_recvable();
+			stream->do_recv();
 		}
 		if (ev.events & EPOLLOUT)
 		{
-			stream->on_sendable();
+			stream->do_send();
 		}
 	}
 #endif
@@ -138,11 +139,11 @@ void socket_manager::wait(int timeout)
 		assert(ev.filter == EVFILT_READ || ev.filter == EVFILT_WRITE);
 		if (ev.filter == EVFILT_READ)
 		{
-			stream->on_recvable();
+			stream->do_recv();
 		}
 		else if (ev.filter == EVFILT_WRITE)
 		{
-			stream->on_sendable();
+			stream->do_send();
 		}
 	}
 #endif
@@ -165,14 +166,52 @@ void socket_manager::wait(int timeout)
 
 int64_t socket_manager::listen(std::string& err, const char ip[], int port)
 {
-	socket_listener* listener = new socket_listener();
-	if (!listener->listen(err, ip, port))
+	int ret = false;
+	socket_t fd = INVALID_SOCKET;
+	sockaddr_storage addr;
+	size_t addr_len = 0;
+	int one = 1;	
+	auto* listener = new socket_listener();
+	int64_t token = 0;
+
+	ret = make_ip_addr(&addr, &addr_len, ip, port);
+	FAILED_JUMP(ret);
+
+	fd = socket(addr.ss_family, SOCK_STREAM, IPPROTO_IP);
+	FAILED_JUMP(fd != INVALID_SOCKET);
+
+	set_none_block(fd);
+
+	ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one));
+	FAILED_JUMP(ret != SOCKET_ERROR);
+
+	// macOSX require addr_len to be the real len (ipv4/ipv6)
+	ret = bind(fd, (sockaddr*)&addr, (int)addr_len);
+	FAILED_JUMP(ret != SOCKET_ERROR);
+
+	ret = ::listen(fd, 16);
+	FAILED_JUMP(ret != SOCKET_ERROR);
+
+	token = register_object(fd, listener, false);
+	FAILED_JUMP(token != 0);
+
+	if (!listener->setup(fd))
 	{
-		delete listener;
-		return 0;
+		m_objects.erase(token);
+		token = 0;
 	}
-	int64_t token = new_token();
-	m_objects[token] = listener;
+
+Exit0:
+	if (token == 0)
+	{
+		get_error_string(err, get_socket_error());
+		delete listener;
+		if (fd != INVALID_SOCKET)
+		{
+			close_socket_handle(fd);
+			fd = INVALID_SOCKET;
+		}
+	}
 	return token;
 }
 
@@ -290,45 +329,59 @@ void socket_manager::set_error_callback(int64_t token, const std::function<void(
 	}
 }
 
-int64_t socket_manager::new_stream(socket_t fd)
+int64_t socket_manager::register_object(socket_t fd, socket_object* object, bool with_write)
 {
-	int64_t token = new_token();
-	socket_stream* stm = new socket_stream(fd);
-
 #ifdef _MSC_VER
-	HANDLE handle = CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)stm, 0);
-	if (handle != m_handle || !stm->queue_recv())
-	{
-		delete stm;
+	auto ret = CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)object, 0);
+	if (ret != m_handle)
 		return 0;
-	}
 #endif
 
 #ifdef __linux
 	epoll_event ev;
-	ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
-	ev.data.ptr = stm;
-	int nRetCode = epoll_ctl(m_handle, EPOLL_CTL_ADD, fd, &ev);
-	if (nRetCode == -1)
+	ev.events = EPOLLIN | EPOLLET;
+	ev.data.ptr = object;
+
+	if (with_write)
 	{
-		delete stm;
-		return 0;
+		ev.events |= EPOLLOUT;
 	}
+
+	auto ret = epoll_ctl(m_handle, EPOLL_CTL_ADD, fd, &ev);
+	if (ret != 0)
+		return 0;
 #endif
 
 #ifdef __APPLE__
 	struct kevent ev[2];
-	EV_SET(&ev[0], fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, stm);
-	EV_SET(&ev[1], fd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, stm);
-	int nRetCode = kevent(m_handle, ev, _countof(ev), nullptr, 0, nullptr);
-	if (nRetCode == -1)
+	EV_SET(&ev[0], fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, object);
+	EV_SET(&ev[1], fd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, object);
+	auto ret = kevent(m_handle, ev, with_write ? 2 : 1, nullptr, 0, nullptr);
+	if (ret != 0)
+		return 0;
+#endif
+
+	auto token = new_token();
+	m_objects[token] = object;
+	return token;
+}
+
+int64_t socket_manager::new_stream(socket_t fd)
+{
+	auto* stm = new socket_stream();
+	auto token = register_object(fd, stm, true);
+	if (token == 0)
 	{
 		delete stm;
 		return 0;
 	}
-#endif
 
-	m_objects[token] = stm;
+	if (!stm->setup(fd))
+	{
+		m_objects.erase(token);
+		delete stm;
+		return 0;
+	}
 
 	return token;
 }

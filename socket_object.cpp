@@ -1,6 +1,7 @@
 #ifdef _MSC_VER
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
+#include <mswsock.h>
 #include <windows.h>
 #endif
 #ifdef __linux
@@ -154,55 +155,55 @@ void socket_connector::on_dns_err(const char* err)
 	}
 }
 
+void socket_connector::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
+{
+}
+
+socket_listener::socket_listener()
+{
+	memset(m_nodes, 0, sizeof(m_nodes));
+	for (auto& node : m_nodes)
+	{
+		node.fd = INVALID_SOCKET;
+	}
+}
+
 socket_listener::~socket_listener()
 {
-	if (m_socket != INVALID_SOCKET)
+	for (auto& node : m_nodes)
 	{
-		close_socket_handle(m_socket);
-		m_socket = INVALID_SOCKET;
+		if (node.fd != INVALID_SOCKET)
+		{
+			close_socket_handle(node.fd);
+			node.fd = INVALID_SOCKET;
+		}
+	}
+
+	if (m_listen_socket != INVALID_SOCKET)
+	{
+		close_socket_handle(m_listen_socket);
+		m_listen_socket = INVALID_SOCKET;
 	}
 }
 
-bool socket_listener::listen(std::string& err, const char ip[], int port)
+bool socket_listener::setup(socket_t fd)
 {
-	bool result = false;
-	int ret = false;
-	sockaddr_storage addr;
-	size_t addr_len = 0;
-	int one = 1;
-
-	ret = make_ip_addr(&addr, &addr_len, ip, port);
-	FAILED_JUMP(ret);
-
-	m_socket = socket(addr.ss_family, SOCK_STREAM, IPPROTO_IP);
-	FAILED_JUMP(m_socket != INVALID_SOCKET);
-
-	set_none_block(m_socket);
-
-	ret = setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one));
-	FAILED_JUMP(ret != SOCKET_ERROR);
-
-	// macOSX require addr_len to be the real len (ipv4/ipv6)
-	ret = bind(m_socket, (sockaddr*)&addr, (int)addr_len);
-	FAILED_JUMP(ret != SOCKET_ERROR);
-
-	ret = ::listen(m_socket, 16);
-	FAILED_JUMP(ret != SOCKET_ERROR);
-
-	result = true;
-Exit0:
-	if (!result)
-	{
-		get_error_string(err, get_socket_error());
-	}
-	return result;
+#ifdef _MSC_VER
+	GUID func_guid = WSAID_ACCEPTEX;
+	DWORD bytes = 0;
+	auto ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &func_guid, sizeof(func_guid), &m_accept_func, sizeof(m_accept_func), &bytes, nullptr, nullptr);
+	if (ret == SOCKET_ERROR)
+		return false;
+#endif
+	m_listen_socket = fd;
+	return true;
 }
 
-bool socket_listener::update(socket_manager* mgr)
+void socket_listener::do_accept(socket_manager* mgr)
 {
 	while (!m_closed)
 	{
-		socket_t fd = accept(m_socket, nullptr, nullptr);
+		socket_t fd = accept(m_listen_socket, nullptr, nullptr);
 		if (fd == INVALID_SOCKET)
 			break;
 
@@ -216,21 +217,104 @@ bool socket_listener::update(socket_manager* mgr)
 		else
 		{
 			close_socket_handle(fd);
+			m_closed = true;
 			m_error_cb("new_stream_failed");
 		}
 	}
+}
+
+bool socket_listener::update(socket_manager* mgr)
+{
+#ifdef _MSC_VER
+	for (auto& node : m_nodes)
+	{
+		// 其实这个循环只有第一次执行才有用...待优化
+		if (node.fd == INVALID_SOCKET && !m_closed)
+			queue_accept(mgr, &node.ovl);
+	}
+#endif
 	return !m_closed;
 }
 
-socket_stream::socket_stream(socket_t fd)
+#ifdef _MSC_VER
+void socket_listener::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 {
-	sockaddr_storage addr;
-	socklen_t len = sizeof(addr);
-	memset(&addr, 0, sizeof(addr));
-	getpeername(fd, (struct sockaddr*)&addr, &len);
-	get_ip_string(m_ip, sizeof(m_ip), addr);
-	m_socket = fd;
+	listen_node* node = CONTAINING_RECORD(ovl, listen_node, ovl);
+
+	assert(node >= m_nodes && node < m_nodes + _countof(m_nodes));
+	assert(node->fd != INVALID_SOCKET);
+
+	set_none_block(node->fd);
+
+	auto token = mgr->new_stream(node->fd);
+	if (token == 0)
+	{
+		close_socket_handle(node->fd);
+		node->fd = INVALID_SOCKET;
+		m_closed = true;
+		m_error_cb("new_stream_failed");
+		return;
+	}
+
+	node->fd = INVALID_SOCKET;
+	m_accept_cb(token);
+	queue_accept(mgr, ovl);
 }
+
+void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
+{
+	listen_node* node = CONTAINING_RECORD(ovl, listen_node, ovl);
+
+	assert(node >= m_nodes && node < m_nodes + _countof(m_nodes));
+	assert(node->fd == INVALID_SOCKET);
+
+	while (!m_closed)
+	{
+		memset(&node->ovl, 0, sizeof(node->ovl));
+		node->fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_IP);
+		if (node->fd == INVALID_SOCKET)
+		{
+			m_closed = true;
+			m_error_cb("new_socket_failed");
+			return;
+		}
+
+		DWORD bytes = 0;
+		auto ret = (*m_accept_func)(m_listen_socket, node->fd, &node->buffer, 0, sizeof(sockaddr_storage), sizeof(sockaddr_storage), &bytes, &node->ovl);
+		if (!ret)
+		{
+			int err = get_socket_error();
+			if (err != ERROR_IO_PENDING)
+			{
+				char txt[MAX_ERROR_TXT];
+				get_error_string(txt, sizeof(txt), err);
+				close_socket_handle(node->fd);
+				node->fd = INVALID_SOCKET;
+				m_closed = true;
+				m_error_cb(txt);
+			}
+			return;
+		}
+
+		// competet without IOCP callback:
+		// to avoid recursion, don't call on_complete
+		set_none_block(node->fd);
+
+		auto token = mgr->new_stream(node->fd);
+		if (token == 0)
+		{
+			close_socket_handle(node->fd);
+			node->fd = INVALID_SOCKET;
+			m_closed = true;
+			m_error_cb("new_stream_failed");
+			return;
+		}
+
+		node->fd = INVALID_SOCKET;
+		m_accept_cb(token);
+	}
+}
+#endif
 
 socket_stream::~socket_stream()
 {
@@ -239,6 +323,17 @@ socket_stream::~socket_stream()
 		close_socket_handle(m_socket);
 		m_socket = INVALID_SOCKET;
 	}
+}
+
+bool socket_stream::setup(socket_t fd)
+{
+	sockaddr_storage addr;
+	socklen_t len = sizeof(addr);
+	memset(&addr, 0, sizeof(addr));
+	getpeername(fd, (struct sockaddr*)&addr, &len);
+	get_ip_string(m_ip, sizeof(m_ip), addr);
+	m_socket = fd;
+	return true;
 }
 
 void socket_stream::send(const void* data, size_t data_len)
@@ -355,21 +450,21 @@ bool socket_stream::queue_recv()
 	return false;
 }
 
-void socket_stream::OnComplete(WSAOVERLAPPED* pOVL, DWORD)
+void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 {
-	if (pOVL == &m_recv_ovl)
+	if (ovl == &m_recv_ovl)
 	{
-		on_recvable();
+		do_recv();
 	}
 	else
 	{
-		assert(pOVL == &m_send_ovl);
-		on_sendable();
+		assert(ovl == &m_send_ovl);
+		do_send();
 	}
 }
 #endif
 
-void socket_stream::on_sendable()
+void socket_stream::do_send()
 {
 	while (!m_closed)
 	{
@@ -414,7 +509,7 @@ void socket_stream::on_sendable()
 	m_send_buffer.MoveDataToFront();
 }
 
-void socket_stream::on_recvable()
+void socket_stream::do_recv()
 {
 	while (!m_closed)
 	{

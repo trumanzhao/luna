@@ -9,6 +9,9 @@
 #include "dns_resolver.h"
 #include "socket_object.h"
 
+//todo: IOCP,一个请求为完成前,关闭socket,那么还会出发事件么?
+//todo: mac keuque处理
+
 struct socket_manager : socket_mgr
 {
 	socket_manager();
@@ -35,6 +38,7 @@ struct socket_manager : socket_mgr
 	virtual void set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb) override;
 	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) override;
 
+	int64_t register_object(socket_t fd, socket_object* object, bool with_write);
 	int64_t new_stream(socket_t fd);
 
 private:
