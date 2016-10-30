@@ -103,8 +103,10 @@ bool socket_listener::update(socket_manager* mgr)
 #ifdef _MSC_VER
 void socket_listener::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 {
-	listen_node* node = CONTAINING_RECORD(ovl, listen_node, ovl);
+	if (m_closed)
+		return;
 
+	listen_node* node = CONTAINING_RECORD(ovl, listen_node, ovl);
 	assert(node >= m_nodes && node < m_nodes + _countof(m_nodes));
 	assert(node->fd != INVALID_SOCKET);
 

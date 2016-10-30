@@ -24,7 +24,7 @@ struct socket_object
 	virtual void set_recv_cache(size_t size) { assert(!"not supported"); }
 	virtual void send(const void* data, size_t data_len) { assert(!"not supported"); }
 	virtual void set_listen_callback(const std::function<void(int64_t)>& cb) { assert(!"not supported"); }
-	virtual void set_connect_callback(const std::function<void(int64_t)>& cb) { assert(!"not supported"); }
+	virtual void set_connect_callback(const std::function<void()>& cb) { assert(!"not supported"); }
 	virtual void set_package_callback(const std::function<void(BYTE*, size_t)>& cb) { assert(!"not supported"); }
 	virtual void set_error_callback(const std::function<void(const char*)>& cb) { assert(!"not supported"); }
 
@@ -58,7 +58,7 @@ struct socket_manager : socket_mgr
 	virtual bool get_remote_ip(std::string& ip, int64_t token) override;
 
 	virtual void set_listen_callback(int64_t token, const std::function<void(int64_t)>& cb) override;
-	virtual void set_connect_callback(int64_t token, const std::function<void(int64_t)>& cb) override;
+	virtual void set_connect_callback(int64_t token, const std::function<void()>& cb) override;
 	virtual void set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb) override;
 	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) override;
 

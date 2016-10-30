@@ -23,7 +23,6 @@
 #include "socket_mgr.h"
 #include "socket_stream.h"
 #include "socket_listener.h"
-#include "socket_connector.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "Ws2_32.lib")
@@ -215,7 +214,7 @@ Exit0:
 int64_t socket_manager::connect(std::string& err, const char domain[], const char service[], int timeout)
 {
 	int64_t token = new_token();
-	socket_connector* connector = new socket_connector();
+	socket_stream* stm = new socket_stream();
 	dns_request_t* req = new dns_request_t;
 
 	req->node = domain;
@@ -244,7 +243,7 @@ int64_t socket_manager::connect(std::string& err, const char domain[], const cha
 	};
 
 	m_dns.request(req);
-	m_objects[token] = connector;
+	m_objects[token] = stm;
 
 	return token;
 }
@@ -299,7 +298,7 @@ void socket_manager::set_listen_callback(int64_t token, const std::function<void
 	}
 }
 
-void socket_manager::set_connect_callback(int64_t token, const std::function<void(int64_t)>& cb)
+void socket_manager::set_connect_callback(int64_t token, const std::function<void()>& cb)
 {
 	auto node = get_object(token);
 	if (node)
@@ -385,10 +384,11 @@ bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_recv, 
 int64_t socket_manager::new_stream(socket_t fd)
 {
 	auto* stm = new socket_stream();
-	if (watch(fd, stm, true, true) && stm->setup(fd))
+	if (watch(fd, stm, true, true))
 	{
 		auto token = new_token();
 		m_objects[token] = stm;
+		stm->accept_socket(fd);
 		return token;
 	}
 	delete stm;
