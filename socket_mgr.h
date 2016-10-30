@@ -7,10 +7,34 @@
 #include "socket_helper.h"
 #include "socket_io.h"
 #include "dns_resolver.h"
-#include "socket_object.h"
 
 //todo: IOCP,一个请求为完成前,关闭socket,那么还会出发事件么?
 //todo: mac keuque处理
+
+struct socket_manager;
+
+struct socket_object
+{
+	virtual ~socket_object() {};
+	virtual bool update(socket_manager* mgr) = 0;
+	virtual void close() { m_closed = true; };
+	virtual void connect(struct addrinfo* addr) { assert(!"not supported"); }
+	virtual void on_dns_err(const char* err) { assert(!"not supported"); }
+	virtual void set_send_cache(size_t size) { assert(!"not supported"); }
+	virtual void set_recv_cache(size_t size) { assert(!"not supported"); }
+	virtual void send(const void* data, size_t data_len) { assert(!"not supported"); }
+	virtual void set_listen_callback(const std::function<void(int64_t)>& cb) { assert(!"not supported"); }
+	virtual void set_connect_callback(const std::function<void(int64_t)>& cb) { assert(!"not supported"); }
+	virtual void set_package_callback(const std::function<void(BYTE*, size_t)>& cb) { assert(!"not supported"); }
+	virtual void set_error_callback(const std::function<void(const char*)>& cb) { assert(!"not supported"); }
+
+#ifdef _MSC_VER
+	virtual void on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl) = 0;
+#endif
+
+protected:
+	bool m_closed = false;
+};
 
 struct socket_manager : socket_mgr
 {
@@ -38,6 +62,7 @@ struct socket_manager : socket_mgr
 	virtual void set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb) override;
 	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) override;
 
+	//  connector刚刚创建的时候,还没有fd(还在等待DNS),所以...,不能把fd watch和obj register混为一谈
 	int64_t register_object(socket_t fd, socket_object* object, bool with_write);
 	int64_t new_stream(socket_t fd);
 

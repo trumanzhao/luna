@@ -112,7 +112,9 @@
     <ClCompile Include="log.cpp" />
     <ClCompile Include="socket_mgr.cpp" />
     <ClCompile Include="dns_resolver.cpp" />
-    <ClCompile Include="socket_object.cpp" />
+    <ClCompile Include="socket_stream.cpp" />
+    <ClCompile Include="socket_connector.cpp" />
+    <ClCompile Include="socket_listener.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lua\lapi.h">
@@ -206,7 +208,9 @@
     <ClInclude Include="log.h" />
     <ClInclude Include="socket_io.h" />
     <ClInclude Include="dns_resolver.h" />
-    <ClInclude Include="socket_object.h" />
+    <ClInclude Include="socket_stream.h" />
+    <ClInclude Include="socket_connector.h" />
+    <ClInclude Include="socket_listener.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lua">

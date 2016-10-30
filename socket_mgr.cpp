@@ -21,6 +21,9 @@
 #include "socket_helper.h"
 #include "io_buffer.h"
 #include "socket_mgr.h"
+#include "socket_stream.h"
+#include "socket_listener.h"
+#include "socket_connector.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "Ws2_32.lib")
