@@ -118,14 +118,7 @@ void socket_manager::wait(int timeout)
 	{
 		epoll_event& ev = m_events[i];
 		auto object = (socket_object*)ev.data.ptr;
-		if (ev.events & EPOLLIN)
-		{
-			object->do_recv();
-		}
-		if (ev.events & EPOLLOUT)
-		{
-			object->do_send();
-		}
+        object->on_complete(this, ev.events & EPOLLIN != 0, ev.events & EPOLLOUT != 0);
 	}
 #endif
 
@@ -139,14 +132,7 @@ void socket_manager::wait(int timeout)
 		struct kevent& ev = m_events[i];
 		auto object = (socket_object*)ev.udata;
 		assert(ev.filter == EVFILT_READ || ev.filter == EVFILT_WRITE);
-		if (ev.filter == EVFILT_READ)
-		{
-			object->do_recv();
-		}
-		else if (ev.filter == EVFILT_WRITE)
-		{
-			object->do_send();
-		}
+        object->on_complete(this, ev.filter == EVFILT_READ, ev.filter == EVFILT_WRITE);
 	}
 #endif
 

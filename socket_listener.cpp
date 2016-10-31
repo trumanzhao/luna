@@ -67,30 +67,6 @@ bool socket_listener::setup(socket_t fd)
 	return true;
 }
 
-void socket_listener::do_accept(socket_manager* mgr)
-{
-	while (!m_closed)
-	{
-		socket_t fd = accept(m_socket, nullptr, nullptr);
-		if (fd == INVALID_SOCKET)
-			break;
-
-		set_none_block(fd);
-
-		int64_t token = mgr->new_stream(fd);
-		if (token != 0)
-		{
-			m_accept_cb(token);
-		}
-		else
-		{
-			close_socket_handle(fd);
-			m_closed = true;
-			m_error_cb("new_stream_failed");
-		}
-	}
-}
-
 bool socket_listener::update(socket_manager* mgr)
 {
 #ifdef _MSC_VER
@@ -185,4 +161,32 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 	}
 }
 #endif
+
+#if defined(__linux) || defined(__APPLE__)
+void socket_listener::on_complete(socket_manager* mgr, bool can_read, bool can_write)
+{
+    while (!m_closed)
+    {
+        socket_t fd = accept(m_socket, nullptr, nullptr);
+        if (fd == INVALID_SOCKET)
+            break;
+
+        set_none_block(fd);
+
+        int64_t token = mgr->new_stream(fd);
+        if (token != 0)
+        {
+            m_accept_cb(token);
+        }
+        else
+        {
+            // TODO: 这种情况,真的要关闭么?
+            close_socket_handle(fd);
+            m_closed = true;
+            m_error_cb("new_stream_failed");
+        }
+    }
+}
+#endif
+
 

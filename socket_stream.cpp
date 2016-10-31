@@ -122,11 +122,19 @@ bool socket_stream::update(socket_manager* mgr)
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-			if (err == EINPROGRESS)
-				break;
+            if (err == EINTR)
+                continue;
 
-			if (err == EINTR)
-				continue;
+			if (err == EINPROGRESS)
+            {
+                if (!mgr->watch(m_socket, this, false, true))
+                {
+                    m_closed = true;
+                    m_error_cb("connecting_watch_failed");
+                    return false;
+                }
+				break;
+            }
 #endif
 
 			close_socket_handle(m_socket);
@@ -264,6 +272,60 @@ void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 	}
 }
 #endif
+
+#if defined(__linux) || defined(__APPLE__)
+void socket_stream::on_complete(socket_manager* mgr, bool can_read, bool can_write)
+{
+    if (m_closed)
+        return;
+
+    if (m_connected)
+    {
+        if (can_read)
+        {
+            do_recv();
+        }
+
+        if (can_write)
+        {
+            do_send();
+        }
+        return;
+    }
+
+    assert(!can_read);
+
+    int err = 0;
+    socklen_t sock_len = sizeof(err);
+    auto ret = getsockopt(m_socket, SOL_SOCKET, SO_ERROR, (char*)&err, &sock_len);
+    if (ret == 0 && err == 0)
+    {
+        freeaddrinfo(m_addr);
+        m_addr = nullptr;
+        m_next = nullptr;
+
+        if (!mgr->watch(m_socket, this, true, true))
+        {
+            m_closed = true;
+            m_error_cb("connection_watch_failed");
+            return;
+        }
+        m_connected = true;
+        m_connect_cb();
+        return;
+    }
+
+    // socket连接失败,还可以继续dns解析的下一个地址继续尝试
+    close_socket_handle(m_socket);
+    m_socket = INVALID_SOCKET;
+    if (m_next == nullptr)
+    {
+        m_error_cb("connect_failed");
+        m_closed = true;
+    }
+}
+#endif
+
 
 void socket_stream::do_send()
 {

@@ -24,6 +24,10 @@ struct socket_stream : public socket_object
 	void on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl) override;
 #endif
 
+#if defined(__linux) || defined(__APPLE__)
+    void on_complete(socket_manager* mgr, bool can_read, bool can_write) override;
+#endif
+
 	void do_send();
 	void do_recv();
 

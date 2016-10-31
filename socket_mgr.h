@@ -32,6 +32,10 @@ struct socket_object
 	virtual void on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl) = 0;
 #endif
 
+#if defined(__linux) || defined(__APPLE__)
+    virtual void on_complete(socket_manager* mgr, bool can_read, bool can_write) = 0;
+#endif
+
 protected:
 	bool m_closed = false;
 };
