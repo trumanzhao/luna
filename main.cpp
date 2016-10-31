@@ -144,6 +144,8 @@ int main(int argc, const char* argv[])
     mgr->set_error_callback(listener, on_err);
 
 	auto stm = mgr->connect(err, "127.0.0.1", "8080");
+    printf("connecting, stm=%lld\n", stm);
+
 	mgr->set_connect_callback(stm, [=]() {
 		printf("connect ok\n");
 	});
