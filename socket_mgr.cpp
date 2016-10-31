@@ -293,7 +293,7 @@ void socket_manager::set_connect_callback(int64_t token, const std::function<voi
 	}
 }
 
-void socket_manager::set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb)
+void socket_manager::set_package_callback(int64_t token, const std::function<void(char*, size_t)>& cb)
 {
 	auto node = get_object(token);
 	if (node)
@@ -311,7 +311,7 @@ void socket_manager::set_error_callback(int64_t token, const std::function<void(
 	}
 }
 
-bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send)
+bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send, bool modify)
 {
 #ifdef _MSC_VER
 	auto ret = CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)object, 0);
@@ -336,9 +336,14 @@ bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_recv, 
 		ev.events |= EPOLLOUT;
 	}
 
-	auto ret = epoll_ctl(m_handle, EPOLL_CTL_ADD, fd, &ev);
+	auto ret = epoll_ctl(m_handle, modify ? EPOLL_CTL_MOD : EPOLL_CTL_ADD, fd, &ev);
 	if (ret != 0)
-		return false;
+    {
+        char txt[128];
+        get_error_string(txt, sizeof(txt), errno);
+        printf("epoll_ctl: %s\n", txt);
+	    return false;
+    }
 #endif
 
 #ifdef __APPLE__

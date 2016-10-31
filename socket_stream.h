@@ -12,7 +12,7 @@ struct socket_stream : public socket_object
 	void connect(struct addrinfo* addr) override { m_addr = addr; m_next = addr; }
 	void on_dns_err(const char* err) override;
 	bool update(socket_manager* mgr) override;
-	void set_package_callback(const std::function<void(BYTE*, size_t)>& cb) override { m_package_cb = cb; }
+	void set_package_callback(const std::function<void(char*, size_t)>& cb) override { m_package_cb = cb; }
 	void set_error_callback(const std::function<void(const char*)>& cb) override { m_error_cb = cb; }
 	void set_connect_callback(const std::function<void()>& cb) override { m_connect_cb = cb; }
 	void set_send_cache(size_t size) override { m_send_buffer.Resize(size); }
@@ -49,7 +49,7 @@ struct socket_stream : public socket_object
 	WSAOVERLAPPED m_recv_ovl;
 #endif
 
-	std::function<void(BYTE*, size_t)> m_package_cb;
+	std::function<void(char*, size_t)> m_package_cb;
 	std::function<void(const char*)> m_error_cb;
 	std::function<void()> m_connect_cb;
 };

@@ -304,7 +304,7 @@ void socket_stream::on_complete(socket_manager* mgr, bool can_read, bool can_wri
         m_addr = nullptr;
         m_next = nullptr;
 
-        if (!mgr->watch(m_socket, this, true, true))
+        if (!mgr->watch(m_socket, this, true, true, true))
         {
             m_closed = true;
             m_error_cb("connection_watch_failed");
@@ -453,7 +453,7 @@ void socket_stream::dispatch_package()
 		if (data_len < header_len + package_size)
 			break;
 
-		m_package_cb(data + header_len, (size_t)package_size);
+		m_package_cb((char*)data + header_len, (size_t)package_size);
 
 		m_recv_buffer.PopData(header_len + (size_t)package_size);
 	}

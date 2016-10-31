@@ -25,7 +25,7 @@ struct socket_object
 	virtual void send(const void* data, size_t data_len) { assert(!"not supported"); }
 	virtual void set_listen_callback(const std::function<void(int64_t)>& cb) { assert(!"not supported"); }
 	virtual void set_connect_callback(const std::function<void()>& cb) { assert(!"not supported"); }
-	virtual void set_package_callback(const std::function<void(BYTE*, size_t)>& cb) { assert(!"not supported"); }
+	virtual void set_package_callback(const std::function<void(char*, size_t)>& cb) { assert(!"not supported"); }
 	virtual void set_error_callback(const std::function<void(const char*)>& cb) { assert(!"not supported"); }
 
 #ifdef _MSC_VER
@@ -63,10 +63,10 @@ struct socket_manager : socket_mgr
 
 	virtual void set_listen_callback(int64_t token, const std::function<void(int64_t)>& cb) override;
 	virtual void set_connect_callback(int64_t token, const std::function<void()>& cb) override;
-	virtual void set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb) override;
+	virtual void set_package_callback(int64_t token, const std::function<void(char*, size_t)>& cb) override;
 	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) override;
 
-	bool watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send);
+	bool watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send, bool modify = false);
 	int64_t new_stream(socket_t fd);
 
 private:

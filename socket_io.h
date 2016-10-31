@@ -21,7 +21,7 @@ struct socket_mgr
 
 	virtual void set_listen_callback(int64_t token, const std::function<void(int64_t)>& cb) = 0;
 	virtual void set_connect_callback(int64_t token, const std::function<void()>& cb) = 0;
-	virtual void set_package_callback(int64_t token, const std::function<void(BYTE*, size_t)>& cb) = 0;
+	virtual void set_package_callback(int64_t token, const std::function<void(char*, size_t)>& cb) = 0;
 	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) = 0;
 };
 
