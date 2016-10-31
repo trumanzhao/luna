@@ -67,7 +67,7 @@ socket_manager::~socket_manager()
 		close(m_handle);
 		m_handle = -1;
 	}
-#endif	
+#endif
 }
 
 bool socket_manager::setup(int max_connection)
@@ -172,7 +172,7 @@ int64_t socket_manager::listen(std::string& err, const char ip[], int port)
 	socket_t fd = INVALID_SOCKET;
 	sockaddr_storage addr;
 	size_t addr_len = 0;
-	int one = 1;	
+	int one = 1;
 	auto* listener = new socket_listener();
 
 	ret = make_ip_addr(&addr, &addr_len, ip, port);
@@ -211,7 +211,7 @@ Exit0:
 	return 0;
 }
 
-int64_t socket_manager::connect(std::string& err, const char domain[], const char service[], int timeout)
+int64_t socket_manager::connect(std::string& err, const char domain[], const char service[])
 {
 	int64_t token = new_token();
 	socket_stream* stm = new socket_stream();
@@ -220,7 +220,7 @@ int64_t socket_manager::connect(std::string& err, const char domain[], const cha
 	req->node = domain;
 	req->service = service;
 
-	req->dns_cb = [this, token](addrinfo* addr) 
+	req->dns_cb = [this, token](addrinfo* addr)
 	{
 		socket_object* obj = get_object(token);
 		if (obj)
@@ -233,7 +233,7 @@ int64_t socket_manager::connect(std::string& err, const char domain[], const cha
 		}
 	};
 
-	req->err_cb = [this, token](const char* err) 
+	req->err_cb = [this, token](const char* err)
 	{
 		socket_object* obj = get_object(token);
 		if (obj)

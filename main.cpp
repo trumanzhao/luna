@@ -135,21 +135,23 @@ int main(int argc, const char* argv[])
 		return 0;
 	}
 
-	mgr->set_listen_callback(listener, [](auto sm) {
+    auto on_err = [](auto err) { puts(err); };
+
+	mgr->set_listen_callback(listener, [=](auto sm) {
 		printf("new connection: %lld\n", sm);
+        mgr->set_error_callback(sm, on_err);
 	});
+    mgr->set_error_callback(listener, on_err);
 
-	auto on_err = [](auto err) { puts(err); };
-
-	auto connector = mgr->connect(err, "127.0.0.1", "8080", 1000);
-	mgr->set_connect_callback(connector, [=]() {
+	auto stm = mgr->connect(err, "127.0.0.1", "8080");
+	mgr->set_connect_callback(stm, [=]() {
 		printf("connect ok\n");
 	});
 
-	mgr->set_error_callback(connector, [](auto err) {
+	mgr->set_error_callback(stm, [](auto err) {
 		printf("connect err: %s\n", err);
 	});
-	
+
 	while (true)
 	{
 		mgr->wait(100);

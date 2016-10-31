@@ -7,7 +7,7 @@
 struct socket_listener : public socket_object
 {
 	socket_listener();
-	~socket_listener() override;
+	~socket_listener();
 	bool setup(socket_t fd);
 	void do_accept(socket_manager* mgr);
 	bool update(socket_manager* mgr) override;

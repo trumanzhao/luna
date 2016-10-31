@@ -49,7 +49,7 @@ struct socket_manager : socket_mgr
 	virtual void wait(int timout) override;
 
 	virtual int64_t listen(std::string& err, const char ip[], int port) override;
-	virtual int64_t connect(std::string& err, const char domain[], const char service[], int timeout) override;
+	virtual int64_t connect(std::string& err, const char domain[], const char service[]) override;
 
 	virtual void set_send_cache(int64_t token, size_t size) override;
 	virtual void set_recv_cache(int64_t token, size_t size) override;

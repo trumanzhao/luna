@@ -38,8 +38,6 @@ struct socket_stream : public socket_object
 
 	struct addrinfo* m_addr = nullptr;
 	struct addrinfo* m_next = nullptr;
-	int64_t m_start_time = get_time_ms();
-	int m_timeout = -1;
 	bool m_connected = false;
 
 #ifdef _MSC_VER

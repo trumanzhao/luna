@@ -71,17 +71,6 @@ bool socket_stream::update(socket_manager* mgr)
 		return false;
 	}
 
-	if (m_timeout >= 0)
-	{
-		int64_t now = get_time_ms();
-		if (now > m_start_time + m_timeout)
-		{
-			m_closed = true;
-			m_error_cb("request_timeout");
-			return false;
-		}
-	}
-
 	// wait for dns resolver
 	if (m_addr == nullptr)
 		return true;
@@ -199,7 +188,7 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 					call_error("send_cache_full");
 					return;
 				}
-				
+
 				return;
 			}
 #endif
