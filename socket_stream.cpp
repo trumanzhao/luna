@@ -38,8 +38,13 @@ socket_stream::~socket_stream()
 	}
 }
 
-void socket_stream::accept_socket(socket_t fd)
+bool socket_stream::accept_socket(socket_t fd)
 {
+#ifdef _MSC_VER
+	if (!wsa_recv_empty(fd, m_recv_ovl))
+		return false;
+#endif
+
 	sockaddr_storage addr;
 	socklen_t len = sizeof(addr);
 	memset(&addr, 0, sizeof(addr));
@@ -47,6 +52,7 @@ void socket_stream::accept_socket(socket_t fd)
 	get_ip_string(m_ip, sizeof(m_ip), &addr, sizeof(addr));
 	m_socket = fd;
 	m_connected = true;
+	return true;
 }
 
 void socket_stream::on_dns_err(const char* err)
@@ -99,10 +105,20 @@ bool socket_stream::update(socket_manager* mgr)
 			ret = ::connect(m_socket, m_next->ai_addr, (int)m_next->ai_addrlen);
 			if (ret != SOCKET_ERROR)
 			{
-				m_connected = true;
 				freeaddrinfo(m_addr);
 				m_addr = nullptr;
 				m_next = nullptr;
+
+#ifdef _MSC_VER
+				if (!wsa_recv_empty(m_socket, m_recv_ovl))
+				{
+					m_closed = true;
+					m_error_cb("connecting_watch_failed");
+					return false;
+				}
+#endif
+
+				m_connected = true;
 				m_connect_cb();
 				return true;
 			}
@@ -169,9 +185,9 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 	if (m_closed)
 		return;
 
-	if (m_send_buffer.HasData())
+	if (m_send_buffer.has_data())
 	{
-		if (!m_send_buffer.PushData(data, data_len))
+		if (!m_send_buffer.push_data(data, data_len))
 		{
 			m_closed = true;
 			call_error("send_cache_full");
@@ -190,7 +206,7 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 #ifdef _MSC_VER
 			if (err == WSAEWOULDBLOCK)
 			{
-				if (!m_send_buffer.PushData(data, data_len))
+				if (!m_send_buffer.push_data(data, data_len))
 				{
 					m_closed = true;
 					call_error("send_cache_full");
@@ -207,7 +223,7 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 
 			if (err == EAGAIN)
 			{
-				if (!m_send_buffer.PushData(data, data_len))
+				if (!m_send_buffer.push_data(data, data_len))
 				{
 					call_error("send_cache_full");
 				}
@@ -257,6 +273,16 @@ void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 		freeaddrinfo(m_addr);
 		m_addr = nullptr;
 		m_next = nullptr;
+
+#ifdef _MSC_VER
+		if (!wsa_recv_empty(m_socket, m_recv_ovl))
+		{
+			m_closed = true;
+			m_error_cb("connecting_watch_failed");
+			return;
+		}
+#endif
+
 		m_connected = true;
 		m_connect_cb();
 		return;
@@ -332,7 +358,7 @@ void socket_stream::do_send()
 	while (!m_closed)
 	{
 		size_t data_len = 0;
-		auto* data = m_send_buffer.GetData(&data_len);
+		auto* data = m_send_buffer.peek_data(&data_len);
 		if (data_len == 0)
 			break;
 
@@ -375,10 +401,10 @@ void socket_stream::do_send()
 			return;
 		}
 
-		m_send_buffer.PopData((size_t)send_len);
+		m_send_buffer.pop_data((size_t)send_len);
 	}
 
-	m_send_buffer.MoveDataToFront();
+	m_send_buffer.regularize(true);
 }
 
 void socket_stream::do_recv()
@@ -386,7 +412,7 @@ void socket_stream::do_recv()
 	while (!m_closed)
 	{
 		size_t space_len = 0;
-		auto* space = m_recv_buffer.GetSpace(&space_len);
+		auto* space = m_recv_buffer.peek_space(&space_len);
 		if (space_len == 0)
 		{
 			m_closed = true;
@@ -432,7 +458,7 @@ void socket_stream::do_recv()
 			return;
 		}
 
-		m_recv_buffer.PopSpace(recv_len);
+		m_recv_buffer.pop_space(recv_len);
 		dispatch_package();
 	}
 }
@@ -442,7 +468,7 @@ void socket_stream::dispatch_package()
 	while (!m_closed)
 	{
 		size_t data_len = 0;
-		auto* data = m_recv_buffer.GetData(&data_len);
+		auto* data = m_recv_buffer.peek_data(&data_len);
 
 		uint64_t package_size = 0;
 		size_t header_len = decode_u64(&package_size, data, data_len);
@@ -455,10 +481,10 @@ void socket_stream::dispatch_package()
 
 		m_package_cb((char*)data + header_len, (size_t)package_size);
 
-		m_recv_buffer.PopData(header_len + (size_t)package_size);
+		m_recv_buffer.pop_data(header_len + (size_t)package_size);
 	}
 
-	m_recv_buffer.MoveDataToFront();
+	m_recv_buffer.regularize();
 }
 
 void socket_stream::call_error(int err)

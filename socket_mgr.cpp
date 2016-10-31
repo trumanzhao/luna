@@ -372,14 +372,13 @@ bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_recv, 
 	return true;
 }
 
-int socket_manager::new_stream(socket_t fd)
+int socket_manager::accept_stream(socket_t fd)
 {
 	auto* stm = new socket_stream();
-	if (watch(fd, stm, true, true))
+	if (watch(fd, stm, true, true) && stm->accept_socket(fd))
 	{
 		auto token = new_token();
 		m_objects[token] = stm;
-		stm->accept_socket(fd);
 		return token;
 	}
 	delete stm;

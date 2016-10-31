@@ -3,126 +3,129 @@
 #include <assert.h>
 #include <string.h>
 
-struct XSocketBuffer
+struct io_buffer
 {
-	XSocketBuffer() { }
-	~XSocketBuffer() { Clear(); }
-
-	void Clear()
+	io_buffer() { }
+	~io_buffer() 
 	{
-		if (m_pbyBuffer)
+		if (m_buffer)
         {
-            delete[] m_pbyBuffer;
-            m_pbyBuffer = nullptr;
+            delete[] m_buffer;
+            m_buffer = nullptr;
         }
-		m_pbyDataBegin = nullptr;
-		m_pbyDataEnd = nullptr;
+		m_data_begin = nullptr;
+		m_data_end = nullptr;
 	}
 
-	void Resize(size_t uSize)
+	void resize(size_t size)
 	{
-		size_t uDataLen = 0;
-		BYTE* pbyData = GetData(&uDataLen);
+		size_t data_len = 0;
+		BYTE* data = peek_data(&data_len);
 
-		if (uSize == m_uBufferSize || uSize < uDataLen)
+		if (size == m_buffer_size || size < data_len)
 			return;
 
-		if (uDataLen > 0)
+		if (data_len > 0)
 		{
-			BYTE* pbyBuffer = new BYTE[uSize];
-			memcpy(pbyBuffer, pbyData, uDataLen);
-			delete[] m_pbyBuffer;
-			m_pbyBuffer = pbyBuffer;
-			m_pbyDataBegin = m_pbyBuffer;
-			m_pbyDataEnd = m_pbyDataBegin + uDataLen;
+			BYTE* pbyBuffer = new BYTE[size];
+			memcpy(pbyBuffer, data, data_len);
+			delete[] m_buffer;
+			m_buffer = pbyBuffer;
+			m_data_begin = m_buffer;
+			m_data_end = m_data_begin + data_len;
 		}
 		else
 		{
 			// 这里只释放而不分配新的缓冲区,在需要用到的时候懒惰分配
-			if (m_pbyBuffer != nullptr)
+			if (m_buffer != nullptr)
 			{
-				delete[] m_pbyBuffer;
-				m_pbyBuffer = nullptr;
+				delete[] m_buffer;
+				m_buffer = nullptr;
 			}
 		}
-		m_uBufferSize = uSize;
+		m_buffer_size = size;
 	}
 
-	size_t GetSize() { return m_uBufferSize; }
+	size_t get_size() { return m_buffer_size; }
 
-	bool PushData(const void* pvData, size_t uDataLen)
+	bool push_data(const void* data, size_t data_len)
 	{
-		if (m_pbyBuffer == nullptr)
-			Alloc();
+		if (m_buffer == nullptr)
+			alloc_buffer();
 
-		size_t uSpaceSize = 0;
-		BYTE* pbySpace = GetSpace(&uSpaceSize);
-		if (uSpaceSize < uDataLen)
+		size_t space_len = 0;
+		auto* space = peek_space(&space_len);
+		if (space_len < data_len)
 			return false;
 
-		memcpy(pbySpace, pvData, uDataLen);
-		PopSpace(uDataLen);
+		memcpy(space, data, data_len);
+		m_data_end += data_len;
 
 		return true;
 	}
 
-	void PopData(size_t uLen)
+	void pop_data(size_t uLen)
 	{
-		assert(m_pbyDataBegin + uLen <= m_pbyDataEnd);
-		m_pbyDataBegin += uLen;
+		assert(m_data_begin + uLen <= m_data_end);
+		m_data_begin += uLen;
 	}
 
-	void PopSpace(size_t uLen)
+	void pop_space(size_t len)
 	{
-		assert(m_pbyDataEnd + uLen <= m_pbyBuffer + m_uBufferSize);
-		m_pbyDataEnd += uLen;
+		assert(m_data_end + len <= m_buffer + m_buffer_size);
+		m_data_end += len;
 	}
 
-	void MoveDataToFront()
+	void regularize(bool try_free = false)
 	{
-		if (m_pbyDataBegin == m_pbyBuffer)
-			return;
-
-		size_t uLen = (size_t)(m_pbyDataEnd - m_pbyDataBegin);
-		if (uLen > 0)
+		size_t data_len = (size_t)(m_data_end - m_data_begin);
+		if (data_len > 0)
 		{
-			memmove(m_pbyBuffer, m_pbyDataBegin, uLen);
+			if (m_data_begin > m_buffer)
+			{
+				memmove(m_buffer, m_data_begin, data_len);
+				m_data_begin = m_buffer;
+				m_data_end = m_data_begin + data_len;
+			}
 		}
-		m_pbyDataBegin = m_pbyBuffer;
-		m_pbyDataEnd = m_pbyDataBegin + uLen;
+		else
+		{
+			if (try_free && m_buffer != nullptr)
+			{
+				delete[] m_buffer;
+				m_data_begin = m_data_end = m_buffer = nullptr;
+			}
+		}
 	}
 
-	BYTE* GetSpace(size_t* puSize)
+	BYTE* peek_space(size_t* len)
 	{
-		if (m_pbyBuffer == nullptr)
-			Alloc();
+		if (m_buffer == nullptr)
+			alloc_buffer();
 
-		BYTE* pbyEnd = m_pbyBuffer + m_uBufferSize;
-		*puSize = (size_t)(pbyEnd - m_pbyDataEnd);
-		return m_pbyDataEnd;
+		BYTE* end = m_buffer + m_buffer_size;
+		*len = (size_t)(end - m_data_end);
+		return m_data_end;
 	}
 
-	BYTE* GetData(size_t* puSize)
+	BYTE* peek_data(size_t* data_len)
 	{
-		*puSize = (size_t)(m_pbyDataEnd - m_pbyDataBegin);
-		return m_pbyDataBegin;
+		*data_len = (size_t)(m_data_end - m_data_begin);
+		return m_data_begin;
 	}
 
-	bool HasData() { return m_pbyDataEnd > m_pbyDataBegin; }
+	bool has_data() { return m_data_end > m_data_begin; }
 
 private:
-	void Alloc()
+	void alloc_buffer()
 	{
-		m_pbyBuffer = new BYTE[m_uBufferSize];
-		m_pbyDataBegin = m_pbyBuffer;
-		m_pbyDataEnd = m_pbyDataBegin;
+		m_buffer = new BYTE[m_buffer_size];
+		m_data_begin = m_buffer;
+		m_data_end = m_data_begin;
 	}
 
-private:
-
-	BYTE* m_pbyDataBegin = nullptr;
-	BYTE* m_pbyDataEnd = nullptr;
-
-	BYTE* m_pbyBuffer = nullptr;
-	size_t m_uBufferSize = 4096;
+	BYTE* m_data_begin = nullptr;
+	BYTE* m_data_end = nullptr;
+	BYTE* m_buffer = nullptr;
+	size_t m_buffer_size = 4096;
 };

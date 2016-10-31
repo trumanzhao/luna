@@ -92,13 +92,13 @@ void socket_listener::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 
 	set_none_block(node->fd);
 
-	auto token = mgr->new_stream(node->fd);
+	auto token = mgr->accept_stream(node->fd);
 	if (token == 0)
 	{
 		close_socket_handle(node->fd);
 		node->fd = INVALID_SOCKET;
 		m_closed = true;
-		m_error_cb("new_stream_failed");
+		m_error_cb("accept_stream_failed");
 		return;
 	}
 
@@ -146,13 +146,13 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 		// to avoid recursion, don't call on_complete
 		set_none_block(node->fd);
 
-		auto token = mgr->new_stream(node->fd);
+		auto token = mgr->accept_stream(node->fd);
 		if (token == 0)
 		{
 			close_socket_handle(node->fd);
 			node->fd = INVALID_SOCKET;
 			m_closed = true;
-			m_error_cb("new_stream_failed");
+			m_error_cb("accept_stream_failed");
 			return;
 		}
 
@@ -173,7 +173,7 @@ void socket_listener::on_complete(socket_manager* mgr, bool can_read, bool can_w
 
         set_none_block(fd);
 
-        auto token = mgr->new_stream(fd);
+        auto token = mgr->accept_stream(fd);
         if (token != 0)
         {
             m_accept_cb(token);
@@ -183,7 +183,7 @@ void socket_listener::on_complete(socket_manager* mgr, bool can_read, bool can_w
             // TODO: 这种情况,真的要关闭么?
             close_socket_handle(fd);
             m_closed = true;
-            m_error_cb("new_stream_failed");
+            m_error_cb("accept_stream_failed");
         }
     }
 }
