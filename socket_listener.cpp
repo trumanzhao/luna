@@ -25,15 +25,18 @@
 
 socket_listener::socket_listener()
 {
+#ifdef _MSC_VER
 	memset(m_nodes, 0, sizeof(m_nodes));
 	for (auto& node : m_nodes)
 	{
 		node.fd = INVALID_SOCKET;
 	}
+#endif
 }
 
 socket_listener::~socket_listener()
 {
+#ifdef _MSC_VER
 	for (auto& node : m_nodes)
 	{
 		if (node.fd != INVALID_SOCKET)
@@ -42,11 +45,12 @@ socket_listener::~socket_listener()
 			node.fd = INVALID_SOCKET;
 		}
 	}
+#endif
 
-	if (m_listen_socket != INVALID_SOCKET)
+	if (m_socket != INVALID_SOCKET)
 	{
-		close_socket_handle(m_listen_socket);
-		m_listen_socket = INVALID_SOCKET;
+		close_socket_handle(m_socket);
+		m_socket = INVALID_SOCKET;
 	}
 }
 
@@ -59,7 +63,7 @@ bool socket_listener::setup(socket_t fd)
 	if (ret == SOCKET_ERROR)
 		return false;
 #endif
-	m_listen_socket = fd;
+	m_socket = fd;
 	return true;
 }
 
@@ -67,7 +71,7 @@ void socket_listener::do_accept(socket_manager* mgr)
 {
 	while (!m_closed)
 	{
-		socket_t fd = accept(m_listen_socket, nullptr, nullptr);
+		socket_t fd = accept(m_socket, nullptr, nullptr);
 		if (fd == INVALID_SOCKET)
 			break;
 
@@ -146,7 +150,7 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 		}
 
 		DWORD bytes = 0;
-		auto ret = (*m_accept_func)(m_listen_socket, node->fd, &node->buffer, 0, sizeof(sockaddr_storage), sizeof(sockaddr_storage), &bytes, &node->ovl);
+		auto ret = (*m_accept_func)(m_socket, node->fd, &node->buffer, 0, sizeof(sockaddr_storage), sizeof(sockaddr_storage), &bytes, &node->ovl);
 		if (!ret)
 		{
 			int err = get_socket_error();

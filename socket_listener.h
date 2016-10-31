@@ -20,7 +20,7 @@ struct socket_listener : public socket_object
 #endif
 
 private:
-	socket_t m_listen_socket = INVALID_SOCKET;
+	socket_t m_socket = INVALID_SOCKET;
 	std::function<void(const char*)> m_error_cb;
 	std::function<void(int64_t)> m_accept_cb;
 
