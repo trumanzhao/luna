@@ -10,7 +10,7 @@ struct socket_listener : public socket_object
 	~socket_listener();
 	bool setup(socket_t fd);
 	bool update(socket_manager* mgr) override;
-	void set_listen_callback(const std::function<void(int64_t)>& cb) override { m_accept_cb = cb; }
+	void set_listen_callback(const std::function<void(int)>& cb) override { m_accept_cb = cb; }
 	void set_error_callback(const std::function<void(const char*)>& cb) override { m_error_cb = cb; }
 
 #ifdef _MSC_VER
@@ -25,7 +25,7 @@ struct socket_listener : public socket_object
 private:
 	socket_t m_socket = INVALID_SOCKET;
 	std::function<void(const char*)> m_error_cb;
-	std::function<void(int64_t)> m_accept_cb;
+	std::function<void(int)> m_accept_cb;
 
 #ifdef _MSC_VER
 	struct listen_node

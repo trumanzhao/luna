@@ -173,7 +173,7 @@ void socket_listener::on_complete(socket_manager* mgr, bool can_read, bool can_w
 
         set_none_block(fd);
 
-        int64_t token = mgr->new_stream(fd);
+        auto token = mgr->new_stream(fd);
         if (token != 0)
         {
             m_accept_cb(token);

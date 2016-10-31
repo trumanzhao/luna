@@ -141,30 +141,30 @@ int main(int argc, const char* argv[])
 		printf("server recv: %s\n", data);
 	};
 
-	mgr->set_listen_callback(listener, [=](auto sm) {
-		printf("server accept: %lld\n", sm);
-        mgr->set_error_callback(sm, on_err);
-		mgr->set_package_callback(sm, svr_recv);
+	mgr->set_listen_callback(listener, [=](auto svr) {
+		printf("server accept: %d\n", svr);
+        mgr->set_error_callback(svr, on_err);
+		mgr->set_package_callback(svr, svr_recv);
 	});
     mgr->set_error_callback(listener, on_err);
 
-	auto stm = mgr->connect(err, "127.0.0.1", "8080");
-    printf("connecting, stm=%lld\n", stm);
+	auto clt = mgr->connect(err, "127.0.0.1", "8080");
+    printf("connecting, clt=%d\n", clt);
 
-	mgr->set_connect_callback(stm, [=](){
+	mgr->set_connect_callback(clt, [=](){
 		printf("client connect ok !\n");
 		char hello[] = "hello !";
-		mgr->send(stm, hello, sizeof(hello));
+		mgr->send(clt, hello, sizeof(hello));
 	});
 	
-	mgr->set_error_callback(stm, on_err);
+	mgr->set_error_callback(clt, on_err);
 
 	auto clt_recv = [=](char* data, size_t data_len)
 	{
 		printf("client recv: %s\n", data);
 	};
 
-	mgr->set_package_callback(stm, clt_recv);
+	mgr->set_package_callback(clt, clt_recv);
 
 	while (true)
 	{

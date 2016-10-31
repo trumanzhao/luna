@@ -152,7 +152,7 @@ void socket_manager::wait(int timeout)
 	}
 }
 
-int64_t socket_manager::listen(std::string& err, const char ip[], int port)
+int socket_manager::listen(std::string& err, const char ip[], int port)
 {
 	int ret = false;
 	socket_t fd = INVALID_SOCKET;
@@ -181,7 +181,7 @@ int64_t socket_manager::listen(std::string& err, const char ip[], int port)
 
 	if (watch(fd, listener, true, false) && listener->setup(fd))
 	{
-		int64_t token = new_token();
+		int token = new_token();
 		m_objects[token] = listener;
 		return token;
 	}
@@ -197,9 +197,9 @@ Exit0:
 	return 0;
 }
 
-int64_t socket_manager::connect(std::string& err, const char domain[], const char service[])
+int socket_manager::connect(std::string& err, const char domain[], const char service[])
 {
-	int64_t token = new_token();
+	int token = new_token();
 	socket_stream* stm = new socket_stream();
 	dns_request_t* req = new dns_request_t;
 
@@ -234,7 +234,7 @@ int64_t socket_manager::connect(std::string& err, const char domain[], const cha
 	return token;
 }
 
-void socket_manager::set_send_cache(int64_t token, size_t size)
+void socket_manager::set_send_cache(int token, size_t size)
 {
 	auto node = get_object(token);
 	if (node)
@@ -243,7 +243,7 @@ void socket_manager::set_send_cache(int64_t token, size_t size)
 	}
 }
 
-void socket_manager::set_recv_cache(int64_t token, size_t size)
+void socket_manager::set_recv_cache(int token, size_t size)
 {
 	auto node = get_object(token);
 	if (node)
@@ -252,7 +252,7 @@ void socket_manager::set_recv_cache(int64_t token, size_t size)
 	}
 }
 
-void socket_manager::send(int64_t token, const void* data, size_t data_len)
+void socket_manager::send(int token, const void* data, size_t data_len)
 {
 	auto node = get_object(token);
 	if (node)
@@ -261,7 +261,7 @@ void socket_manager::send(int64_t token, const void* data, size_t data_len)
 	}
 }
 
-void socket_manager::close(int64_t token)
+void socket_manager::close(int token)
 {
 	auto node = get_object(token);
 	if (node)
@@ -270,12 +270,12 @@ void socket_manager::close(int64_t token)
 	}
 }
 
-bool socket_manager::get_remote_ip(std::string& ip, int64_t token)
+bool socket_manager::get_remote_ip(std::string& ip, int token)
 {
 	return false;
 }
 
-void socket_manager::set_listen_callback(int64_t token, const std::function<void(int64_t)>& cb)
+void socket_manager::set_listen_callback(int token, const std::function<void(int)>& cb)
 {
 	auto node = get_object(token);
 	if (node)
@@ -284,7 +284,7 @@ void socket_manager::set_listen_callback(int64_t token, const std::function<void
 	}
 }
 
-void socket_manager::set_connect_callback(int64_t token, const std::function<void()>& cb)
+void socket_manager::set_connect_callback(int token, const std::function<void()>& cb)
 {
 	auto node = get_object(token);
 	if (node)
@@ -293,7 +293,7 @@ void socket_manager::set_connect_callback(int64_t token, const std::function<voi
 	}
 }
 
-void socket_manager::set_package_callback(int64_t token, const std::function<void(char*, size_t)>& cb)
+void socket_manager::set_package_callback(int token, const std::function<void(char*, size_t)>& cb)
 {
 	auto node = get_object(token);
 	if (node)
@@ -302,7 +302,7 @@ void socket_manager::set_package_callback(int64_t token, const std::function<voi
 	}
 }
 
-void socket_manager::set_error_callback(int64_t token, const std::function<void(const char*)>& cb)
+void socket_manager::set_error_callback(int token, const std::function<void(const char*)>& cb)
 {
 	auto node = get_object(token);
 	if (node)
@@ -372,7 +372,7 @@ bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_recv, 
 	return true;
 }
 
-int64_t socket_manager::new_stream(socket_t fd)
+int socket_manager::new_stream(socket_t fd)
 {
 	auto* stm = new socket_stream();
 	if (watch(fd, stm, true, true))

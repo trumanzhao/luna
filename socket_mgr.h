@@ -8,9 +8,6 @@
 #include "socket_io.h"
 #include "dns_resolver.h"
 
-//todo: IOCP,一个请求为完成前,关闭socket,那么还会出发事件么?
-//todo: mac keuque处理
-
 struct socket_manager;
 
 struct socket_object
@@ -23,7 +20,7 @@ struct socket_object
 	virtual void set_send_cache(size_t size) { assert(!"not supported"); }
 	virtual void set_recv_cache(size_t size) { assert(!"not supported"); }
 	virtual void send(const void* data, size_t data_len) { assert(!"not supported"); }
-	virtual void set_listen_callback(const std::function<void(int64_t)>& cb) { assert(!"not supported"); }
+	virtual void set_listen_callback(const std::function<void(int)>& cb) { assert(!"not supported"); }
 	virtual void set_connect_callback(const std::function<void()>& cb) { assert(!"not supported"); }
 	virtual void set_package_callback(const std::function<void(char*, size_t)>& cb) { assert(!"not supported"); }
 	virtual void set_error_callback(const std::function<void(const char*)>& cb) { assert(!"not supported"); }
@@ -52,22 +49,22 @@ struct socket_manager : socket_mgr
 
 	virtual void wait(int timout) override;
 
-	virtual int64_t listen(std::string& err, const char ip[], int port) override;
-	virtual int64_t connect(std::string& err, const char domain[], const char service[]) override;
+	virtual int listen(std::string& err, const char ip[], int port) override;
+	virtual int connect(std::string& err, const char domain[], const char service[]) override;
 
-	virtual void set_send_cache(int64_t token, size_t size) override;
-	virtual void set_recv_cache(int64_t token, size_t size) override;
-	virtual void send(int64_t token, const void* data, size_t data_len) override;
-	virtual void close(int64_t token) override;
-	virtual bool get_remote_ip(std::string& ip, int64_t token) override;
+	virtual void set_send_cache(int token, size_t size) override;
+	virtual void set_recv_cache(int token, size_t size) override;
+	virtual void send(int token, const void* data, size_t data_len) override;
+	virtual void close(int token) override;
+	virtual bool get_remote_ip(std::string& ip, int token) override;
 
-	virtual void set_listen_callback(int64_t token, const std::function<void(int64_t)>& cb) override;
-	virtual void set_connect_callback(int64_t token, const std::function<void()>& cb) override;
-	virtual void set_package_callback(int64_t token, const std::function<void(char*, size_t)>& cb) override;
-	virtual void set_error_callback(int64_t token, const std::function<void(const char*)>& cb) override;
+	virtual void set_listen_callback(int token, const std::function<void(int)>& cb) override;
+	virtual void set_connect_callback(int token, const std::function<void()>& cb) override;
+	virtual void set_package_callback(int token, const std::function<void(char*, size_t)>& cb) override;
+	virtual void set_error_callback(int token, const std::function<void(const char*)>& cb) override;
 
 	bool watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send, bool modify = false);
-	int64_t new_stream(socket_t fd);
+	int new_stream(socket_t fd);
 
 private:
 
@@ -86,7 +83,7 @@ private:
 	std::vector<struct kevent> m_events;
 #endif
 
-	socket_object* get_object(int64_t token)
+	socket_object* get_object(int token)
 	{
 		auto it = m_objects.find(token);
 		if (it != m_objects.end())
@@ -96,7 +93,7 @@ private:
 		return nullptr;
 	}
 
-	int64_t new_token()
+	int new_token()
 	{
 		while (m_token == 0 || m_objects.find(m_token) != m_objects.end())
 		{
@@ -107,7 +104,7 @@ private:
 
 	int m_max_connection = 0;
 	int m_ref = 1;
-	int64_t m_token = 0;
-	std::unordered_map<int64_t, socket_object*> m_objects;
+	int m_token = 0;
+	std::unordered_map<int, socket_object*> m_objects;
 	dns_resolver m_dns;
 };
