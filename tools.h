@@ -1,4 +1,4 @@
-/*
+﻿/*
 ** repository: https://github.com/trumanzhao/luna
 ** trumanzhao, 2016/10/19, trumanzhao@foxmail.com
 */
@@ -11,6 +11,8 @@
 #include <windows.h>
 using int64_t = long long;
 using uint64_t = unsigned long long;
+#define getcwd _getcwd
+#define strdup _strdup
 #endif
 
 #if defined(__linux) || defined(__APPLE__)

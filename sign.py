@@ -18,9 +18,9 @@ def recode(path):
         encoding = result['encoding']
 
     lines = io.open(path, "r", encoding=encoding).readlines();
-    for i in xrange(0, len(lines)):
+    for i in range(0, len(lines)):
         lines[i] = lines[i].rstrip() + "\n";
-    io.open(path, "w", encoding="utf-8").writelines(lines);
+    io.open(path, "w", encoding="utf-8-sig").writelines(lines);
 
 sign = list();
 sign.append(u"/*");
@@ -39,12 +39,12 @@ def signed(lines):
 def sign_file(path):
     recode(path);
 
-    lines = io.open(path, "r", encoding="utf-8").readlines();
+    lines = io.open(path, "r", encoding="utf-8-sig").readlines();
     if signed(lines):
         print("%s 已签名!" % path);
         return;
 
-    for i in xrange(0, len(sign)):
+    for i in range(0, len(sign)):
         lines.insert(i, sign[i] + u"\n");
 
     print("签名: %s" % path);
