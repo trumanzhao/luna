@@ -1,3 +1,8 @@
+/*
+** repository: https://github.com/trumanzhao/luna
+** trumanzhao, 2016-11-01, trumanzhao@foxmail.com
+*/
+
 #ifdef _MSC_VER
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
@@ -309,7 +314,7 @@ void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 		return;
 	}
 
-	// socketÁ¬½ÓÊ§°Ü,»¹¿ÉÒÔ¼ÌĞødns½âÎöµÄÏÂÒ»¸öµØÖ·¼ÌĞø³¢ÊÔ
+	// socketè¿æ¥å¤±è´¥,è¿˜å¯ä»¥ç»§ç»­dnsè§£æçš„ä¸‹ä¸€ä¸ªåœ°å€ç»§ç»­å°è¯•
 	close_socket_handle(m_socket);
 	m_socket = INVALID_SOCKET;
 	if (m_next == nullptr)
@@ -362,7 +367,7 @@ void socket_stream::on_complete(socket_manager* mgr, bool can_read, bool can_wri
         return;
     }
 
-    // socketÁ¬½ÓÊ§°Ü,»¹¿ÉÒÔ¼ÌĞødns½âÎöµÄÏÂÒ»¸öµØÖ·¼ÌĞø³¢ÊÔ
+    // socketè¿æ¥å¤±è´¥,è¿˜å¯ä»¥ç»§ç»­dnsè§£æçš„ä¸‹ä¸€ä¸ªåœ°å€ç»§ç»­å°è¯•
     close_socket_handle(m_socket);
     m_socket = INVALID_SOCKET;
     if (m_next == nullptr)
@@ -498,7 +503,7 @@ void socket_stream::dispatch_package()
 		if (header_len == 0)
 			break;
 
-		// Êı¾İ°ü»¹Ã»ÓĞÊÕÍêÕû
+		// æ•°æ®åŒ…è¿˜æ²¡æœ‰æ”¶å®Œæ•´
 		if (data_len < header_len + package_size)
 			break;
 

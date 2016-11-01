@@ -1,4 +1,9 @@
-﻿#pragma once
+/*
+** repository: https://github.com/trumanzhao/luna
+** trumanzhao, 2016-11-01, trumanzhao@foxmail.com
+*/
+
+#pragma once
 
 #if defined(__linux) || defined(__APPLE__)
 #include <errno.h>

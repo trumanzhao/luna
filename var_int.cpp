@@ -1,4 +1,4 @@
-﻿/*
+/*
 ** repository: https://github.com/trumanzhao/luna
 ** trumanzhao, 2016/10/19, trumanzhao@foxmail.com
 */
@@ -9,7 +9,7 @@
 
 size_t encode_u64(BYTE* buffer, size_t buffer_size, uint64_t value)
 {
-	auto pos = buffer, end = buffer + buffer_size;	
+	auto pos = buffer, end = buffer + buffer_size;
 	do
 	{
 		if (pos >= end)
@@ -23,7 +23,7 @@ size_t encode_u64(BYTE* buffer, size_t buffer_size, uint64_t value)
 
 size_t encode_s64(BYTE* buffer, size_t buffer_size, int64_t value)
 {
-	uint64_t uValue = (uint64_t)value;	
+	uint64_t uValue = (uint64_t)value;
 	if (value < 0)
 	{
 		// 将符号位挪到最低位

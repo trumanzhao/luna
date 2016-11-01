@@ -1,3 +1,8 @@
+/*
+** repository: https://github.com/trumanzhao/luna
+** trumanzhao, 2016-11-01, trumanzhao@foxmail.com
+*/
+
 #ifdef _MSC_VER
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
@@ -145,7 +150,7 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 	while (!m_closed)
 	{
 		memset(ovl, 0, sizeof(*ovl));
-		// ×¢,AF_INET6±¾ÉíÊÇ¿ÉÒÔÖ§³Öipv4µÄ,µ«ÊÇ...ĞèÒªwin10ÒÔÉÏ°æ±¾,win7²»Ö§³Ö, ËùÒÔÕâÀïÈ¡listen_addr
+		// æ³¨,AF_INET6æœ¬èº«æ˜¯å¯ä»¥æ”¯æŒipv4çš„,ä½†æ˜¯...éœ€è¦win10ä»¥ä¸Šç‰ˆæœ¬,win7ä¸æ”¯æŒ, æ‰€ä»¥è¿™é‡Œå–listen_addr
 		node->fd = socket(listen_addr.ss_family, SOCK_STREAM, IPPROTO_IP);
 		if (node->fd == INVALID_SOCKET)
 		{
@@ -210,7 +215,7 @@ void socket_listener::on_complete(socket_manager* mgr, bool can_read, bool can_w
         }
         else
         {
-            // TODO: ÕâÖÖÇé¿ö,ÕæµÄÒª¹Ø±ÕÃ´?
+            // TODO: è¿™ç§æƒ…å†µ,çœŸçš„è¦å…³é—­ä¹ˆ?
             close_socket_handle(fd);
             m_closed = true;
             m_error_cb("accept_stream_failed");

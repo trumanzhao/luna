@@ -1,3 +1,8 @@
+/*
+** repository: https://github.com/trumanzhao/luna
+** trumanzhao, 2016-11-01, trumanzhao@foxmail.com
+*/
+
 #ifdef _MSC_VER
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
@@ -41,7 +46,7 @@ void dns_resolver::request(dns_request_t* req)
 	m_reqs.push_back(req);
 }
 
-// ÓÃ»§¿ÉÒÔÔÚÈÎºÎÊ±¿Ìclose,µ«ÊÇÒªm_dns_resolvedÍê³Éºó²Å»áÕæµÄÉ¾³ı¶ÔÏó
+// ç”¨æˆ·å¯ä»¥åœ¨ä»»ä½•æ—¶åˆ»close,ä½†æ˜¯è¦m_dns_resolvedå®Œæˆåæ‰ä¼šçœŸçš„åˆ é™¤å¯¹è±¡
 void dns_resolver::update()
 {
 	m_rep_lock.lock();

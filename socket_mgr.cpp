@@ -1,3 +1,8 @@
+/*
+** repository: https://github.com/trumanzhao/luna
+** trumanzhao, 2016-11-01, trumanzhao@foxmail.com
+*/
+
 #ifdef _MSC_VER
 #include <Winsock2.h>
 #include <Ws2tcpip.h>

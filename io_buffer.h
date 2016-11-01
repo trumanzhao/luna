@@ -1,3 +1,8 @@
+/*
+** repository: https://github.com/trumanzhao/luna
+** trumanzhao, 2016-11-01, trumanzhao@foxmail.com
+*/
+
 #pragma once
 
 #include <assert.h>
@@ -6,7 +11,7 @@
 struct io_buffer
 {
 	io_buffer() { }
-	~io_buffer() 
+	~io_buffer()
 	{
 		if (m_buffer)
         {
@@ -36,7 +41,7 @@ struct io_buffer
 		}
 		else
 		{
-			// ÕâÀïÖ»ÊÍ·Å¶ø²»·ÖÅäĞÂµÄ»º³åÇø,ÔÚĞèÒªÓÃµ½µÄÊ±ºòÀÁ¶è·ÖÅä
+			// è¿™é‡Œåªé‡Šæ”¾è€Œä¸åˆ†é…æ–°çš„ç¼“å†²åŒº,åœ¨éœ€è¦ç”¨åˆ°çš„æ—¶å€™æ‡’æƒ°åˆ†é…
 			if (m_buffer != nullptr)
 			{
 				delete[] m_buffer;

@@ -1,4 +1,9 @@
-﻿#include <stdarg.h>
+/*
+** repository: https://github.com/trumanzhao/luna
+** trumanzhao, 2016-11-01, trumanzhao@foxmail.com
+*/
+
+#include <stdarg.h>
 #include <assert.h>
 #include <string.h>
 #if defined(__linux) || defined(__APPLE__)
