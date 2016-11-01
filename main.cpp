@@ -132,43 +132,67 @@ int main(int argc, const char* argv[])
 	{
 		puts(err);
 	};
+    size_t cache_size = 1024 * 1024 * 10;
+    size_t msg_len = 1024 * 1024 * 8;
 
-	auto listener = mgr->listen(err, "127.0.0.1", 8080);
-	if (!listener)
-	{
-		puts("failed listen");
-		return 0;
-	}
+    char* msg_data = new char[msg_len];
+    for (size_t i = 0; i < msg_len / 2; ++i)
+    {
+        uint16_t* pos = (uint16_t*)msg_data;
+        pos[i] = (uint16_t)rand();
+    }
 
-	auto svr_recv = [](char* data, size_t data_len)
-	{
-		printf("server recv: %s\n", data);
-	};
+    auto listen_token = mgr->listen(err, "127.0.0.1", 8080);
+    if (!listen_token)
+    {
+        puts("failed listen");
+        return 0;
+    }
 
-	mgr->set_listen_callback(listener, [=](auto svr) {
-		printf("server accept: %d\n", svr);
-        mgr->set_error_callback(svr, on_err);
-		mgr->set_package_callback(svr, svr_recv);
+    auto svr_recv = [=](char* data, size_t data_len)
+    {
+        char hash[SHA1_STRING_SIZE];
+        sha1_string(hash, data, data_len);
+        printf("server recv msg, hash=%s\n", hash);
+    };
+
+	mgr->set_listen_callback(listen_token, [=](auto accept_token) {
+		printf("server accept: %d\n", accept_token);
+        mgr->set_error_callback(accept_token, on_err);
+		mgr->set_package_callback(accept_token, svr_recv);
+        mgr->set_send_cache(accept_token, cache_size);
+        mgr->set_recv_cache(accept_token, cache_size);
 	});
-    mgr->set_error_callback(listener, on_err);
+    mgr->set_error_callback(listen_token, on_err);
 
-	auto clt = mgr->connect(err, "127.0.0.1", "8080");
-    printf("connecting, clt=%d\n", clt);
+	auto client_token = mgr->connect(err, "127.0.0.1", "8080");
+    if (!client_token)
+    {
+        puts(err.c_str());
+        return 0;
+    }
 
-	mgr->set_connect_callback(clt, [=](){
-		printf("client connect ok !\n");
-		char hello[] = "hello !";
-		mgr->send(clt, hello, sizeof(hello));
+	mgr->set_connect_callback(client_token, [=](){
+        printf("client connect ok, client_token=%d\n", client_token);
+
+        char hash[SHA1_STRING_SIZE];
+        sha1_string(hash, msg_data, msg_len);
+        printf("client send msg, hash=%s\n", hash);
+		mgr->send(client_token, msg_data, msg_len);
 	});
-	
-	mgr->set_error_callback(clt, on_err);
+
+	mgr->set_error_callback(client_token, on_err);
+    mgr->set_send_cache(client_token, cache_size);
+    mgr->set_recv_cache(client_token, cache_size);
 
 	auto clt_recv = [=](char* data, size_t data_len)
 	{
-		printf("client recv: %s\n", data);
+        char hash[SHA1_STRING_SIZE];
+        sha1_string(hash, data, data_len);
+        printf("server recv msg, hash=%s\n", hash);
 	};
 
-	mgr->set_package_callback(clt, clt_recv);
+	mgr->set_package_callback(client_token, clt_recv);
 
 	int64_t t = get_time_ms();
 
@@ -176,11 +200,11 @@ int main(int argc, const char* argv[])
 	{
 		int64_t n = get_time_ms();
 
-		if (n - t > 2000 && clt != 0)
+		if (n - t > 2000 && client_token != 0)
 		{
-			puts("close clt");
-			mgr->close(clt);
-			clt = 0;
+			puts("close client_token");
+			mgr->close(client_token);
+			client_token = 0;
 		}
 
 		mgr->wait(100);
