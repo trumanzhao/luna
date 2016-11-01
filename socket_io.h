@@ -9,7 +9,7 @@
 
 struct socket_mgr
 {
-	virtual void reference() = 0;
+	virtual void add_ref() = 0;
 	virtual void release() = 0;
 
 	virtual void wait(int timeout) = 0;

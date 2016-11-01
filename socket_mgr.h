@@ -49,7 +49,7 @@ struct socket_manager : socket_mgr
 
 	bool setup(int max_connection);
 
-	virtual void reference() override { ++m_ref; }
+	virtual void add_ref() override { ++m_ref; }
 	virtual void release() override { if (--m_ref == 0) delete this; }
 
 	virtual void wait(int timout) override;

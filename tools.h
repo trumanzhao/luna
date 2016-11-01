@@ -113,6 +113,17 @@ inline uint64_t get_thread_id() { return (uint64_t)pthread_self(); }
         }   \
     } while (0)
 
+#define SAFE_RELEASE(p)	\
+    do	\
+    {	\
+        if (p)  \
+        {   \
+            (p)->release();    \
+            (p) = nullptr;  \
+        }   \
+    } while (0)
+
+
 #if defined(__linux) || defined(__APPLE__)
 template <typename T, int N>
 constexpr int _countof(T(&_array)[N]) { return N; }
