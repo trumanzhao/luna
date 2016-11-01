@@ -36,6 +36,8 @@ socket_stream::~socket_stream()
 		freeaddrinfo(m_addr);
 		m_addr = nullptr;
 	}
+
+	printf("delete stream: %p\n", this);
 }
 
 bool socket_stream::accept_socket(socket_t fd)
@@ -43,6 +45,7 @@ bool socket_stream::accept_socket(socket_t fd)
 #ifdef _MSC_VER
 	if (!wsa_recv_empty(fd, m_recv_ovl))
 		return false;
+	m_ovl_ref++;
 #endif
 
 	sockaddr_storage addr;
@@ -67,19 +70,36 @@ void socket_stream::on_dns_err(const char* err)
 
 bool socket_stream::update(socket_manager* mgr)
 {
-	if (m_connected)
+	if (m_closed && m_socket != INVALID_SOCKET)
 	{
-		return !m_closed;
+		close_socket_handle(m_socket);
+		m_socket = INVALID_SOCKET;
 	}
 
 	if (m_closed)
 	{
+#ifdef _MSC_VER
+		return m_ovl_ref != 0;
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
 		return false;
+#endif
 	}
 
+	if (!m_connected)
+	{
+		try_connect(mgr);
+	}
+
+	return true;
+}
+
+void socket_stream::try_connect(socket_manager* mgr)
+{
 	// wait for dns resolver
 	if (m_addr == nullptr)
-		return true;
+		return;
 
 	int ret = 0;
 	while (m_socket == INVALID_SOCKET && m_next != nullptr)
@@ -113,14 +133,15 @@ bool socket_stream::update(socket_manager* mgr)
 				if (!wsa_recv_empty(m_socket, m_recv_ovl))
 				{
 					m_closed = true;
-					m_error_cb("connecting_watch_failed");
-					return false;
+					m_error_cb("connect_failed");
+					return;
 				}
+				m_ovl_ref++;
 #endif
 
 				m_connected = true;
 				m_connect_cb();
-				return true;
+				return;
 			}
 
 			int err = get_socket_error();
@@ -130,27 +151,28 @@ bool socket_stream::update(socket_manager* mgr)
 				if (!mgr->watch(m_socket, this, false, true) || !wsa_send_empty(m_socket, m_send_ovl))
 				{
 					m_closed = true;
-					m_error_cb("connecting_watch_failed");
-					return false;
+					m_error_cb("connect_failed");
+					return;
 				}
+				m_ovl_ref++;
 				break;
 			}
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-            if (err == EINTR)
-                continue;
+			if (err == EINTR)
+				continue;
 
 			if (err == EINPROGRESS)
-            {
-                if (!mgr->watch(m_socket, this, false, true))
-                {
-                    m_closed = true;
-                    m_error_cb("connecting_watch_failed");
-                    return false;
-                }
+			{
+				if (!mgr->watch(m_socket, this, false, true))
+				{
+					m_closed = true;
+					m_error_cb("connect_failed");
+					return;
+				}
 				break;
-            }
+			}
 #endif
 
 			close_socket_handle(m_socket);
@@ -163,10 +185,7 @@ bool socket_stream::update(socket_manager* mgr)
 	{
 		m_closed = true;
 		m_error_cb("socket_error");
-		return false;
 	}
-
-	return true;
 }
 
 void socket_stream::send(const void* data, size_t data_len)
@@ -249,6 +268,7 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 #ifdef _MSC_VER
 void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 {
+	m_ovl_ref--;
 	if (m_closed)
 		return;
 
@@ -278,9 +298,10 @@ void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 		if (!wsa_recv_empty(m_socket, m_recv_ovl))
 		{
 			m_closed = true;
-			m_error_cb("connecting_watch_failed");
+			m_error_cb("connect_failed");
 			return;
 		}
+		m_ovl_ref++;
 #endif
 
 		m_connected = true;
@@ -377,6 +398,7 @@ void socket_stream::do_send()
 					call_error("wsa_send_failed");
 					return;
 				}
+				m_ovl_ref++;
 				break;
 			}
 #endif
@@ -434,6 +456,7 @@ void socket_stream::do_recv()
 					call_error("wsa_recv_failed");
 					return;
 				}
+				m_ovl_ref++;
 				break;
 			}
 #endif

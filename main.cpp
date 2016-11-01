@@ -128,6 +128,11 @@ int main(int argc, const char* argv[])
 	std::string err;
 	auto* mgr = create_socket_mgr(1000);
 
+	auto on_err = [](auto err)
+	{
+		puts(err);
+	};
+
 	auto listener = mgr->listen(err, "127.0.0.1", 8080);
 	if (!listener)
 	{
@@ -135,7 +140,6 @@ int main(int argc, const char* argv[])
 		return 0;
 	}
 
-    auto on_err = [](auto err) { puts(err); };
 	auto svr_recv = [](char* data, size_t data_len)
 	{
 		printf("server recv: %s\n", data);
@@ -166,8 +170,19 @@ int main(int argc, const char* argv[])
 
 	mgr->set_package_callback(clt, clt_recv);
 
+	int64_t t = get_time_ms();
+
 	while (true)
 	{
+		int64_t n = get_time_ms();
+
+		if (n - t > 2000 && clt != 0)
+		{
+			puts("close clt");
+			mgr->close(clt);
+			clt = 0;
+		}
+
 		mgr->wait(100);
 	}
 

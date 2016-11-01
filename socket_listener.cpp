@@ -52,6 +52,8 @@ socket_listener::~socket_listener()
 		close_socket_handle(m_socket);
 		m_socket = INVALID_SOCKET;
 	}
+
+	printf("delete listener: %p\n", this);
 }
 
 bool socket_listener::setup(socket_t fd)
@@ -69,20 +71,42 @@ bool socket_listener::setup(socket_t fd)
 
 bool socket_listener::update(socket_manager* mgr)
 {
-#ifdef _MSC_VER
-	for (auto& node : m_nodes)
+	if (m_closed && m_socket != INVALID_SOCKET)
 	{
-		// 其实这个循环只有第一次执行才有用...待优化
-		if (node.fd == INVALID_SOCKET && !m_closed)
-			queue_accept(mgr, &node.ovl);
+		close_socket_handle(m_socket);
+		m_socket = INVALID_SOCKET;
+	}
+
+#ifdef _MSC_VER
+	if (m_ovl_ref == 0 && !m_closed)
+	{
+		for (auto& node : m_nodes)
+		{
+			if (node.fd == INVALID_SOCKET)
+			{
+				queue_accept(mgr, &node.ovl);
+			}
+		}
 	}
 #endif
-	return !m_closed;
+
+	if (m_closed)
+	{
+#ifdef _MSC_VER
+		return m_ovl_ref != 0;
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+		return false;
+#endif
+	}
+	return true;
 }
 
 #ifdef _MSC_VER
 void socket_listener::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 {
+	m_ovl_ref--;
 	if (m_closed)
 		return;
 
@@ -114,10 +138,15 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 	assert(node >= m_nodes && node < m_nodes + _countof(m_nodes));
 	assert(node->fd == INVALID_SOCKET);
 
+	sockaddr_storage listen_addr;
+	socklen_t listen_addr_len = sizeof(listen_addr);
+	getsockname(m_socket, (sockaddr*)&listen_addr, &listen_addr_len);
+
 	while (!m_closed)
 	{
-		memset(&node->ovl, 0, sizeof(node->ovl));
-		node->fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_IP);
+		memset(ovl, 0, sizeof(*ovl));
+		// 注,AF_INET6本身是可以支持ipv4的,但是...需要win10以上版本,win7不支持, 所以这里取listen_addr
+		node->fd = socket(listen_addr.ss_family, SOCK_STREAM, IPPROTO_IP);
 		if (node->fd == INVALID_SOCKET)
 		{
 			m_closed = true;
@@ -125,8 +154,11 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 			return;
 		}
 
+		set_none_block(node->fd);
+
 		DWORD bytes = 0;
-		auto ret = (*m_accept_func)(m_socket, node->fd, &node->buffer, 0, sizeof(sockaddr_storage), sizeof(sockaddr_storage), &bytes, &node->ovl);
+		static_assert(sizeof(sockaddr_storage) >= sizeof(sockaddr_in6) + 16, "buffer too small");
+		auto ret = (*m_accept_func)(m_socket, node->fd, node->buffer, 0, sizeof(node->buffer[0]), sizeof(node->buffer[1]), &bytes, ovl);
 		if (!ret)
 		{
 			int err = get_socket_error();
@@ -138,13 +170,11 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 				node->fd = INVALID_SOCKET;
 				m_closed = true;
 				m_error_cb(txt);
+				return;
 			}
+			m_ovl_ref++;
 			return;
 		}
-
-		// competet without IOCP callback:
-		// to avoid recursion, don't call on_complete
-		set_none_block(node->fd);
 
 		auto token = mgr->accept_stream(node->fd);
 		if (token == 0)
