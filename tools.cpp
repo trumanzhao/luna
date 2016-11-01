@@ -25,6 +25,11 @@
 #endif
 #include "tools.h"
 
+extern "C"
+{
+    #include "sha1/sha1.h"
+}
+
 time_t get_file_time(const char* file_name)
 {
     if (file_name == nullptr)
@@ -104,4 +109,18 @@ void get_error_string(std::string& err, int no)
 	char txt[MAX_ERROR_TXT];
 	get_error_string(txt, sizeof(txt), no);
 	err = txt;
+}
+
+
+void sha1_string(char* buffer, const void* data, size_t data_len)
+{
+    unsigned char hash[SHA1_STRING_SIZE / 2 + 1];
+
+    SHA1((char*)hash, (const char*)data, (int)data_len);
+
+    char* pos = buffer;
+    for (int i = 0; i < SHA1_STRING_SIZE / 2; ++i)
+    {
+        pos += sprintf(pos, "%02x", hash[i]);
+    }
 }
