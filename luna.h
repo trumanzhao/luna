@@ -21,8 +21,11 @@ template <typename T> T lua_to_object(lua_State* L, int idx);
 template <typename T> T lua_to_native(lua_State* L, int i) { return lua_to_object<T>(L, i); }
 template <> inline  const char* lua_to_native<const char*>(lua_State* L, int i) { return lua_tostring(L, i); }
 template <> inline long long lua_to_native<long long>(lua_State* L, int i) { return lua_tointeger(L, i); }
+template <> inline unsigned long long lua_to_native<unsigned long long>(lua_State* L, int i) { return (unsigned long long)lua_tointeger(L, i); }
 template <> inline long lua_to_native<long>(lua_State* L, int i) { return (long)lua_tointeger(L, i); }
+template <> inline unsigned long lua_to_native<unsigned long>(lua_State* L, int i) { return (unsigned long)lua_tointeger(L, i); }
 template <> inline int lua_to_native<int>(lua_State* L, int i) { return (int)lua_tointeger(L, i); }
+template <> inline unsigned int lua_to_native<unsigned int>(lua_State* L, int i) { return (unsigned int)lua_tointeger(L, i); }
 template <> inline float lua_to_native<float>(lua_State* L, int i) { return (float)lua_tonumber(L, i); }
 template <> inline double lua_to_native<double>(lua_State* L, int i) { return lua_tonumber(L, i); }
 template <> inline std::string lua_to_native<std::string>(lua_State* L, int i)
@@ -35,8 +38,11 @@ template <typename T>
 void native_to_lua(lua_State* L, T* v) { lua_push_object(L, v); }
 inline void native_to_lua(lua_State* L, const char* v) { lua_pushstring(L, v); }
 inline void native_to_lua(lua_State* L, int v) { lua_pushinteger(L, v); }
+inline void native_to_lua(lua_State* L, unsigned int v) { lua_pushinteger(L, v); }
 inline void native_to_lua(lua_State* L, long long v) { lua_pushinteger(L, (lua_Integer)v); }
+inline void native_to_lua(lua_State* L, unsigned long long v) { lua_pushinteger(L, (lua_Integer)v); }
 inline void native_to_lua(lua_State* L, long v) { lua_pushinteger(L, v); }
+inline void native_to_lua(lua_State* L, unsigned long v) { lua_pushinteger(L, v); }
 inline void native_to_lua(lua_State* L, float v) { lua_pushnumber(L, v); }
 inline void native_to_lua(lua_State* L, double v) { lua_pushnumber(L, v); }
 inline void native_to_lua(lua_State* L, const std::string& v) { lua_pushstring(L, v.c_str()); }
@@ -530,7 +536,7 @@ inline void lua_register_function(lua_State* L, const char* name, lua_CFunction 
     lua_register(L, name, func);
 }
 
-// 从指定的全局table中获取函数
+// get function from global table
 bool lua_get_table_function(lua_State* L, const char table[], const char function[]);
 
 template <typename T>

@@ -280,12 +280,12 @@ bool socket_manager::get_remote_ip(std::string& ip, int token)
 	return false;
 }
 
-void socket_manager::set_listen_callback(int token, const std::function<void(int)>& cb)
+void socket_manager::set_accept_callback(int token, const std::function<void(int)>& cb)
 {
 	auto node = get_object(token);
 	if (node)
 	{
-		node->set_listen_callback(cb);
+		node->set_accept_callback(cb);
 	}
 }
 

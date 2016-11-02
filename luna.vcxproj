@@ -189,7 +189,7 @@
     <ClCompile Include="socket_listener.cpp" />
     <ClCompile Include="socket_mgr.cpp" />
     <ClCompile Include="socket_stream.cpp" />
-    <ClCompile Include="socket_wapper .cpp" />
+    <ClCompile Include="socket_wapper.cpp" />
     <ClCompile Include="tools.cpp" />
     <ClCompile Include="var_int.cpp" />
   </ItemGroup>

@@ -15,7 +15,7 @@ struct socket_listener : public socket_object
 	~socket_listener();
 	bool setup(socket_t fd);
 	bool update(socket_manager* mgr) override;
-	void set_listen_callback(const std::function<void(int)>& cb) override { m_accept_cb = cb; }
+	void set_accept_callback(const std::function<void(int)>& cb) override { m_accept_cb = cb; }
 	void set_error_callback(const std::function<void(const char*)>& cb) override { m_error_cb = cb; }
 
 #ifdef _MSC_VER

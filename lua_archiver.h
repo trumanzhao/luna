@@ -9,12 +9,21 @@
 
 class lua_archiver
 {
-public:
-    lua_archiver(size_t buffer_size = 1024 * 64, size_t compress_threhold = 1024 * 4);
+private:
+    lua_archiver();
     ~lua_archiver();
 
 public:
-    size_t save(BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last);
+	static lua_archiver* create(size_t buffer_size, size_t compress_threhold);
+
+	void add_ref() { ++m_ref; }
+	void release() { if (--m_ref == 0) delete this; }
+
+	void resize(size_t buffer_size, size_t compress_threhold);
+
+public:
+	BYTE* save(size_t* data_len, lua_State* L, int first, int last);
+
 private:
     bool save_value(lua_State* L, int idx);
     bool save_number(double v);
@@ -27,11 +36,14 @@ private:
 
 public:
     int load(lua_State* L, BYTE* data, size_t data_len);
+
 private:
     bool load_value(lua_State* L);
 
 private:
+	int m_ref = 1;
 	BYTE* m_buffer = nullptr;
+	BYTE* m_compress = nullptr;
     size_t m_buffer_size = 0;
 	BYTE* m_pos = nullptr;
 	BYTE* m_end = nullptr;
