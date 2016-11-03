@@ -6,59 +6,105 @@
 #include "socket_wapper.h"
 #include "lua/lstate.h"
 
+EXPORT_CLASS_BEGIN(lua_socket_mgr)
+EXPORT_LUA_FUNCTION(wait)
+EXPORT_LUA_FUNCTION(listen)
+EXPORT_CLASS_END()
+
+lua_socket_mgr::~lua_socket_mgr()
+{
+}
+
+bool lua_socket_mgr::setup(lua_State* L, int max_fd, size_t buffer_size, size_t compress_threhold)
+{
+	auto mgr = create_socket_mgr(max_fd);
+	m_tool = std::make_shared<lua_socket_tool>();
+	m_tool->lvm = L;
+	m_tool->archiver.resize(buffer_size, compress_threhold);
+	m_tool->mgr = std::shared_ptr<socket_mgr>(mgr, [](auto o) { o->release(); });
+	return mgr != nullptr;
+}
+
+void lua_socket_mgr::wait(int ms)
+{
+	m_tool->mgr->wait(ms);
+}
+
+int lua_socket_mgr::listen(lua_State* L)
+{
+	const char* ip = lua_tostring(L, 1);
+	int port = (int)lua_tointeger(L, 2);
+	if (ip == nullptr || port <= 0)
+	{
+		lua_pushnil(L);
+		lua_pushstring(L, "invalid param");
+		return 2;
+	}
+
+	std::string err;
+	int token = m_tool->mgr->listen(err, ip, port);
+	if (token == 0)
+	{
+		lua_pushnil(L);
+		lua_pushstring(L, err.c_str());
+		return 2;
+	}
+
+	auto listener = new lua_socket_listener(token, m_tool);
+	lua_push_object(L, listener);
+	lua_pushstring(L, "OK");
+	return 2;
+}
+
 EXPORT_CLASS_BEGIN(lua_socket_listener)
 EXPORT_CLASS_END()
 
-lua_socket_listener::lua_socket_listener(lua_State* L, std::shared_ptr<socket_mgr> mgr, std::shared_ptr<lua_archiver> archiver, int token)
+lua_socket_listener::lua_socket_listener(int token, std::shared_ptr<lua_socket_tool> tool)
 {
-	m_lvm = L;
-	m_mgr = mgr;
-	m_archiver = archiver;
 	m_token = token;
+	m_tool = tool;
 
-	m_mgr->set_accept_callback(token, [this](int steam_token) 
+	m_tool->mgr->set_accept_callback(token, [this](int steam_token)
 	{
-		auto stream = new lua_socket_stream(m_lvm, m_mgr, m_archiver, steam_token);
-		if (!lua_call_object_function(m_lvm, this, "on_accept", std::tie(), stream))
+		auto stream = new lua_socket_stream(steam_token, m_tool);
+		if (!lua_call_object_function(m_tool->lvm, this, "on_accept", std::tie(), stream))
 			delete stream;
 	});
 
-	m_mgr->set_error_callback(token, [this](const char* err) 
+	m_tool->mgr->set_error_callback(token, [this](const char* err)
 	{
-		lua_call_object_function(m_lvm, this, "on_error", std::tie(), err);
+		lua_call_object_function(m_tool->lvm, this, "on_error", std::tie(), err);
 	});
 }
 
 lua_socket_listener::~lua_socket_listener()
 {
-	m_mgr->close(m_token);
+	m_tool->mgr->close(m_token);
 }
 
 EXPORT_CLASS_BEGIN(lua_socket_stream)
 EXPORT_LUA_FUNCTION(call)
 EXPORT_CLASS_END()
 
-lua_socket_stream::lua_socket_stream(lua_State* L, std::shared_ptr<socket_mgr> mgr, std::shared_ptr<lua_archiver> archiver, int token)
+lua_socket_stream::lua_socket_stream(int token, std::shared_ptr<lua_socket_tool> tool)
 {
-	m_lvm = L;
-	m_mgr = mgr;
-	m_archiver = archiver;
 	m_token = token;
+	m_tool = tool;
 
-	m_mgr->set_package_callback(token, [this](char* data, size_t data_len)
+	m_tool->mgr->set_package_callback(token, [this](char* data, size_t data_len)
 	{
 		on_remote_call(data, data_len);
 	});
 
-	m_mgr->set_error_callback(token, [this](const char* err)
+	m_tool->mgr->set_error_callback(token, [this](const char* err)
 	{
-		lua_call_object_function(m_lvm, this, "on_error", std::tie(), err);
+		lua_call_object_function(m_tool->lvm, this, "on_error", std::tie(), err);
 	});
 }
 
 lua_socket_stream::~lua_socket_stream()
 {
-	m_mgr->close(m_token);
+	m_tool->mgr->close(m_token);
 }
 
 size_t lua_socket_stream::call(lua_State* L)
@@ -94,65 +140,14 @@ void lua_socket_stream::on_remote_call(char* data, size_t data_len)
 	char* param = name_end;
 	size_t param_len = data_end - name_end;
 
-	lua_guard_t g(m_lvm);
-	if (lua_get_object_function(m_lvm, this, "on_recv"))
-	{
-		lua_pushstring(m_lvm, function);
-		int param_count = m_archiver->load(m_lvm, (BYTE*)data, data_len);
-		lua_call_function(m_lvm, 1 + param_count, 0);
-	}
-}
+	lua_guard_t g(m_tool->lvm);
 
-EXPORT_CLASS_BEGIN(lua_socket_mgr)
-EXPORT_LUA_FUNCTION(wait)
-EXPORT_LUA_FUNCTION(listen)
-EXPORT_CLASS_END()
+	if (!lua_get_object_function(m_tool->lvm, this, "on_recv"))
+		return;
 
-lua_socket_mgr::~lua_socket_mgr()
-{
-}
-
-bool lua_socket_mgr::setup(lua_State* L, int max_fd, size_t buffer_size, size_t compress_threhold)
-{
-	m_lvm = L;
-	m_mgr = create_socket_mgr(max_fd);
-	if (m_mgr == nullptr)
-		return false;
-
-	m_archiver = std::make_shared<lua_archiver>();
-	m_archiver->resize(buffer_size, compress_threhold);
-	return true;
-}
-
-void lua_socket_mgr::wait(int ms)
-{
-	m_mgr->wait(ms);
-}
-
-int lua_socket_mgr::listen(lua_State* L)
-{
-	const char* ip = lua_tostring(L, 1);
-	int port = (int)lua_tointeger(L, 2);
-	if (ip == nullptr || port <= 0)
-	{
-		lua_pushnil(L);
-		lua_pushstring(L, "invalid param");
-		return 2;
-	}
-
-	std::string err;
-	int token = m_mgr->listen(err, ip, port);
-	if (token == 0)
-	{
-		lua_pushnil(L);
-		lua_pushstring(L, err.c_str());
-		return 2;
-	}
-
-	auto listener = new lua_socket_listener(m_lvm, m_mgr, m_archiver, token);
-	lua_push_object(L, listener);
-	lua_pushstring(L, "OK");
-	return 2;
+	//lua_pushstring(m_lvm, function);
+	//int param_count = m_archiver->load(m_lvm, (BYTE*)data, data_len);
+	//lua_call_function(m_lvm, 1 + param_count, 0);
 }
 
 int lua_create_socket_mgr(lua_State* L)

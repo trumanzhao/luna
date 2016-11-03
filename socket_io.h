@@ -10,7 +10,7 @@
 
 struct socket_mgr
 {
-	virtual ~socket_mgr() {};
+	virtual void release() = 0;
 	virtual void wait(int timeout) = 0;
 
 	virtual int listen(std::string& err, const char ip[], int port) = 0;
@@ -29,4 +29,4 @@ struct socket_mgr
 	virtual void set_error_callback(int token, const std::function<void(const char*)>& cb) = 0;
 };
 
-std::shared_ptr<socket_mgr> create_socket_mgr(int max_fd);
+socket_mgr* create_socket_mgr(int max_fd);

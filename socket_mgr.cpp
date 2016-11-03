@@ -390,12 +390,13 @@ int socket_manager::accept_stream(socket_t fd)
 	return 0;
 }
 
-std::shared_ptr<socket_mgr> create_socket_mgr(int max_fd)
+socket_mgr* create_socket_mgr(int max_fd)
 {
-	std::shared_ptr<socket_manager> mgr = std::make_shared<socket_manager>();
+	auto* mgr = new socket_manager();
 	if (mgr->setup(max_fd))
 	{
 		return mgr;
 	}
+	delete mgr;
 	return nullptr;
 }

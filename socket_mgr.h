@@ -49,6 +49,7 @@ struct socket_manager : socket_mgr
 
 	bool setup(int max_connection);
 
+	virtual void release() override { delete this; };
 	virtual void wait(int timout) override;
 
 	virtual int listen(std::string& err, const char ip[], int port) override;
