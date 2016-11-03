@@ -39,6 +39,7 @@ struct lua_socket_node
 	~lua_socket_node() { m_mgr->close(m_token); }
 
 	size_t call(lua_State* L);
+	void close();
 
 private:
 	void on_recv(char* data, size_t data_len);

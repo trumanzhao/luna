@@ -63,12 +63,6 @@ struct io_buffer
 		m_data_begin += uLen;
 	}
 
-	void pop_space(size_t len)
-	{
-		assert(m_data_end + len <= m_buffer + m_buffer_size);
-		m_data_end += len;
-	}
-
 	void regularize(bool try_free = false)
 	{
 		size_t data_len = (size_t)(m_data_end - m_data_begin);
@@ -91,13 +85,40 @@ struct io_buffer
 		}
 	}
 
+	void clear(bool with_free = false)
+	{
+		if (with_free)
+		{
+			SAFE_DELETE_ARRAY(m_buffer);
+		}
+		m_data_begin = m_buffer;
+		m_data_end = m_data_begin;
+	}
+
 	BYTE* peek_space(size_t* len)
 	{
 		if (m_buffer == nullptr)
 			alloc_buffer();
 
-		BYTE* end = m_buffer + m_buffer_size;
-		*len = (size_t)(end - m_data_end);
+		auto buffer_end = m_buffer + m_buffer_size;
+		*len = (size_t)(buffer_end - m_data_end);
+		return m_data_end;
+	}
+
+	BYTE* pop_space(size_t* space_len, size_t pop_len)
+	{
+		if (m_buffer == nullptr)
+			alloc_buffer();
+
+		auto buffer_end = m_buffer + m_buffer_size;
+		if (m_data_end + pop_len > buffer_end)
+			return nullptr;
+
+		m_data_end += pop_len;
+		if (space_len)
+		{
+			*space_len = (size_t)(buffer_end - m_data_end);
+		}
 		return m_data_end;
 	}
 

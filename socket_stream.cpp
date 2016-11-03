@@ -440,6 +440,7 @@ void socket_stream::do_recv()
 	{
 		size_t space_len = 0;
 		auto* space = m_recv_buffer->peek_space(&space_len);
+
 		if (space_len == 0)
 		{
 			m_closed = true;
@@ -448,7 +449,7 @@ void socket_stream::do_recv()
 		}
 
 		int recv_len = recv(m_socket, (char*)space, (int)space_len, 0);
-		if (recv_len == -1)
+		if (recv_len < 0)
 		{
 			int err = get_socket_error();
 
@@ -486,7 +487,7 @@ void socket_stream::do_recv()
 			return;
 		}
 
-		m_recv_buffer->pop_space(recv_len);
+		m_recv_buffer->pop_space(nullptr, recv_len);
 		dispatch_package();
 	}
 }

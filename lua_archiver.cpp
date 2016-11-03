@@ -10,7 +10,6 @@
 #include "tools.h"
 #include "lua_archiver.h"
 #include "var_int.h"
-#include "lz4/lz4.h"
 
 enum class ar_type
 {
@@ -29,7 +28,7 @@ enum class ar_type
 static const int small_int_max = UCHAR_MAX - (int)ar_type::count;
 static int normal_index(lua_State* L, int idx) { return idx >= 0 ? idx : lua_gettop(L) + idx + 1; }
 
-size_t lua_archiver::save(BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last)
+bool lua_archiver::save(size_t* data_len, BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last)
 {
 	m_begin = buffer;
 	m_pos = m_begin;
@@ -43,13 +42,14 @@ size_t lua_archiver::save(BYTE* buffer, size_t buffer_size, lua_State* L, int fi
 	for (int i = first; i <= last; i++)
 	{
 		if (!save_value(L, i))
-			return 0;
+			return false;
 	}
 
-	return (size_t)(m_pos - m_begin);
+	*data_len = (size_t)(m_pos - m_begin);
+	return true;
 }
 
-int lua_archiver::load(lua_State* L, BYTE* data, size_t data_len)
+bool lua_archiver::load(int* param_count, lua_State* L, BYTE* data, size_t data_len)
 {
 	m_pos = data;
 	m_end = data + data_len;
@@ -63,11 +63,12 @@ int lua_archiver::load(lua_State* L, BYTE* data, size_t data_len)
 		if (!load_value(L))
 		{
 			lua_settop(L, top);
-			return 0;
+			return false;
 		}
 		count++;
 	}
-	return count;
+	*param_count = count;
+	return true;
 }
 
 bool lua_archiver::save_value(lua_State* L, int idx)

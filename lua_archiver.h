@@ -12,8 +12,8 @@ struct lua_archiver
 	lua_archiver() {}
 	~lua_archiver() {}
 
-	size_t save(BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last);
-	int load(lua_State* L, BYTE* data, size_t data_len);
+	bool save(size_t* data_len, BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last);
+	bool load(int* param_count, lua_State* L, BYTE* data, size_t data_len);
 
 private:
     bool save_value(lua_State* L, int idx);

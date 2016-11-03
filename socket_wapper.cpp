@@ -5,6 +5,7 @@
 #include "tools.h"
 #include "socket_wapper.h"
 #include "lua/lstate.h"
+#include "lz4/lz4.h"
 
 EXPORT_CLASS_BEGIN(lua_socket_mgr)
 EXPORT_LUA_FUNCTION(wait)
@@ -58,6 +59,7 @@ int lua_socket_mgr::listen(lua_State* L)
 
 EXPORT_CLASS_BEGIN(lua_socket_node)
 EXPORT_LUA_FUNCTION(call)
+EXPORT_LUA_FUNCTION(close)
 EXPORT_CLASS_END()
 
 lua_socket_node::lua_socket_node(int token, lua_State* L, std::shared_ptr<socket_mgr>& mgr, std::shared_ptr<lua_archiver>& ar, std::shared_ptr<io_buffer>& ar_buffer, std::shared_ptr<io_buffer>& lz_buffer)
@@ -93,14 +95,36 @@ size_t lua_socket_node::call(lua_State* L)
 	if (top < 1 || lua_type(L, 1) != LUA_TSTRING)
 		return 0;
 
-	const char* msg = lua_tostring(L, 1);
+	const char* name = lua_tostring(L, 1);
+	size_t name_len = strlen(name) + 1;
 
-	// 如果archieve的时候,一般都不需要压缩的话,那么最高效的方式应该是save到外部缓冲区,这样就少一次copy
-	// 但是,这样的话,外面就得维护一个缓冲区....
-	// 而且,如果触发压缩呢? 嗯,所以,外部得再提供一个压缩缓冲区,并额外再调用一次压缩?
-	//m_archiver->save();
+	m_ar_buffer->clear();
 
-	return 0;
+	size_t buffer_size = 0;
+	auto* buffer = m_ar_buffer->pop_space(&buffer_size, name_len);
+	if (buffer == nullptr)
+		return 0;
+
+	size_t param_len = 0;	
+	if (!m_archiver->save(&param_len, buffer, buffer_size, L, 2, top))
+		return 0;
+
+	size_t data_len = 0;
+	auto* data = m_ar_buffer->peek_data(&data_len);
+	memcpy(data, name, name_len);
+
+	m_mgr->send(m_token, data, data_len);
+
+	return data_len;
+}
+
+void lua_socket_node::close()
+{
+	if (m_token != 0)
+	{
+		m_mgr->close(m_token);
+		m_token = 0;
+	}
 }
 
 void lua_socket_node::on_recv(char* data, size_t data_len)
