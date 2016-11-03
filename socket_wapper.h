@@ -10,25 +10,20 @@
 #include "lua_archiver.h"
 #include "io_buffer.h"
 
-struct lua_socket_tool 
-{
-	lua_State* lvm;
-	lua_archiver archiver;
-	io_buffer ar_buffer;
-	io_buffer lz_buffer;
-	std::shared_ptr<socket_mgr> mgr;
-};
-
 struct lua_socket_mgr
 {
 public:
 	~lua_socket_mgr();
 	bool setup(lua_State* L, int max_fd, size_t buffer_size, size_t compress_threhold);
-	void wait(int ms);
+	void wait(int ms) { m_mgr->wait(ms); }
 	int listen(lua_State* L);
 
 private:
-	std::shared_ptr<lua_socket_tool> m_tool;
+	lua_State* m_lvm = nullptr;
+	std::shared_ptr<lua_archiver> m_archiver;
+	std::shared_ptr<io_buffer> m_ar_buffer;
+	std::shared_ptr<io_buffer> m_lz_buffer;
+	std::shared_ptr<socket_mgr> m_mgr;
 
 public:
 	DECLARE_LUA_CLASS(lua_socket_mgr);
@@ -38,37 +33,25 @@ public:
 // 所以不存在相关事件(accept, package, error...)触发时,相应的wapper对象失效的问题
 // 因为close之后,这些事件不可能触发嘛:)
 
-struct lua_socket_listener
+struct lua_socket_node
 {
-	lua_socket_listener(int token, std::shared_ptr<lua_socket_tool> tool);
-	~lua_socket_listener();
-
-private:
-	int m_token = 0;
-	std::shared_ptr<lua_socket_tool> m_tool;
-
-public:
-	DECLARE_LUA_CLASS(lua_socket_listener);
-};
-
-//TODO: stream之间需要共享序列化打包器,否则内存开销就非常大咯,嗯,每次都new也不见得不行
-// lua_archiver不可能同时多个都在使用中,所以,全局共享一个就够了,大小取所需的最大值
-struct lua_socket_stream
-{
-	lua_socket_stream(int token, std::shared_ptr<lua_socket_tool> tool);
-	~lua_socket_stream();
+	lua_socket_node(int token, lua_State* L, std::shared_ptr<socket_mgr>& mgr, std::shared_ptr<lua_archiver>& ar, std::shared_ptr<io_buffer>& ar_buffer, std::shared_ptr<io_buffer>& lz_buffer);
+	~lua_socket_node() { m_mgr->close(m_token); }
 
 	size_t call(lua_State* L);
 
 private:
-	void on_remote_call(char* data, size_t data_len);
+	void on_recv(char* data, size_t data_len);
 
-private:
 	int m_token = 0;
-	std::shared_ptr<lua_socket_tool> m_tool;
+	lua_State* m_lvm = nullptr;
+	std::shared_ptr<socket_mgr> m_mgr;
+	std::shared_ptr<lua_archiver> m_archiver;
+	std::shared_ptr<io_buffer> m_ar_buffer;
+	std::shared_ptr<io_buffer> m_lz_buffer;
 
 public:
-	DECLARE_LUA_CLASS(lua_socket_stream);
+	DECLARE_LUA_CLASS(lua_socket_listener);
 };
 
 int lua_create_socket_mgr(lua_State* L);

@@ -18,15 +18,16 @@ lua_socket_mgr::~lua_socket_mgr()
 bool lua_socket_mgr::setup(lua_State* L, int max_fd, size_t buffer_size, size_t compress_threhold)
 {
 	auto mgr = create_socket_mgr(max_fd);
-	m_tool = std::make_shared<lua_socket_tool>();
-	m_tool->lvm = L;
-	m_tool->mgr = std::shared_ptr<socket_mgr>(mgr, [](auto o) { o->release(); });
-	return mgr != nullptr;
-}
-
-void lua_socket_mgr::wait(int ms)
-{
-	m_tool->mgr->wait(ms);
+	if (mgr != nullptr)
+	{
+		m_lvm = L;
+		m_mgr = std::shared_ptr<socket_mgr>(mgr, [](auto o) { o->release(); });
+		m_archiver = std::make_shared<lua_archiver>();
+		m_ar_buffer = std::make_shared<io_buffer>();
+		m_lz_buffer = std::make_shared<io_buffer>();
+		return true;
+	}
+	return false;
 }
 
 int lua_socket_mgr::listen(lua_State* L)
@@ -41,7 +42,7 @@ int lua_socket_mgr::listen(lua_State* L)
 	}
 
 	std::string err;
-	int token = m_tool->mgr->listen(err, ip, port);
+	int token = m_mgr->listen(err, ip, port);
 	if (token == 0)
 	{
 		lua_pushnil(L);
@@ -49,70 +50,50 @@ int lua_socket_mgr::listen(lua_State* L)
 		return 2;
 	}
 
-	auto listener = new lua_socket_listener(token, m_tool);
+	auto listener = new lua_socket_node(token, m_lvm, m_mgr, m_archiver, m_ar_buffer, m_lz_buffer);
 	lua_push_object(L, listener);
 	lua_pushstring(L, "OK");
 	return 2;
 }
 
-EXPORT_CLASS_BEGIN(lua_socket_listener)
-EXPORT_CLASS_END()
-
-lua_socket_listener::lua_socket_listener(int token, std::shared_ptr<lua_socket_tool> tool)
-{
-	m_token = token;
-	m_tool = tool;
-
-	m_tool->mgr->set_accept_callback(token, [this](int steam_token)
-	{
-		auto stream = new lua_socket_stream(steam_token, m_tool);
-		if (!lua_call_object_function(m_tool->lvm, this, "on_accept", std::tie(), stream))
-			delete stream;
-	});
-
-	m_tool->mgr->set_error_callback(token, [this](const char* err)
-	{
-		lua_call_object_function(m_tool->lvm, this, "on_error", std::tie(), err);
-	});
-}
-
-lua_socket_listener::~lua_socket_listener()
-{
-	m_tool->mgr->close(m_token);
-}
-
-EXPORT_CLASS_BEGIN(lua_socket_stream)
+EXPORT_CLASS_BEGIN(lua_socket_node)
 EXPORT_LUA_FUNCTION(call)
 EXPORT_CLASS_END()
 
-lua_socket_stream::lua_socket_stream(int token, std::shared_ptr<lua_socket_tool> tool)
+lua_socket_node::lua_socket_node(int token, lua_State* L, std::shared_ptr<socket_mgr>& mgr, std::shared_ptr<lua_archiver>& ar, std::shared_ptr<io_buffer>& ar_buffer, std::shared_ptr<io_buffer>& lz_buffer)
 {
 	m_token = token;
-	m_tool = tool;
+	m_lvm = L;
+	m_mgr = mgr;
+	m_archiver = ar;
+	m_ar_buffer = ar_buffer;
+	m_lz_buffer = lz_buffer;
 
-	m_tool->mgr->set_package_callback(token, [this](char* data, size_t data_len)
+	m_mgr->set_accept_callback(token, [this](int steam_token)
 	{
-		on_remote_call(data, data_len);
+		auto stream = new lua_socket_node(steam_token, m_lvm, m_mgr, m_archiver, m_ar_buffer, m_lz_buffer);
+		if (!lua_call_object_function(m_lvm, this, "on_accept", std::tie(), stream))
+			delete stream;
 	});
 
-	m_tool->mgr->set_error_callback(token, [this](const char* err)
+	m_mgr->set_error_callback(token, [this](const char* err)
 	{
-		lua_call_object_function(m_tool->lvm, this, "on_error", std::tie(), err);
+		lua_call_object_function(m_lvm, this, "on_error", std::tie(), err);
+	});
+
+	m_mgr->set_package_callback(token, [this](char* data, size_t data_len)
+	{
+		on_recv(data, data_len);
 	});
 }
 
-lua_socket_stream::~lua_socket_stream()
-{
-	m_tool->mgr->close(m_token);
-}
-
-size_t lua_socket_stream::call(lua_State* L)
+size_t lua_socket_node::call(lua_State* L)
 {
 	int top = lua_gettop(L);
 	if (top < 1 || lua_type(L, 1) != LUA_TSTRING)
 		return 0;
 
-	const char* function = lua_tostring(L, 1);
+	const char* msg = lua_tostring(L, 1);
 
 	// 如果archieve的时候,一般都不需要压缩的话,那么最高效的方式应该是save到外部缓冲区,这样就少一次copy
 	// 但是,这样的话,外面就得维护一个缓冲区....
@@ -122,7 +103,7 @@ size_t lua_socket_stream::call(lua_State* L)
 	return 0;
 }
 
-void lua_socket_stream::on_remote_call(char* data, size_t data_len)
+void lua_socket_node::on_recv(char* data, size_t data_len)
 {
 	char* data_end = data;
 	char* name_end = data;
@@ -135,13 +116,13 @@ void lua_socket_stream::on_remote_call(char* data, size_t data_len)
 
 	name_end++;
 
-	char* function = data;
+	char* msg = data;
 	char* param = name_end;
 	size_t param_len = data_end - name_end;
 
-	lua_guard_t g(m_tool->lvm);
+	lua_guard_t g(m_lvm);
 
-	if (!lua_get_object_function(m_tool->lvm, this, "on_recv"))
+	if (!lua_get_object_function(m_lvm, this, "on_recv"))
 		return;
 
 	//lua_pushstring(m_lvm, function);
