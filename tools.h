@@ -137,4 +137,3 @@ void get_error_string(std::string& err, int no);
 // out buffer should 41 bytes at least
 #define SHA1_STRING_SIZE  41
 void sha1_string(char* buffer, const void* data, size_t data_len);
-

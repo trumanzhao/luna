@@ -4,7 +4,7 @@
 */
 
 #pragma once
-
+#include <memory>
 #include "socket_io.h"
 #include "luna.h"
 #include "lua_archiver.h"
@@ -15,12 +15,12 @@
 
 struct lua_socket_listener
 {
-	lua_socket_listener(lua_State* L, socket_mgr* mgr, lua_archiver* archiver, int token);
+	lua_socket_listener(lua_State* L, std::shared_ptr<socket_mgr> mgr, std::shared_ptr<lua_archiver> archiver, int token);
 	~lua_socket_listener();
 
 private:
-	socket_mgr* m_mgr = nullptr;
-	lua_archiver* m_archiver = nullptr;
+	std::shared_ptr<socket_mgr>  m_mgr;
+	std::shared_ptr<lua_archiver> m_archiver;
 	lua_State* m_lvm = nullptr;
 	int m_token = 0;
 
@@ -32,7 +32,7 @@ public:
 // lua_archiver不可能同时多个都在使用中,所以,全局共享一个就够了,大小取所需的最大值
 struct lua_socket_stream
 {
-	lua_socket_stream(lua_State* L, socket_mgr* mgr, lua_archiver* archiver, int token);
+	lua_socket_stream(lua_State* L, std::shared_ptr<socket_mgr>  mgr, std::shared_ptr<lua_archiver> archiver, int token);
 	~lua_socket_stream();
 
 	size_t call(lua_State* L);
@@ -41,8 +41,8 @@ private:
 	void on_remote_call(char* data, size_t data_len);
 
 private:
-	socket_mgr* m_mgr = nullptr;
-	lua_archiver* m_archiver = nullptr;
+	std::shared_ptr<socket_mgr>  m_mgr;
+	std::shared_ptr<lua_archiver> m_archiver;
 	lua_State* m_lvm = nullptr;
 	int m_token = 0;
 
@@ -57,10 +57,11 @@ public:
 	bool setup(lua_State* L, int max_fd, size_t buffer_size, size_t compress_threhold);
 	void wait(int ms);
 	int listen(lua_State* L);
+
 private:
 	lua_State* m_lvm = nullptr;
-	socket_mgr* m_mgr = nullptr;
-	lua_archiver* m_archiver = nullptr;
+	std::shared_ptr<socket_mgr>  m_mgr;
+	std::shared_ptr<lua_archiver> m_archiver;
 
 public:
 	DECLARE_LUA_CLASS(lua_socket_mgr);

@@ -11,22 +11,12 @@
 struct io_buffer
 {
 	io_buffer() { }
-	~io_buffer()
-	{
-		if (m_buffer)
-        {
-            delete[] m_buffer;
-            m_buffer = nullptr;
-        }
-		m_data_begin = nullptr;
-		m_data_end = nullptr;
-	}
+	~io_buffer() { SAFE_DELETE_ARRAY(m_buffer); }
 
 	void resize(size_t size)
 	{
 		size_t data_len = 0;
 		BYTE* data = peek_data(&data_len);
-
 		if (size == m_buffer_size || size < data_len)
 			return;
 
@@ -50,8 +40,6 @@ struct io_buffer
 		}
 		m_buffer_size = size;
 	}
-
-	size_t get_size() { return m_buffer_size; }
 
 	bool push_data(const void* data, size_t data_len)
 	{
@@ -119,7 +107,7 @@ struct io_buffer
 		return m_data_begin;
 	}
 
-	bool has_data() { return m_data_end > m_data_begin; }
+	bool empty() { return m_data_end <= m_data_begin; }
 
 private:
 	void alloc_buffer()

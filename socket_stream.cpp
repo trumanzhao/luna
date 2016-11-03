@@ -209,9 +209,9 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 	if (m_closed)
 		return;
 
-	if (m_send_buffer.has_data())
+	if (!m_send_buffer->empty())
 	{
-		if (!m_send_buffer.push_data(data, data_len))
+		if (!m_send_buffer->push_data(data, data_len))
 		{
 			m_closed = true;
 			call_error("send_cache_full");
@@ -230,7 +230,7 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 #ifdef _MSC_VER
 			if (err == WSAEWOULDBLOCK)
 			{
-				if (!m_send_buffer.push_data(data, data_len))
+				if (!m_send_buffer->push_data(data, data_len))
 				{
 					m_closed = true;
 					call_error("send_cache_full");
@@ -384,7 +384,7 @@ void socket_stream::do_send()
 	while (!m_closed)
 	{
 		size_t data_len = 0;
-		auto* data = m_send_buffer.peek_data(&data_len);
+		auto* data = m_send_buffer->peek_data(&data_len);
 		if (data_len == 0)
 			break;
 
@@ -428,10 +428,10 @@ void socket_stream::do_send()
 			return;
 		}
 
-		m_send_buffer.pop_data((size_t)send_len);
+		m_send_buffer->pop_data((size_t)send_len);
 	}
 
-	m_send_buffer.regularize(true);
+	m_send_buffer->regularize(true);
 }
 
 void socket_stream::do_recv()
@@ -439,7 +439,7 @@ void socket_stream::do_recv()
 	while (!m_closed)
 	{
 		size_t space_len = 0;
-		auto* space = m_recv_buffer.peek_space(&space_len);
+		auto* space = m_recv_buffer->peek_space(&space_len);
 		if (space_len == 0)
 		{
 			m_closed = true;
@@ -486,7 +486,7 @@ void socket_stream::do_recv()
 			return;
 		}
 
-		m_recv_buffer.pop_space(recv_len);
+		m_recv_buffer->pop_space(recv_len);
 		dispatch_package();
 	}
 }
@@ -496,9 +496,8 @@ void socket_stream::dispatch_package()
 	while (!m_closed)
 	{
 		size_t data_len = 0;
-		auto* data = m_recv_buffer.peek_data(&data_len);
-
 		uint64_t package_size = 0;
+		auto* data = m_recv_buffer->peek_data(&data_len);
 		size_t header_len = decode_u64(&package_size, data, data_len);
 		if (header_len == 0)
 			break;
@@ -509,10 +508,10 @@ void socket_stream::dispatch_package()
 
 		m_package_cb((char*)data + header_len, (size_t)package_size);
 
-		m_recv_buffer.pop_data(header_len + (size_t)package_size);
+		m_recv_buffer->pop_data(header_len + (size_t)package_size);
 	}
 
-	m_recv_buffer.regularize();
+	m_recv_buffer->regularize();
 }
 
 void socket_stream::call_error(int err)

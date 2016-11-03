@@ -9,12 +9,10 @@
 EXPORT_CLASS_BEGIN(lua_socket_listener)
 EXPORT_CLASS_END()
 
-lua_socket_listener::lua_socket_listener(lua_State* L, socket_mgr* mgr, lua_archiver* archiver, int token)
+lua_socket_listener::lua_socket_listener(lua_State* L, std::shared_ptr<socket_mgr> mgr, std::shared_ptr<lua_archiver> archiver, int token)
 {
 	m_lvm = L;
-	mgr->add_ref();
 	m_mgr = mgr;
-	archiver->add_ref();
 	m_archiver = archiver;
 	m_token = token;
 
@@ -34,20 +32,16 @@ lua_socket_listener::lua_socket_listener(lua_State* L, socket_mgr* mgr, lua_arch
 lua_socket_listener::~lua_socket_listener()
 {
 	m_mgr->close(m_token);
-	SAFE_RELEASE(m_archiver);
-	SAFE_RELEASE(m_mgr);
 }
 
 EXPORT_CLASS_BEGIN(lua_socket_stream)
 EXPORT_LUA_FUNCTION(call)
 EXPORT_CLASS_END()
 
-lua_socket_stream::lua_socket_stream(lua_State* L, socket_mgr* mgr, lua_archiver* archiver, int token)
+lua_socket_stream::lua_socket_stream(lua_State* L, std::shared_ptr<socket_mgr> mgr, std::shared_ptr<lua_archiver> archiver, int token)
 {
 	m_lvm = L;
-	mgr->add_ref();
 	m_mgr = mgr;
-	archiver->add_ref();
 	m_archiver = archiver;
 	m_token = token;
 
@@ -65,8 +59,6 @@ lua_socket_stream::lua_socket_stream(lua_State* L, socket_mgr* mgr, lua_archiver
 lua_socket_stream::~lua_socket_stream()
 {
 	m_mgr->close(m_token);
-	SAFE_RELEASE(m_archiver);
-	SAFE_RELEASE(m_mgr);
 }
 
 size_t lua_socket_stream::call(lua_State* L)
@@ -118,16 +110,18 @@ EXPORT_CLASS_END()
 
 lua_socket_mgr::~lua_socket_mgr()
 {
-	SAFE_RELEASE(m_archiver);
-	SAFE_RELEASE(m_mgr);
 }
 
 bool lua_socket_mgr::setup(lua_State* L, int max_fd, size_t buffer_size, size_t compress_threhold)
 {
 	m_lvm = L;
 	m_mgr = create_socket_mgr(max_fd);
-	m_archiver = lua_archiver::create(buffer_size, compress_threhold);
-	return m_mgr != nullptr && m_archiver != nullptr;
+	if (m_mgr == nullptr)
+		return false;
+
+	m_archiver = std::make_shared<lua_archiver>();
+	m_archiver->resize(buffer_size, compress_threhold);
+	return true;
 }
 
 void lua_socket_mgr::wait(int ms)

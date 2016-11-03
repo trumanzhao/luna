@@ -5,13 +5,12 @@
 
 #pragma once
 
+#include <memory>
 #include <functional>
 
 struct socket_mgr
 {
-	virtual void add_ref() = 0;
-	virtual void release() = 0;
-
+	virtual ~socket_mgr() {};
 	virtual void wait(int timeout) = 0;
 
 	virtual int listen(std::string& err, const char ip[], int port) = 0;
@@ -30,4 +29,4 @@ struct socket_mgr
 	virtual void set_error_callback(int token, const std::function<void(const char*)>& cb) = 0;
 };
 
-socket_mgr* create_socket_mgr(int max_fd);
+std::shared_ptr<socket_mgr> create_socket_mgr(int max_fd);

@@ -39,13 +39,6 @@ lua_archiver::~lua_archiver()
 	delete[] m_compress;
 }
 
-lua_archiver* lua_archiver::create(size_t buffer_size, size_t compress_threhold)
-{
-	lua_archiver* archiver = new lua_archiver();
-	archiver->resize(buffer_size, compress_threhold);
-	return archiver;
-}
-
 void lua_archiver::resize(size_t buffer_size, size_t compress_threhold)
 {
 	SAFE_DELETE_ARRAY(m_buffer);
@@ -93,6 +86,42 @@ BYTE* lua_archiver::save(size_t* data_len, lua_State* L, int first, int last)
 		return m_compress;
 	}
 	return nullptr;
+}
+
+int lua_archiver::load(lua_State* L, BYTE* data, size_t data_len)
+{
+	m_shared_string.clear();
+	m_shared_strlen.clear();
+
+	if (data_len < 1)
+		return 0;
+
+	if (*data == 'z')
+	{
+		int raw_len = LZ4_decompress_safe((char*)data + 1, (char*)m_buffer, (int)data_len - 1, (int)m_buffer_size);
+		if (raw_len <= 0)
+			return 0;
+		m_pos = m_buffer;
+		m_end = m_buffer + raw_len;
+	}
+	else
+	{
+		m_pos = (BYTE*)data + 1;
+		m_end = data + data_len;
+	}
+
+	int count = 0;
+	int top = lua_gettop(L);
+	while (m_pos < m_end)
+	{
+		if (!load_value(L))
+		{
+			lua_settop(L, top);
+			return 0;
+		}
+		count++;
+	}
+	return count;
 }
 
 bool lua_archiver::save_value(lua_State* L, int idx)
@@ -230,42 +259,6 @@ int lua_archiver::find_shared_str(const char* str)
     if (it != m_shared_string.end())
         return (int)(it - m_shared_string.begin());
     return -1;
-}
-
-int lua_archiver::load(lua_State* L, BYTE* data, size_t data_len)
-{
-    m_shared_string.clear();
-    m_shared_strlen.clear();
-
-    if (data_len < 1)
-        return 0;
-
-    if (*data == 'z')
-    {
-        int raw_len = LZ4_decompress_safe((char*)data + 1, (char*)m_buffer, (int)data_len - 1, (int)m_buffer_size);
-        if (raw_len <= 0)
-            return 0;
-        m_pos = m_buffer;
-        m_end = m_buffer + raw_len;
-    }
-    else
-    {
-        m_pos = (BYTE*)data + 1;
-        m_end = data + data_len;
-    }
-
-    int count = 0;
-    int top = lua_gettop(L);
-    while (m_pos < m_end)
-    {
-        if (!load_value(L))
-        {
-            lua_settop(L, top);
-            return 0;
-        }
-        count++;
-    }
-    return count;
 }
 
 bool lua_archiver::load_value(lua_State* L)

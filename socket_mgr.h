@@ -49,9 +49,6 @@ struct socket_manager : socket_mgr
 
 	bool setup(int max_connection);
 
-	virtual void add_ref() override { ++m_ref; }
-	virtual void release() override { if (--m_ref == 0) delete this; }
-
 	virtual void wait(int timout) override;
 
 	virtual int listen(std::string& err, const char ip[], int port) override;
@@ -108,7 +105,6 @@ private:
 	}
 
 	int m_max_connection = 0;
-	int m_ref = 1;
 	int m_token = 0;
 	std::unordered_map<int, socket_object*> m_objects;
 	dns_resolver m_dns;
