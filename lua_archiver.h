@@ -9,11 +9,10 @@
 
 struct lua_archiver
 {
-    lua_archiver();
-    ~lua_archiver();
+	lua_archiver() {}
+	~lua_archiver() {}
 
-	void resize(size_t buffer_size, size_t compress_threhold);
-	BYTE* save(size_t* data_len, lua_State* L, int first, int last);
+	size_t save(BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last);
 	int load(lua_State* L, BYTE* data, size_t data_len);
 
 private:
@@ -28,12 +27,9 @@ private:
     bool load_value(lua_State* L);
 
 private:
-	BYTE* m_buffer = nullptr;
-	BYTE* m_compress = nullptr;
-    size_t m_buffer_size = 0;
+	BYTE* m_begin = nullptr;
 	BYTE* m_pos = nullptr;
 	BYTE* m_end = nullptr;
-    size_t m_compress_threhold = 4096;
     std::vector<const char*> m_shared_string;
     std::vector<size_t> m_shared_strlen;
 };

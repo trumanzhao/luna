@@ -29,86 +29,32 @@ enum class ar_type
 static const int small_int_max = UCHAR_MAX - (int)ar_type::count;
 static int normal_index(lua_State* L, int idx) { return idx >= 0 ? idx : lua_gettop(L) + idx + 1; }
 
-lua_archiver::lua_archiver()
+size_t lua_archiver::save(BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last)
 {
-}
-
-lua_archiver::~lua_archiver()
-{
-    delete[] m_buffer;
-	delete[] m_compress;
-}
-
-void lua_archiver::resize(size_t buffer_size, size_t compress_threhold)
-{
-	SAFE_DELETE_ARRAY(m_buffer);
-	SAFE_DELETE_ARRAY(m_compress);
-	m_buffer = new BYTE[buffer_size];
-	m_compress = new BYTE[buffer_size];
-	m_buffer_size = buffer_size;
-	m_compress_threhold = compress_threhold;
-}
-
-BYTE* lua_archiver::save(size_t* data_len, lua_State* L, int first, int last)
-{
-	m_pos = m_buffer;
-	m_end = m_buffer + m_buffer_size;
+	m_begin = buffer;
+	m_pos = m_begin;
+	m_end = m_begin+ buffer_size;
 	m_shared_string.clear();
+	m_shared_strlen.clear();
 
 	first = normal_index(L, first);
 	last = normal_index(L, last);
-	if (first > last)
-		return nullptr;
 
-	*m_pos++ = 'x'; // compress flag
 	for (int i = first; i <= last; i++)
 	{
 		if (!save_value(L, i))
-			return nullptr;
+			return 0;
 	}
 
-	size_t raw_len = (size_t)(m_pos - m_buffer) - 1;
-	if (raw_len < m_compress_threhold)
-	{
-		*data_len = 1 + raw_len;
-		return m_buffer;
-	}
-
-	if (m_buffer_size < 1 + LZ4_COMPRESSBOUND(raw_len))
-		return nullptr;
-
-	char* dest_buffer = (char*)m_compress;
-	*dest_buffer++ = 'z';
-	int compressed_len = LZ4_compress_default((char*)m_buffer + 1, dest_buffer, (int)raw_len, (int)m_buffer_size - 1);
-	if (compressed_len > 0)
-	{
-		*data_len = 1 + compressed_len;
-		return m_compress;
-	}
-	return nullptr;
+	return (size_t)(m_pos - m_begin);
 }
 
 int lua_archiver::load(lua_State* L, BYTE* data, size_t data_len)
 {
+	m_pos = data;
+	m_end = data + data_len;
 	m_shared_string.clear();
 	m_shared_strlen.clear();
-
-	if (data_len < 1)
-		return 0;
-
-	if (*data == 'z')
-	{
-		int raw_len = LZ4_decompress_safe((char*)data + 1, (char*)m_buffer, (int)data_len - 1, (int)m_buffer_size);
-		if (raw_len <= 0)
-			return 0;
-		m_pos = m_buffer;
-		m_end = m_buffer + raw_len;
-	}
-	else
-	{
-		m_pos = (BYTE*)data + 1;
-		m_end = data + data_len;
-	}
 
 	int count = 0;
 	int top = lua_gettop(L);

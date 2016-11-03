@@ -20,7 +20,6 @@ bool lua_socket_mgr::setup(lua_State* L, int max_fd, size_t buffer_size, size_t 
 	auto mgr = create_socket_mgr(max_fd);
 	m_tool = std::make_shared<lua_socket_tool>();
 	m_tool->lvm = L;
-	m_tool->archiver.resize(buffer_size, compress_threhold);
 	m_tool->mgr = std::shared_ptr<socket_mgr>(mgr, [](auto o) { o->release(); });
 	return mgr != nullptr;
 }
