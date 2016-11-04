@@ -20,15 +20,15 @@ struct socket_object
 	virtual ~socket_object() {};
 	virtual bool update(socket_manager* mgr) = 0;
 	virtual void close() { m_closed = true; };
-	virtual void connect(struct addrinfo* addr) { assert(!"not supported"); }
-	virtual void on_dns_err(const char* err) { assert(!"not supported"); }
-	virtual void set_send_cache(size_t size) { assert(!"not supported"); }
-	virtual void set_recv_cache(size_t size) { assert(!"not supported"); }
-	virtual void send(const void* data, size_t data_len) { assert(!"not supported"); }
-	virtual void set_accept_callback(const std::function<void(int)>& cb) { assert(!"not supported"); }
-	virtual void set_connect_callback(const std::function<void()>& cb) { assert(!"not supported"); }
-	virtual void set_package_callback(const std::function<void(char*, size_t)>& cb) { assert(!"not supported"); }
-	virtual void set_error_callback(const std::function<void(const char*)>& cb) { assert(!"not supported"); }
+	virtual void connect(struct addrinfo* addr) { }
+	virtual void on_dns_err(const char* err) { }
+	virtual void set_send_cache(size_t size) { }
+	virtual void set_recv_cache(size_t size) { }
+	virtual void send(const void* data, size_t data_len) { }
+	virtual void set_accept_callback(const std::function<void(int)>& cb) { }
+	virtual void set_connect_callback(const std::function<void()>& cb) { }
+	virtual void set_package_callback(const std::function<void(char*, size_t)>& cb) { }
+	virtual void set_error_callback(const std::function<void(const char*)>& cb) { }
 
 #ifdef _MSC_VER
 	virtual void on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl) = 0;

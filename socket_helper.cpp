@@ -78,7 +78,7 @@ bool wsa_recv_empty(socket_t fd, WSAOVERLAPPED& ovl)
 
 bool make_ip_addr(sockaddr_storage* addr, size_t* len, const char ip[], int port)
 {
-	if (strchr(ip, ':') || ip[0] == '\0')
+	if (strchr(ip, ':'))
 	{
 		sockaddr_in6* ipv6 = (sockaddr_in6*)addr;
 		ipv6->sin6_family = AF_INET6;
@@ -91,8 +91,9 @@ bool make_ip_addr(sockaddr_storage* addr, size_t* len, const char ip[], int port
 	sockaddr_in* ipv4 = (sockaddr_in*)addr;
 	ipv4->sin_family = AF_INET;
 	ipv4->sin_port = htons(port);
+	ipv4->sin_addr = in4addr_any;
 	*len = sizeof(*ipv4);
-	return inet_pton(AF_INET, ip, &ipv4->sin_addr) == 1;
+	return ip[0] == '\0' || inet_pton(AF_INET, ip, &ipv4->sin_addr) == 1;
 }
 
 bool get_ip_string(char ip[], size_t ip_size, const void* addr, size_t addr_len)

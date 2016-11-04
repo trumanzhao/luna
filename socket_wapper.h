@@ -17,6 +17,7 @@ public:
 	bool setup(lua_State* L, int max_fd, size_t buffer_size, size_t compress_threhold);
 	void wait(int ms) { m_mgr->wait(ms); }
 	int listen(lua_State* L);
+	int connect(lua_State* L);
 
 private:
 	lua_State* m_lvm = nullptr;
@@ -36,9 +37,9 @@ public:
 struct lua_socket_node
 {
 	lua_socket_node(int token, lua_State* L, std::shared_ptr<socket_mgr>& mgr, std::shared_ptr<lua_archiver>& ar, std::shared_ptr<io_buffer>& ar_buffer, std::shared_ptr<io_buffer>& lz_buffer);
-	~lua_socket_node() { m_mgr->close(m_token); }
+	~lua_socket_node();
 
-	size_t call(lua_State* L);
+	int call(lua_State* L);
 	void close();
 
 private:

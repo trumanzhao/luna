@@ -10,6 +10,7 @@
 EXPORT_CLASS_BEGIN(lua_socket_mgr)
 EXPORT_LUA_FUNCTION(wait)
 EXPORT_LUA_FUNCTION(listen)
+EXPORT_LUA_FUNCTION(connect)
 EXPORT_CLASS_END()
 
 lua_socket_mgr::~lua_socket_mgr()
@@ -57,6 +58,32 @@ int lua_socket_mgr::listen(lua_State* L)
 	return 2;
 }
 
+int lua_socket_mgr::connect(lua_State* L)
+{
+	const char* ip = lua_tostring(L, 1);
+	const char* port = lua_tostring(L, 2);
+	if (ip == nullptr || port == nullptr)
+	{
+		lua_pushnil(L);
+		lua_pushstring(L, "invalid param");
+		return 2;
+	}
+
+	std::string err;
+	int token = m_mgr->connect(err, ip, port);
+	if (token == 0)
+	{
+		lua_pushnil(L);
+		lua_pushstring(L, err.c_str());
+		return 2;
+	}
+
+	auto stream = new lua_socket_node(token, m_lvm, m_mgr, m_archiver, m_ar_buffer, m_lz_buffer);
+	lua_push_object(L, stream);
+	lua_pushstring(L, "OK");
+	return 2;
+}
+
 EXPORT_CLASS_BEGIN(lua_socket_node)
 EXPORT_LUA_FUNCTION(call)
 EXPORT_LUA_FUNCTION(close)
@@ -78,6 +105,11 @@ lua_socket_node::lua_socket_node(int token, lua_State* L, std::shared_ptr<socket
 			delete stream;
 	});
 
+	m_mgr->set_connect_callback(token, [this]()
+	{
+		lua_call_object_function(m_lvm, this, "on_connected");
+	});
+
 	m_mgr->set_error_callback(token, [this](const char* err)
 	{
 		lua_call_object_function(m_lvm, this, "on_error", std::tie(), err);
@@ -89,7 +121,12 @@ lua_socket_node::lua_socket_node(int token, lua_State* L, std::shared_ptr<socket
 	});
 }
 
-size_t lua_socket_node::call(lua_State* L)
+lua_socket_node::~lua_socket_node()
+{
+	m_mgr->close(m_token);
+}
+
+int lua_socket_node::call(lua_State* L)
 {
 	int top = lua_gettop(L);
 
@@ -100,11 +137,15 @@ size_t lua_socket_node::call(lua_State* L)
 
 	size_t data_len = 0;
 	if (!m_archiver->save(&data_len, buffer, buffer_size, L, 1, top))
-		return 0;
+	{
+		lua_pushnil(L);
+		return 1;
+	}
 
 	m_mgr->send(m_token, buffer, data_len);
 
-	return data_len;
+	lua_pushinteger(L, data_len);
+	return 1;
 }
 
 void lua_socket_node::close()
