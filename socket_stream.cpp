@@ -487,7 +487,7 @@ void socket_stream::do_recv()
 			return;
 		}
 
-		m_recv_buffer->pop_space(nullptr, recv_len);
+		m_recv_buffer->pop_space(recv_len);
 		dispatch_package();
 	}
 }

@@ -105,6 +105,15 @@ struct io_buffer
 		return m_data_end;
 	}
 
+	void pop_space(size_t pop_len)
+	{
+		if (m_buffer == nullptr)
+			alloc_buffer();
+
+		assert(m_data_end + pop_len <= m_buffer + m_buffer_size);
+		m_data_end += pop_len;
+	}
+
 	BYTE* pop_space(size_t* space_len, size_t pop_len)
 	{
 		if (m_buffer == nullptr)

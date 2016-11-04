@@ -92,28 +92,17 @@ lua_socket_node::lua_socket_node(int token, lua_State* L, std::shared_ptr<socket
 size_t lua_socket_node::call(lua_State* L)
 {
 	int top = lua_gettop(L);
-	if (top < 1 || lua_type(L, 1) != LUA_TSTRING)
-		return 0;
-
-	const char* name = lua_tostring(L, 1);
-	size_t name_len = strlen(name) + 1;
 
 	m_ar_buffer->clear();
 
 	size_t buffer_size = 0;
-	auto* buffer = m_ar_buffer->pop_space(&buffer_size, name_len);
-	if (buffer == nullptr)
-		return 0;
-
-	size_t param_len = 0;	
-	if (!m_archiver->save(&param_len, buffer, buffer_size, L, 2, top))
-		return 0;
+	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
 
 	size_t data_len = 0;
-	auto* data = m_ar_buffer->peek_data(&data_len);
-	memcpy(data, name, name_len);
+	if (!m_archiver->save(&data_len, buffer, buffer_size, L, 1, top))
+		return 0;
 
-	m_mgr->send(m_token, data, data_len);
+	m_mgr->send(m_token, buffer, data_len);
 
 	return data_len;
 }
@@ -129,29 +118,16 @@ void lua_socket_node::close()
 
 void lua_socket_node::on_recv(char* data, size_t data_len)
 {
-	char* data_end = data;
-	char* name_end = data;
-
-	while (*name_end != '\0' && name_end < data_end)
-		name_end++;
-
-	if (name_end >= data_end)
-		return;
-
-	name_end++;
-
-	char* msg = data;
-	char* param = name_end;
-	size_t param_len = data_end - name_end;
-
 	lua_guard_t g(m_lvm);
 
 	if (!lua_get_object_function(m_lvm, this, "on_recv"))
 		return;
 
-	//lua_pushstring(m_lvm, function);
-	//int param_count = m_archiver->load(m_lvm, (BYTE*)data, data_len);
-	//lua_call_function(m_lvm, 1 + param_count, 0);
+	int param_count = 0;
+	if (!m_archiver->load(&param_count, m_lvm, (BYTE*)data, data_len))
+		return;
+
+	lua_call_function(m_lvm, param_count, 0);
 }
 
 int lua_create_socket_mgr(lua_State* L)
