@@ -83,6 +83,7 @@ function luna_entry(filename)
     while not luna_quit_flag do
         local now = get_time_ms();
         local on_loop = entry_file.on_loop;
+
         if on_loop then
             pcall(on_loop, now);
         end

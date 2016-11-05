@@ -46,13 +46,13 @@ int main(int argc, const char* argv[])
 	g_lvm = luaL_newstate();
 
 	luaL_openlibs(g_lvm);
+	luaL_dofile(g_lvm, "base/base.lua");
 
     lua_register_function(g_lvm, "get_file_time", get_file_time);
     lua_register_function(g_lvm, "get_time_ms", get_time_ms);
     lua_register_function(g_lvm, "sleep_ms", sleep_ms);
 	lua_register_function(g_lvm, "create_socket_mgr", lua_create_socket_mgr);
 
-	luaL_dofile(g_lvm, "base/base.lua");
     lua_call_global_function(g_lvm, "luna_entry", std::tie(), argc > 1 ? argv[1] : "main.lua");
 
 	lua_close(g_lvm);

@@ -75,7 +75,10 @@ int64_t get_time_ms()
 
 #ifdef _MSC_VER
 // just for developing :)
-int64_t get_time_ms() { return (int64_t)GetTickCount64(); }
+int64_t get_time_ms() 
+{
+	return (int64_t)GetTickCount64(); 
+}
 #endif
 
 void sleep_ms(int ms)
