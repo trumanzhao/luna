@@ -17,12 +17,10 @@
 
 lua_State* g_lvm = nullptr;
 
-#if defined(__linux) || defined(__APPLE__)
 static void on_quit_signal(int signo)
 {
     lua_call_global_function(g_lvm, "on_quit_signal", std::tie(), signo);
 }
-#endif
 
 int main(int argc, const char* argv[])
 {
@@ -36,9 +34,10 @@ int main(int argc, const char* argv[])
 
     setlocale(LC_ALL, "");
 
+	signal(SIGINT, on_quit_signal);
+	signal(SIGTERM, on_quit_signal);
+
 #if defined(__linux) || defined(__APPLE__)
-    signal(SIGINT, on_quit_signal);
-    signal(SIGTERM, on_quit_signal);
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
 #endif
