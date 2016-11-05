@@ -1,9 +1,3 @@
-run_flag = true;
-_G.on_quit_signal = function(signo)
-    print("on_quit_signal: "..signo);
-    run_flag = false;
-end
-
 mgr = create_socket_mgr(100, 1024 * 1024, 1024 * 8);
 
 listen = mgr.listen("", 8080);
@@ -35,7 +29,7 @@ client.on_error = function (err)
     print("client err: "..err);
 end
 
-frame = 0;
+local frame = 0;
 function on_frame(now)
     frame = frame + 1;
     if frame % 10 == 0 then
@@ -43,19 +37,20 @@ function on_frame(now)
     end
 end
 
-function _G.main()
+local next_frame_time = 0;
+local next_gc_time = 0;
 
-    local last = 0;
-    while run_flag do
-        local now = get_time_ms();
-        if now > last + 100 then
-            last = now;
-            on_frame(now);
-            --pcall(on_frame, now);
-        else
-            mgr.wait(10);
-            collectgarbage();
-        end
+function on_loop(now)
+    if now >= next_frame_time then
+        next_frame_time = now + 100;
+        on_frame(now);
     end
+
+    if now >= next_gc_time then
+        collectgarbage();
+        next_gc_time = now + 500;
+    end
+
+    mgr.wait(50);
 end
 

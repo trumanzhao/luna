@@ -49,10 +49,6 @@ function import(filename)
     return env;
 end
 
-luna_quit_flag = false;  --通过设置这个标志位退出程序
-luna_frame_cycle = 60;    --on_frame调用周期,单位: ms
-luna_reload_cycle = 3000; --检查文件更新的周期,单位: ms
-
 local try_reload = function()
     for filename, filenode in pairs(luna_files) do
         local filetime = get_file_time(filename);
@@ -69,28 +65,31 @@ local try_reload = function()
     end
 end
 
-function luna_entry(entry_file)
-    local entry = import(entry_file);
-    if entry == nil or entry.on_frame == nil then
+luna_quit_flag = false;  --通过设置这个标志位退出程序
+
+function on_quit_signal(sig_no)
+    print("recv_quit_signal: "..tostring(sig_no));
+    luna_quit_flag = true;
+end
+
+function luna_entry(filename)
+    local entry_file = import(filename);
+    if entry_file == nil then
         return;
     end
 
-    local frame = 0;
-    local now = get_time_ms();
-    local next_frame_time = now;
-    local next_reload_time = now + luna_reload_cycle;
+    local next_reload_time = 0;
 
     while not luna_quit_flag do
-        now = get_time_ms();
-        if now >= last + luna_frame_cycle then
-            last = now;
-            frame = frame + 1;
-            pcall(entry.on_frame, frame);
+        local now = get_time_ms();
+        local on_loop = entry_file.on_loop;
+        if on_loop then
+            pcall(on_loop, now);
         end
 
         if now >= next_reload_time then
             try_reload();
-            next_reload_time = now + luna_reload_cycle;
+            next_reload_time = now + 3000;
         end
     end
 end

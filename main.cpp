@@ -15,9 +15,6 @@
 #include "socket_io.h"
 #include "socket_wapper.h"
 
-static const char* g_usage =
-u8R"---(usage: luna main.lua)---";
-
 lua_State* g_lvm = nullptr;
 
 #if defined(__linux) || defined(__APPLE__)
@@ -46,12 +43,6 @@ int main(int argc, const char* argv[])
     signal(SIGCHLD, SIG_IGN);
 #endif
 
-    if (argc != 2)
-    {
-        puts(g_usage);
-        return 1;
-    }
-
 	g_lvm = luaL_newstate();
 
 	luaL_openlibs(g_lvm);
@@ -62,8 +53,7 @@ int main(int argc, const char* argv[])
 	lua_register_function(g_lvm, "create_socket_mgr", lua_create_socket_mgr);
 
 	luaL_dofile(g_lvm, "base/base.lua");
-
-    lua_call_global_function(g_lvm, "luna_entry", std::tie(), argv[1]);
+    lua_call_global_function(g_lvm, "luna_entry", std::tie(), argc > 1 ? argv[1] : "main.lua");
 
 	lua_close(g_lvm);
 	return 0;
