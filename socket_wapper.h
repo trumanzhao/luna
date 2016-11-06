@@ -41,12 +41,12 @@ struct lua_socket_node
 
 	int call(lua_State* L);
 	void close();
-
 private:
 	void on_recv(char* data, size_t data_len);
 
 	int m_token = 0;
 	lua_State* m_lvm = nullptr;
+	std::string m_ip;
 	std::shared_ptr<socket_mgr> m_mgr;
 	std::shared_ptr<lua_archiver> m_archiver;
 	std::shared_ptr<io_buffer> m_ar_buffer;

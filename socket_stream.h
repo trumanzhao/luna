@@ -11,8 +11,9 @@
 
 struct socket_stream : public socket_object
 {
-	socket_stream() {}
+	socket_stream();
 	~socket_stream();
+	bool get_remote_ip(std::string& ip) override;
 	bool accept_socket(socket_t fd);
 	void connect(struct addrinfo* addr) override { m_addr = addr; m_next = addr; }
 	void on_dns_err(const char* err) override;

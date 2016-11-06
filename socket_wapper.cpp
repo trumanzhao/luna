@@ -87,6 +87,7 @@ int lua_socket_mgr::connect(lua_State* L)
 EXPORT_CLASS_BEGIN(lua_socket_node)
 EXPORT_LUA_FUNCTION(call)
 EXPORT_LUA_FUNCTION(close)
+EXPORT_LUA_STD_STR_AS_R(m_ip, "ip")
 EXPORT_CLASS_END()
 
 lua_socket_node::lua_socket_node(int token, lua_State* L, std::shared_ptr<socket_mgr>& mgr, std::shared_ptr<lua_archiver>& ar, std::shared_ptr<io_buffer>& ar_buffer, std::shared_ptr<io_buffer>& lz_buffer)
@@ -97,6 +98,8 @@ lua_socket_node::lua_socket_node(int token, lua_State* L, std::shared_ptr<socket
 	m_archiver = ar;
 	m_ar_buffer = ar_buffer;
 	m_lz_buffer = lz_buffer;
+
+	mgr->get_remote_ip(m_ip, token);
 
 	m_mgr->set_accept_callback(token, [this](int steam_token)
 	{

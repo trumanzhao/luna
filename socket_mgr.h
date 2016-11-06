@@ -19,7 +19,8 @@ struct socket_object
 {
 	virtual ~socket_object() {};
 	virtual bool update(socket_manager* mgr) = 0;
-	virtual void close() { m_closed = true; };
+	virtual void close() final { m_closed = true; };
+	virtual bool get_remote_ip(std::string& ip) = 0;
 	virtual void connect(struct addrinfo* addr) { }
 	virtual void on_dns_err(const char* err) { }
 	virtual void set_send_cache(size_t size) { }

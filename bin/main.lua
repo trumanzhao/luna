@@ -3,7 +3,7 @@ mgr = create_socket_mgr(100, 1024 * 1024, 1024 * 8);
 listen = mgr.listen("", 8080);
 server = nil;
 listen.on_accept = function (stm)
-    print("accept new connection ...");
+    print("accept new connection, ip="..stm.ip);
     server = stm;
 
     server.on_error = function (err)
@@ -21,7 +21,7 @@ if not client then
 end
 
 client.on_connected = function ()
-    print("client connected !");
+    print("client connected, remote="..client.ip);
     client.call("fuck", "you", 123);
 end
 

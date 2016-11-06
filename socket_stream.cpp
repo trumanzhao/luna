@@ -28,6 +28,11 @@
 #include "socket_mgr.h"
 #include "socket_stream.h"
 
+socket_stream::socket_stream()
+{
+	m_ip[0] = 0;
+}
+
 socket_stream::~socket_stream()
 {
 	if (m_socket != INVALID_SOCKET)
@@ -45,6 +50,12 @@ socket_stream::~socket_stream()
 	printf("delete stream: %p\n", this);
 }
 
+bool socket_stream::get_remote_ip(std::string& ip)
+{
+	ip = m_ip;
+	return true;
+}
+
 bool socket_stream::accept_socket(socket_t fd)
 {
 #ifdef _MSC_VER
@@ -56,7 +67,13 @@ bool socket_stream::accept_socket(socket_t fd)
 	sockaddr_storage addr;
 	socklen_t len = sizeof(addr);
 	memset(&addr, 0, sizeof(addr));
-	getpeername(fd, (struct sockaddr*)&addr, &len);
+	int ret = getpeername(fd, (struct sockaddr*)&addr, &len);
+	if (ret != 0)
+	{
+		char err[128];
+		get_error_string(err, sizeof(err), get_socket_error());
+		puts(err);
+	}
 	get_ip_string(m_ip, sizeof(m_ip), &addr, sizeof(addr));
 	m_socket = fd;
 	m_connected = true;

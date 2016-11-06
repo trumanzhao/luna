@@ -277,6 +277,11 @@ void socket_manager::close(int token)
 
 bool socket_manager::get_remote_ip(std::string& ip, int token)
 {
+	auto node = get_object(token);
+	if (node)
+	{
+		return node->get_remote_ip(ip);
+	}
 	return false;
 }
 
