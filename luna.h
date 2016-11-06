@@ -15,10 +15,23 @@
 #include <utility>
 #include "lua/lua.hpp"
 
-template <typename T> void lua_push_object(lua_State* L, T obj);
-template <typename T> T lua_to_object(lua_State* L, int idx);
+template<typename T>
+struct has_meta_data
+{
+	template<typename U> static auto check(int) -> decltype(std::declval<U>()->lua_get_meta_data(), std::true_type());
+	template<typename U> static std::false_type check(...);
+	enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
+};
 
-template <typename T> T lua_to_native(lua_State* L, int i) { return lua_to_object<T>(L, i); }
+template <typename T> 
+void lua_push_object(lua_State* L, T obj);
+
+template <typename T> 
+typename std::enable_if<has_meta_data<T>::value, T>::type lua_to_object(lua_State* L, int idx);
+
+template <typename T> 
+T lua_to_native(lua_State* L, int i) { return lua_to_object<T>(L, i); }
+
 template <> inline  const char* lua_to_native<const char*>(lua_State* L, int i) { return lua_tostring(L, i); }
 template <> inline long long lua_to_native<long long>(lua_State* L, int i) { return lua_tointeger(L, i); }
 template <> inline unsigned long long lua_to_native<unsigned long long>(lua_State* L, int i) { return (unsigned long long)lua_tointeger(L, i); }
@@ -349,7 +362,7 @@ struct has_member_gc
 {
     template<typename U> static auto check(int) -> decltype(std::declval<U>().gc(), std::true_type());
     template<typename U> static std::false_type check(...);
-    // 注意编译器在check函数两个版本(int参数, ...参数)同时存在时,优先掉int参数版
+    // 注意编译器在check函数两个版本(int参数, ...变参)同时存在时,优先匹配int参数版
     enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
 };
 
@@ -436,7 +449,7 @@ void lua_push_object(lua_State* L, T obj)
 }
 
 template <typename T>
-T lua_to_object(lua_State* L, int idx)
+typename std::enable_if<has_meta_data<T>::value, T>::type lua_to_object(lua_State* L, int idx)
 {
     T obj = nullptr;
      if (lua_istable(L, idx))
