@@ -6,9 +6,20 @@
 #ifdef _MSC_VER
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
+#include <mswsock.h>
 #include <windows.h>
 #endif
+#ifdef __linux
+#include <sys/epoll.h>
+#endif
+#ifdef __APPLE__
+#include <sys/types.h>
+#include <sys/event.h>
+#include <sys/time.h>
+#endif
 #if defined(__linux) || defined(__APPLE__)
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
 #include <string.h>
@@ -91,7 +102,7 @@ bool make_ip_addr(sockaddr_storage* addr, size_t* len, const char ip[], int port
 	sockaddr_in* ipv4 = (sockaddr_in*)addr;
 	ipv4->sin_family = AF_INET;
 	ipv4->sin_port = htons(port);
-	ipv4->sin_addr = in4addr_any;
+	ipv4->sin_addr.s_addr = INADDR_ANY;
 	*len = sizeof(*ipv4);
 	return ip[0] == '\0' || inet_pton(AF_INET, ip, &ipv4->sin_addr) == 1;
 }

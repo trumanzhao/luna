@@ -247,7 +247,7 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 
 			if (err == EAGAIN)
 			{
-				if (!m_send_buffer.push_data(data, data_len))
+				if (!m_send_buffer->push_data(data, data_len))
 				{
 					call_error("send_cache_full");
 				}
