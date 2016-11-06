@@ -228,11 +228,11 @@ void socket_listener::on_complete(socket_manager* mgr, bool can_read, bool can_w
 		socklen_t addr_len = (socklen_t)sizeof(addr);
 		char ip[INET6_ADDRSTRLEN];
 
-		socket_t fd = accept(m_socket, &addr, addr_len);
+		socket_t fd = accept(m_socket, (sockaddr*)&addr, &addr_len);
         if (fd == INVALID_SOCKET)
             break;
 
-		get_ip_string(ip, sizeof(ip), addr, (size_t)addr_len);
+		get_ip_string(ip, sizeof(ip), &addr, (size_t)addr_len);
 
         set_none_block(fd);
 
