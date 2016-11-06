@@ -46,8 +46,6 @@ socket_stream::~socket_stream()
 		freeaddrinfo(m_addr);
 		m_addr = nullptr;
 	}
-
-	printf("delete stream: %p\n", this);
 }
 
 bool socket_stream::get_remote_ip(std::string& ip)
@@ -56,7 +54,7 @@ bool socket_stream::get_remote_ip(std::string& ip)
 	return true;
 }
 
-bool socket_stream::accept_socket(socket_t fd)
+bool socket_stream::accept_socket(socket_t fd, const char ip[])
 {
 #ifdef _MSC_VER
 	if (!wsa_recv_empty(fd, m_recv_ovl))
@@ -64,17 +62,7 @@ bool socket_stream::accept_socket(socket_t fd)
 	m_ovl_ref++;
 #endif
 
-	sockaddr_storage addr;
-	socklen_t len = sizeof(addr);
-	memset(&addr, 0, sizeof(addr));
-	int ret = getpeername(fd, (struct sockaddr*)&addr, &len);
-	if (ret != 0)
-	{
-		char err[128];
-		get_error_string(err, sizeof(err), get_socket_error());
-		puts(err);
-	}
-	get_ip_string(m_ip, sizeof(m_ip), &addr, sizeof(addr));
+	safe_cpy(m_ip, ip);
 	m_socket = fd;
 	m_connected = true;
 	return true;

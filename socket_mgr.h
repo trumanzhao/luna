@@ -68,7 +68,7 @@ struct socket_manager : socket_mgr
 	virtual void set_error_callback(int token, const std::function<void(const char*)>& cb) override;
 
 	bool watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send, bool modify = false);
-	int accept_stream(socket_t fd);
+	int accept_stream(socket_t fd, const char ip[]);
 
 private:
 

@@ -42,6 +42,7 @@ private:
 	};
 	listen_node m_nodes[16];
 	LPFN_ACCEPTEX m_accept_func = nullptr;
+	LPFN_GETACCEPTEXSOCKADDRS m_addrs_func = nullptr;
 	int m_ovl_ref = 0;
 #endif
 };

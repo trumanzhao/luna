@@ -57,16 +57,20 @@ socket_listener::~socket_listener()
 		close_socket_handle(m_socket);
 		m_socket = INVALID_SOCKET;
 	}
-
-	printf("delete listener: %p\n", this);
 }
 
 bool socket_listener::setup(socket_t fd)
 {
 #ifdef _MSC_VER
-	GUID func_guid = WSAID_ACCEPTEX;
 	DWORD bytes = 0;
+	GUID func_guid = WSAID_ACCEPTEX;
 	auto ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &func_guid, sizeof(func_guid), &m_accept_func, sizeof(m_accept_func), &bytes, nullptr, nullptr);
+	if (ret == SOCKET_ERROR)
+		return false;
+
+	bytes = 0;
+	func_guid = WSAID_GETACCEPTEXSOCKADDRS;
+	ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &func_guid, sizeof(func_guid), &m_addrs_func, sizeof(m_addrs_func), &bytes, nullptr, nullptr);
 	if (ret == SOCKET_ERROR)
 		return false;
 #endif
@@ -119,9 +123,18 @@ void socket_listener::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 	assert(node >= m_nodes && node < m_nodes + _countof(m_nodes));
 	assert(node->fd != INVALID_SOCKET);
 
+	sockaddr* local_addr = nullptr;
+	sockaddr* remote_addr = nullptr;
+	int local_addr_len = 0;
+	int remote_addr_len = 0;
+	char ip[INET6_ADDRSTRLEN];
+
+	(*m_addrs_func)(node->buffer, 0, sizeof(node->buffer[0]), sizeof(node->buffer[2]), &local_addr, &local_addr_len, &remote_addr, &remote_addr_len);
+	get_ip_string(ip, sizeof(ip), remote_addr, (size_t)remote_addr_len);
+
 	set_none_block(node->fd);
 
-	auto token = mgr->accept_stream(node->fd);
+	auto token = mgr->accept_stream(node->fd, ip);
 	if (token == 0)
 	{
 		close_socket_handle(node->fd);
@@ -181,7 +194,16 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 			return;
 		}
 
-		auto token = mgr->accept_stream(node->fd);
+		sockaddr* local_addr = nullptr;
+		sockaddr* remote_addr = nullptr;
+		int local_addr_len = 0;
+		int remote_addr_len = 0;
+		char ip[INET6_ADDRSTRLEN];
+
+		(*m_addrs_func)(node->buffer, 0, sizeof(node->buffer[0]), sizeof(node->buffer[2]), &local_addr, &local_addr_len, &remote_addr, &remote_addr_len);
+		get_ip_string(ip, sizeof(ip), remote_addr, (size_t)remote_addr_len);
+
+		auto token = mgr->accept_stream(node->fd, ip);
 		if (token == 0)
 		{
 			close_socket_handle(node->fd);
@@ -202,13 +224,19 @@ void socket_listener::on_complete(socket_manager* mgr, bool can_read, bool can_w
 {
     while (!m_closed)
     {
-        socket_t fd = accept(m_socket, nullptr, nullptr);
+		sockaddr_storage addr;
+		socklen_t addr_len = (socklen_t)sizeof(addr);
+		char ip[INET6_ADDRSTRLEN];
+
+		socket_t fd = accept(m_socket, &addr, addr_len);
         if (fd == INVALID_SOCKET)
             break;
 
+		get_ip_string(ip, sizeof(ip), addr, (size_t)addr_len);
+
         set_none_block(fd);
 
-        auto token = mgr->accept_stream(fd);
+        auto token = mgr->accept_stream(fd, ip);
         if (token != 0)
         {
             m_accept_cb(token);
