@@ -99,8 +99,6 @@ lua_socket_node::lua_socket_node(int token, lua_State* L, std::shared_ptr<socket
 	m_ar_buffer = ar_buffer;
 	m_lz_buffer = lz_buffer;
 
-	mgr->get_remote_ip(m_ip, token);
-
 	m_mgr->set_accept_callback(token, [this](int steam_token)
 	{
 		auto stream = new lua_socket_node(steam_token, m_lvm, m_mgr, m_archiver, m_ar_buffer, m_lz_buffer);
@@ -110,6 +108,7 @@ lua_socket_node::lua_socket_node(int token, lua_State* L, std::shared_ptr<socket
 
 	m_mgr->set_connect_callback(token, [this]()
 	{
+		m_mgr->get_remote_ip(m_ip, m_token);
 		lua_call_object_function(m_lvm, this, "on_connected");
 	});
 
