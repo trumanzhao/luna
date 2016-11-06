@@ -1,20 +1,21 @@
 mgr = create_socket_mgr(100, 1024 * 1024, 1024 * 8);
 
-listen = mgr.listen("", 8080);
-server = nil;
-listen.on_accept = function (stm)
-    print("accept new connection, ip="..stm.ip);
-    server = stm;
+client = mgr.connect("10.0.1.10", 8080);
+if not client then
+    print("client connect failed !");
+end
 
-    server.on_error = function (err)
-        print("server err: "..err);
-    end
+client.on_connected = function ()
+    print("client connected, remote="..client.ip);
+    client.call("fuck", "you", 123);
+end
 
-    server.on_recv = function (msg, a, b)
-        print("msg="..msg..", a="..tostring(a)..", b="..tostring(b));
-    end
+client.on_error = function (err)
+    print("client err: "..err);
+end
 
-    server.call("hello", "I'm server");
+client.on_recv = function (msg, a, b)
+    print("msg="..msg..", a="..tostring(a)..", b="..tostring(b));
 end
 
 local frame = 0;
