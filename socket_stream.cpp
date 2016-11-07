@@ -8,6 +8,7 @@
 #include <Ws2tcpip.h>
 #include <mswsock.h>
 #include <windows.h>
+#include <mstcpip.h>
 #endif
 #ifdef __linux
 #include <sys/epoll.h>
@@ -28,6 +29,14 @@
 #include "socket_mgr.h"
 #include "socket_stream.h"
 
+#ifdef _MSC_VER
+socket_stream::socket_stream(LPFN_CONNECTEX connect_func)
+{
+	m_connect_func = connect_func;
+	m_ip[0] = 0;
+}
+#endif
+
 socket_stream::socket_stream()
 {
 	m_ip[0] = 0;
@@ -46,6 +55,7 @@ socket_stream::~socket_stream()
 		freeaddrinfo(m_addr);
 		m_addr = nullptr;
 	}
+	puts("stream closed !");
 }
 
 bool socket_stream::get_remote_ip(std::string& ip)
@@ -68,14 +78,15 @@ bool socket_stream::accept_socket(socket_t fd, const char ip[])
 	return true;
 }
 
+void socket_stream::connect(struct addrinfo* addr)
+{ 
+	m_addr = addr; 
+	m_next = addr; 
+}
+
 void socket_stream::on_dns_err(const char* err)
 {
-	if (!m_closed)
-	{
-		assert(!m_connected);
-		call_error(err);
-		m_closed = true;
-	}
+	call_error("domain_error");
 }
 
 bool socket_stream::update(socket_manager* mgr)
@@ -105,14 +116,120 @@ bool socket_stream::update(socket_manager* mgr)
 	return true;
 }
 
+#ifdef _MSC_VER
+static bool bind_any(socket_t s)
+{
+	struct sockaddr_in6 v6addr;
+
+	memset(&v6addr, 0, sizeof(v6addr));
+	v6addr.sin6_family = AF_INET6;
+	v6addr.sin6_addr = in6addr_any;
+	v6addr.sin6_port = 0;
+	auto ret = bind(s, (sockaddr*)&v6addr, (int)sizeof(v6addr));
+	if (ret != SOCKET_ERROR)
+		return true;
+
+	struct sockaddr_in v4addr;
+	memset(&v4addr, 0, sizeof(v4addr));
+	v4addr.sin_family = AF_INET;
+	v4addr.sin_addr.s_addr = INADDR_ANY;
+	v4addr.sin_port = 0;
+
+	ret = bind(s, (sockaddr*)&v4addr, (int)sizeof(v4addr));
+	return ret != SOCKET_ERROR;
+}
+
+bool socket_stream::do_connect(socket_manager* mgr)
+{
+	if (!bind_any(m_socket))
+	{
+		call_error("bind_failed");
+		return false;
+	}
+
+	if (!mgr->watch(m_socket, this, false, false))
+	{
+		call_error("watch_failed");
+		return false;
+	}
+
+	memset(&m_send_ovl, 0, sizeof(m_send_ovl));
+
+	auto ret = (*m_connect_func)(m_socket, (SOCKADDR*)m_next->ai_addr, (int)m_next->ai_addrlen, nullptr, 0, nullptr, &m_send_ovl);
+	if (!ret)
+	{
+		m_next = m_next->ai_next;
+		int err = get_socket_error();
+		if (err == ERROR_IO_PENDING)
+		{
+			m_ovl_ref++;
+			return true;
+		}
+
+		m_closed = true;("connect_failed");
+		return false;
+	}
+
+	freeaddrinfo(m_addr);
+	m_addr = nullptr;
+	m_next = nullptr;
+
+	if (!wsa_recv_empty(m_socket, m_recv_ovl))
+	{
+		call_error("connect_failed");
+		return false;
+	}
+
+	m_ovl_ref++;
+	m_connected = true;
+	m_connect_cb();
+	return true;
+}
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+bool socket_stream::do_connect(socket_manager* mgr)
+{
+	while (true)
+	{
+		auto ret = ::connect(m_socket, m_next->ai_addr, (int)m_next->ai_addrlen);
+		if (ret != SOCKET_ERROR)
+		{
+			freeaddrinfo(m_addr);
+			m_addr = nullptr;
+			m_next = nullptr;
+			m_connected = true;
+			m_connect_cb();
+			break;
+		}
+
+		int err = get_socket_error();
+		if (err == EINTR)
+			continue;
+
+		m_next = m_next->ai_next;
+
+		if (err != EINPROGRESS)
+			return false;
+
+		if (!mgr->watch(m_socket, this, false, true))
+		{
+			call_error("watch_failed");
+			return false;
+		}
+		break;
+	}
+	return true;
+}
+#endif
+
 void socket_stream::try_connect(socket_manager* mgr)
 {
-	// wait for dns resolver
-	if (m_addr == nullptr)
+	// wait for dns resolver, or, socket connecting
+	if (m_addr == nullptr || m_socket != INVALID_SOCKET)
 		return;
 
-	int ret = 0;
-	while (m_socket == INVALID_SOCKET && m_next != nullptr)
+	while (m_next != nullptr && !m_closed)
 	{
 		if (m_next->ai_family != AF_INET && m_next->ai_family != AF_INET6)
 		{
@@ -130,72 +247,17 @@ void socket_stream::try_connect(socket_manager* mgr)
 		set_none_block(m_socket);
 		get_ip_string(m_ip, sizeof(m_ip), m_next->ai_addr, m_next->ai_addrlen);
 
-		while (m_socket != INVALID_SOCKET)
+		if (do_connect(mgr))
+			return;
+
+		if (m_socket != INVALID_SOCKET)
 		{
-			ret = ::connect(m_socket, m_next->ai_addr, (int)m_next->ai_addrlen);
-			if (ret != SOCKET_ERROR)
-			{
-				freeaddrinfo(m_addr);
-				m_addr = nullptr;
-				m_next = nullptr;
-
-#ifdef _MSC_VER
-				if (!wsa_recv_empty(m_socket, m_recv_ovl))
-				{
-					m_closed = true;
-					m_error_cb("connect_failed");
-					return;
-				}
-				m_ovl_ref++;
-#endif
-
-				m_connected = true;
-				m_connect_cb();
-				return;
-			}
-
-			int err = get_socket_error();
-#ifdef _MSC_VER
-			if (err == WSAEWOULDBLOCK)
-			{
-				if (!mgr->watch(m_socket, this, false, true) || !wsa_send_empty(m_socket, m_send_ovl))
-				{
-					m_closed = true;
-					m_error_cb("connect_failed");
-					return;
-				}
-				m_ovl_ref++;
-				break;
-			}
-#endif
-
-#if defined(__linux) || defined(__APPLE__)
-			if (err == EINTR)
-				continue;
-
-			if (err == EINPROGRESS)
-			{
-				if (!mgr->watch(m_socket, this, false, true))
-				{
-					m_closed = true;
-					m_error_cb("connect_failed");
-					return;
-				}
-				break;
-			}
-#endif
-
 			close_socket_handle(m_socket);
 			m_socket = INVALID_SOCKET;
 		}
-		m_next = m_next->ai_next;
 	}
 
-	if (m_socket == INVALID_SOCKET)
-	{
-		m_closed = true;
-		m_error_cb("socket_error");
-	}
+	call_error("connect_failed");
 }
 
 void socket_stream::send(const void* data, size_t data_len)
@@ -218,7 +280,6 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 	{
 		if (!m_send_buffer->push_data(data, data_len))
 		{
-			m_closed = true;
 			call_error("send_cache_full");
 		}
 		return;
@@ -237,11 +298,16 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 			{
 				if (!m_send_buffer->push_data(data, data_len))
 				{
-					m_closed = true;
 					call_error("send_cache_full");
 					return;
 				}
 
+				if (!wsa_send_empty(m_socket, m_send_ovl))
+				{
+					call_error("wsa_send_failed");
+					return;
+				}
+				m_ovl_ref++;
 				return;
 			}
 #endif
@@ -260,7 +326,7 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 			}
 #endif
 
-			call_error(err);
+			call_error("send_failed");
 			return;
 		}
 
@@ -307,8 +373,7 @@ void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 #ifdef _MSC_VER
 		if (!wsa_recv_empty(m_socket, m_recv_ovl))
 		{
-			m_closed = true;
-			m_error_cb("connect_failed");
+			call_error("connect_failed");
 			return;
 		}
 		m_ovl_ref++;
@@ -324,8 +389,7 @@ void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 	m_socket = INVALID_SOCKET;
 	if (m_next == nullptr)
 	{
-		m_error_cb("connect_failed");
-		m_closed = true;
+		call_error("connect_failed");
 	}
 }
 #endif
@@ -363,8 +427,7 @@ void socket_stream::on_complete(socket_manager* mgr, bool can_read, bool can_wri
 
         if (!mgr->watch(m_socket, this, true, true, true))
         {
-            m_closed = true;
-            m_error_cb("connection_watch_failed");
+            call_error("connection_watch_failed");
             return;
         }
         m_connected = true;
@@ -377,8 +440,7 @@ void socket_stream::on_complete(socket_manager* mgr, bool can_read, bool can_wri
     m_socket = INVALID_SOCKET;
     if (m_next == nullptr)
     {
-        m_error_cb("connect_failed");
-        m_closed = true;
+        call_error("connect_failed");
     }
 }
 #endif
@@ -404,7 +466,6 @@ void socket_stream::do_send()
 			{
 				if (!wsa_send_empty(m_socket, m_send_ovl))
 				{
-					m_closed = true;
 					call_error("wsa_send_failed");
 					return;
 				}
@@ -421,14 +482,12 @@ void socket_stream::do_send()
 				break;
 #endif
 
-			m_closed = true;
-			call_error(err);
+			call_error("send_failed");
 			return;
 		}
 
 		if (send_len == 0)
 		{
-			m_closed = true;
 			call_error("connection_lost");
 			return;
 		}
@@ -445,10 +504,8 @@ void socket_stream::do_recv()
 	{
 		size_t space_len = 0;
 		auto* space = m_recv_buffer->peek_space(&space_len);
-
 		if (space_len == 0)
 		{
-			m_closed = true;
 			call_error("package_too_large");
 			return;
 		}
@@ -463,7 +520,6 @@ void socket_stream::do_recv()
 			{
 				if (!wsa_recv_empty(m_socket, m_recv_ovl))
 				{
-					m_closed = true;
 					call_error("wsa_recv_failed");
 					return;
 				}
@@ -480,14 +536,12 @@ void socket_stream::do_recv()
 				break;
 #endif
 
-			m_closed = true;
-			call_error(err);
+			call_error("recv_failed");
 			return;
 		}
 
 		if (recv_len == 0)
 		{
-			m_closed = true;
 			call_error("connection_lost");
 			return;
 		}
@@ -518,13 +572,6 @@ void socket_stream::dispatch_package()
 	}
 
 	m_recv_buffer->regularize();
-}
-
-void socket_stream::call_error(int err)
-{
-	char txt[MAX_ERROR_TXT];
-	get_error_string(txt, _countof(txt), err);
-	call_error(txt);
 }
 
 void socket_stream::call_error(const char err[])

@@ -81,6 +81,9 @@ bool socket_manager::setup(int max_connection)
 	m_handle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 	if (m_handle == INVALID_HANDLE_VALUE)
 		return false;
+
+	if (!get_socket_funcs())
+		return false;
 #endif
 
 #ifdef __linux
@@ -100,6 +103,44 @@ bool socket_manager::setup(int max_connection)
 
 	return true;
 }
+
+#ifdef _MSC_VER
+bool socket_manager::get_socket_funcs()
+{
+	bool result = false;
+	int ret = 0;
+	socket_t fd = INVALID_SOCKET;
+	DWORD bytes = 0;
+	GUID func_guid = WSAID_ACCEPTEX;
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	FAILED_JUMP(fd != INVALID_SOCKET);
+
+	bytes = 0;
+	func_guid = WSAID_ACCEPTEX;
+	ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &func_guid, sizeof(func_guid), &m_accept_func, sizeof(m_accept_func), &bytes, nullptr, nullptr);
+	FAILED_JUMP(ret != SOCKET_ERROR);
+
+	bytes = 0;
+	func_guid = WSAID_CONNECTEX;
+	ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &func_guid, sizeof(func_guid), &m_connect_func, sizeof(m_connect_func), &bytes, nullptr, nullptr);
+	FAILED_JUMP(ret != SOCKET_ERROR);
+
+	bytes = 0;
+	func_guid = WSAID_GETACCEPTEXSOCKADDRS;
+	ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &func_guid, sizeof(func_guid), &m_addrs_func, sizeof(m_addrs_func), &bytes, nullptr, nullptr);
+	FAILED_JUMP(ret != SOCKET_ERROR);
+
+	result = true;
+Exit0:
+	if (fd != INVALID_SOCKET)
+	{
+		close_socket_handle(fd);
+		fd = INVALID_SOCKET;
+	}
+	return result;
+}
+#endif
 
 void socket_manager::wait(int timeout)
 {
@@ -164,7 +205,14 @@ int socket_manager::listen(std::string& err, const char ip[], int port)
 	sockaddr_storage addr;
 	size_t addr_len = 0;
 	int one = 1;
+
+#ifdef _MSC_VER
+	auto* listener = new socket_listener(m_accept_func, m_addrs_func);
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
 	auto* listener = new socket_listener();
+#endif
 
 	ret = make_ip_addr(&addr, &addr_len, ip, port);
 	FAILED_JUMP(ret);
@@ -205,8 +253,15 @@ Exit0:
 int socket_manager::connect(std::string& err, const char domain[], const char service[])
 {
 	int token = new_token();
-	socket_stream* stm = new socket_stream();
 	dns_request_t* req = new dns_request_t;
+
+#ifdef _MSC_VER
+	socket_stream* stm = new socket_stream(m_connect_func);
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+	socket_stream* stm = new socket_stream();
+#endif
 
 	req->node = domain;
 	req->service = service;

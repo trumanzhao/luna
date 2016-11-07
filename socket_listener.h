@@ -11,7 +11,14 @@
 
 struct socket_listener : public socket_object
 {
-	socket_listener();
+#ifdef _MSC_VER
+	socket_listener(LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func);
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+	socket_listener() {}
+#endif
+
 	~socket_listener();
 	bool setup(socket_t fd);
 	bool get_remote_ip(std::string& ip) override { return false; }

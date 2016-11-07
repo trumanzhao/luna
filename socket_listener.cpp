@@ -28,16 +28,18 @@
 #include "socket_mgr.h"
 #include "socket_listener.h"
 
-socket_listener::socket_listener()
-{
 #ifdef _MSC_VER
+socket_listener::socket_listener(LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func)
+{
+	m_accept_func = accept_func;
+	m_addrs_func = addrs_func;
 	memset(m_nodes, 0, sizeof(m_nodes));
 	for (auto& node : m_nodes)
 	{
 		node.fd = INVALID_SOCKET;
 	}
-#endif
 }
+#endif
 
 socket_listener::~socket_listener()
 {
@@ -61,19 +63,6 @@ socket_listener::~socket_listener()
 
 bool socket_listener::setup(socket_t fd)
 {
-#ifdef _MSC_VER
-	DWORD bytes = 0;
-	GUID func_guid = WSAID_ACCEPTEX;
-	auto ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &func_guid, sizeof(func_guid), &m_accept_func, sizeof(m_accept_func), &bytes, nullptr, nullptr);
-	if (ret == SOCKET_ERROR)
-		return false;
-
-	bytes = 0;
-	func_guid = WSAID_GETACCEPTEXSOCKADDRS;
-	ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &func_guid, sizeof(func_guid), &m_addrs_func, sizeof(m_addrs_func), &bytes, nullptr, nullptr);
-	if (ret == SOCKET_ERROR)
-		return false;
-#endif
 	m_socket = fd;
 	return true;
 }

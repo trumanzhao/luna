@@ -11,13 +11,18 @@
 
 struct socket_stream : public socket_object
 {
+#ifdef _MSC_VER
+	socket_stream(LPFN_CONNECTEX connect_func);
+#endif
 	socket_stream();
+
 	~socket_stream();
 	bool get_remote_ip(std::string& ip) override;
 	bool accept_socket(socket_t fd, const char ip[]);
-	void connect(struct addrinfo* addr) override { m_addr = addr; m_next = addr; }
+	void connect(struct addrinfo* addr) override;
 	void on_dns_err(const char* err) override;
 	bool update(socket_manager* mgr) override;
+	bool do_connect(socket_manager* mgr);
 	void try_connect(socket_manager* mgr);
 	void set_package_callback(const std::function<void(char*, size_t)>& cb) override { m_package_cb = cb; }
 	void set_error_callback(const std::function<void(const char*)>& cb) override { m_error_cb = cb; }
@@ -39,7 +44,6 @@ struct socket_stream : public socket_object
 	void do_recv();
 
 	void dispatch_package();
-	void call_error(int err);
 	void call_error(const char err[]);
 
 	char m_ip[INET6_ADDRSTRLEN];
@@ -52,6 +56,7 @@ struct socket_stream : public socket_object
 	bool m_connected = false;
 
 #ifdef _MSC_VER
+	LPFN_CONNECTEX m_connect_func = nullptr;
 	WSAOVERLAPPED m_send_ovl;
 	WSAOVERLAPPED m_recv_ovl;
 	int m_ovl_ref = 0;

@@ -50,6 +50,10 @@ struct socket_manager : socket_mgr
 
 	bool setup(int max_connection);
 
+#ifdef _MSC_VER
+	bool get_socket_funcs();
+#endif
+
 	virtual void release() override { delete this; };
 	virtual void wait(int timout) override;
 
@@ -73,6 +77,9 @@ struct socket_manager : socket_mgr
 private:
 
 #ifdef _MSC_VER
+	LPFN_ACCEPTEX m_accept_func = nullptr;
+	LPFN_CONNECTEX m_connect_func = nullptr;
+	LPFN_GETACCEPTEXSOCKADDRS m_addrs_func = nullptr;
 	HANDLE m_handle = INVALID_HANDLE_VALUE;
 	std::vector<OVERLAPPED_ENTRY> m_events;
 #endif

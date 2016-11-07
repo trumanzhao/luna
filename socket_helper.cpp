@@ -48,6 +48,7 @@ bool wsa_send_empty(socket_t fd, WSAOVERLAPPED& ovl)
 
 	memset(&ovl, 0, sizeof(ovl));
 	int ret = WSASend(fd, &ws_buf, 1, &bytes, 0, &ovl, nullptr);
+	printf("send empty ret=%d\n", ret);
 	if (ret == 0)
 	{
 		return true;
@@ -55,10 +56,15 @@ bool wsa_send_empty(socket_t fd, WSAOVERLAPPED& ovl)
 	else if (ret == SOCKET_ERROR)
 	{
 		int err = get_socket_error();
+		printf("send empty err=%d\n", err);
 		if (err == WSA_IO_PENDING)
 		{
 			return true;
 		}
+
+		char txt[100];
+		get_error_string(txt, sizeof(txt), err);
+		puts(txt);
 	}
 	return false;
 }
@@ -92,6 +98,7 @@ bool make_ip_addr(sockaddr_storage* addr, size_t* len, const char ip[], int port
 	if (strchr(ip, ':'))
 	{
 		sockaddr_in6* ipv6 = (sockaddr_in6*)addr;
+		memset(ipv6, 0, sizeof(*ipv6));
 		ipv6->sin6_family = AF_INET6;
 		ipv6->sin6_port = htons(port);
 		ipv6->sin6_addr = in6addr_any;
@@ -100,6 +107,7 @@ bool make_ip_addr(sockaddr_storage* addr, size_t* len, const char ip[], int port
 	}
 
 	sockaddr_in* ipv4 = (sockaddr_in*)addr;
+	memset(ipv4, 0, sizeof(*ipv4));
 	ipv4->sin_family = AF_INET;
 	ipv4->sin_port = htons(port);
 	ipv4->sin_addr.s_addr = INADDR_ANY;
