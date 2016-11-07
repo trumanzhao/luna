@@ -55,7 +55,6 @@ socket_stream::~socket_stream()
 		freeaddrinfo(m_addr);
 		m_addr = nullptr;
 	}
-	puts("stream closed !");
 }
 
 bool socket_stream::get_remote_ip(std::string& ip)

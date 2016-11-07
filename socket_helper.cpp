@@ -48,7 +48,6 @@ bool wsa_send_empty(socket_t fd, WSAOVERLAPPED& ovl)
 
 	memset(&ovl, 0, sizeof(ovl));
 	int ret = WSASend(fd, &ws_buf, 1, &bytes, 0, &ovl, nullptr);
-	printf("send empty ret=%d\n", ret);
 	if (ret == 0)
 	{
 		return true;
@@ -56,15 +55,10 @@ bool wsa_send_empty(socket_t fd, WSAOVERLAPPED& ovl)
 	else if (ret == SOCKET_ERROR)
 	{
 		int err = get_socket_error();
-		printf("send empty err=%d\n", err);
 		if (err == WSA_IO_PENDING)
 		{
 			return true;
 		}
-
-		char txt[100];
-		get_error_string(txt, sizeof(txt), err);
-		puts(txt);
 	}
 	return false;
 }
