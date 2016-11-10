@@ -26,9 +26,12 @@ using BYTE = unsigned char;
 #endif
 
 #include <string>
+#include <chrono>
+
+inline int64_t get_time_ns() { return std::chrono::high_resolution_clock::now().time_since_epoch().count(); }
+inline int64_t get_time_ms() { return get_time_ns() / 1000 / 1000; }
 
 time_t get_file_time(const char* file_name);
-int64_t get_time_ms();
 void sleep_ms(int ms);
 
 template <typename T, int N>

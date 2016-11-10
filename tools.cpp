@@ -49,38 +49,6 @@ time_t get_file_time(const char* file_name)
 #endif
 }
 
-#ifdef __linux
-int64_t get_time_ms()
-{
-    timespec ts;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-    uint64_t iTime = ts.tv_sec;
-    return iTime * 1000 + ts.tv_nsec / 1000 / 1000;
-}
-#endif
-
-
-#ifdef __APPLE__
-int64_t get_time_ms()
-{
-    clock_serv_t cclock;
-    mach_timespec_t mts;
-    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-    clock_get_time(cclock, &mts);
-    mach_port_deallocate(mach_task_self(), cclock);
-    uint64_t iTime = mts.tv_sec;
-    return iTime * 1000 + mts.tv_nsec / 1000 / 1000;
-}
-#endif
-
-#ifdef _MSC_VER
-// just for developing :)
-int64_t get_time_ms() 
-{
-	return (int64_t)GetTickCount64(); 
-}
-#endif
-
 void sleep_ms(int ms)
 {
 #if defined(__linux) || defined(__APPLE__)

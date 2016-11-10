@@ -49,6 +49,7 @@ int main(int argc, const char* argv[])
     if (ret == 0)
     {
         lua_register_function(g_lvm, "get_file_time", get_file_time);
+        lua_register_function(g_lvm, "get_time_ns", get_time_ns);
         lua_register_function(g_lvm, "get_time_ms", get_time_ms);
         lua_register_function(g_lvm, "sleep_ms", sleep_ms);
         lua_register_function(g_lvm, "create_socket_mgr", lua_create_socket_mgr);
