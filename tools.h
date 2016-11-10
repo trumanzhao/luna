@@ -17,7 +17,6 @@ using uint64_t = unsigned long long;
 
 #if defined(__linux) || defined(__APPLE__)
 #include <stdint.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -27,12 +26,13 @@ using BYTE = unsigned char;
 
 #include <string>
 #include <chrono>
+#include <thread>
 
 inline int64_t get_time_ns() { return std::chrono::high_resolution_clock::now().time_since_epoch().count(); }
 inline int64_t get_time_ms() { return get_time_ns() / 1000 / 1000; }
+inline void sleep_ms(int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 
 time_t get_file_time(const char* file_name);
-void sleep_ms(int ms);
 
 template <typename T, int N>
 void safe_cpy(T (&buffer)[N], const T* str)

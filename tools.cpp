@@ -49,17 +49,6 @@ time_t get_file_time(const char* file_name)
 #endif
 }
 
-void sleep_ms(int ms)
-{
-#if defined(__linux) || defined(__APPLE__)
-    usleep(ms * 1000);
-#endif
-
-#ifdef _MSC_VER
-    Sleep(ms);
-#endif
-}
-
 char* get_error_string(char buffer[], int len, int no)
 {
 	buffer[0] = '\0';
@@ -81,7 +70,6 @@ void get_error_string(std::string& err, int no)
 	get_error_string(txt, sizeof(txt), no);
 	err = txt;
 }
-
 
 void sha1_string(char* buffer, const void* data, size_t data_len)
 {
