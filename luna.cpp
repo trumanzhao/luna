@@ -14,7 +14,7 @@
 #include <cstdio>
 #include "luna.h"
 
-struct luna_function_wapper
+struct luna_function_wapper final
 {
     luna_function_wapper(const lua_global_function& func) : m_func(func) {}
     lua_global_function m_func;

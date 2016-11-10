@@ -15,21 +15,10 @@
 #include <utility>
 #include "lua/lua.hpp"
 
-template<typename T>
-struct has_meta_data
-{
-	template<typename U> static auto check(int) -> decltype(std::declval<U>()->lua_get_meta_data(), std::true_type());
-	template<typename U> static std::false_type check(...);
-	enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
-};
+template <typename T> void lua_push_object(lua_State* L, T obj);
+template <typename T> T lua_to_object(lua_State* L, int idx);
 
-template <typename T> 
-void lua_push_object(lua_State* L, T obj);
-
-template <typename T> 
-typename std::enable_if<has_meta_data<T>::value, T>::type lua_to_object(lua_State* L, int idx);
-
-template <typename T> 
+template <typename T>
 T lua_to_native(lua_State* L, int i) { return lua_to_object<T>(L, i); }
 
 template <> inline  const char* lua_to_native<const char*>(lua_State* L, int i) { return lua_tostring(L, i); }
@@ -422,6 +411,10 @@ void lua_register_class(lua_State* L, T* obj)
 template <typename T>
 void lua_push_object(lua_State* L, T obj)
 {
+    // 禁止将对象的父类指针push到lua中去,以免造成指针转换的低级错误(在lua_push_object时).
+    // 如果自信不会犯这种错误,并且懒得写final,可以将下一行注释掉:)
+    static_assert(std::is_final<typename std::remove_pointer<T>::type>::value, "T should be declared final !");
+
     if (obj == nullptr)
     {
         lua_pushnil(L);
@@ -448,9 +441,18 @@ void lua_push_object(lua_State* L, T obj)
     lua_pcall(L, 2, 1, -3);
 }
 
-template <typename T>
-typename std::enable_if<has_meta_data<T>::value, T>::type lua_to_object(lua_State* L, int idx)
+template<typename T>
+struct has_meta_data
 {
+    template<typename U> static auto check(int) -> decltype(std::declval<U>().lua_get_meta_data(), std::true_type());
+    template<typename U> static std::false_type check(...);
+    enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
+};
+
+template <typename T>
+T lua_to_object(lua_State* L, int idx)
+{
+    static_assert(has_meta_data<typename std::remove_pointer<T>::type>::value, "T should be declared export !");
     T obj = nullptr;
      if (lua_istable(L, idx))
      {
