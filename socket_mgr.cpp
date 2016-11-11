@@ -184,11 +184,12 @@ void socket_manager::wait(int timeout)
 
 	m_dns.update();
 
+	int64_t now = get_time_ms();
 	auto it = m_objects.begin(), end = m_objects.end();
 	while (it != end)
 	{
 		socket_object* object = it->second;
-		if (!object->update(this))
+		if (!object->update(this, now))
 		{
 			it = m_objects.erase(it);
 			delete object;
@@ -309,6 +310,15 @@ void socket_manager::set_recv_cache(int token, size_t size)
 	if (node)
 	{
 		node->set_recv_cache(size);
+	}
+}
+
+void socket_manager::set_timeout(int token, int duration)
+{
+	auto node = get_object(token);
+	if (node)
+	{
+		node->set_timeout(duration);
 	}
 }
 

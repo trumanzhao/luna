@@ -87,6 +87,7 @@ int lua_socket_mgr::connect(lua_State* L)
 EXPORT_CLASS_BEGIN(lua_socket_node)
 EXPORT_LUA_FUNCTION(call)
 EXPORT_LUA_FUNCTION(close)
+EXPORT_LUA_FUNCTION(set_timeout)
 EXPORT_LUA_STD_STR_AS_R(m_ip, "ip")
 EXPORT_CLASS_END()
 
@@ -159,6 +160,11 @@ void lua_socket_node::close()
 		m_mgr->close(m_token);
 		m_token = 0;
 	}
+}
+
+void lua_socket_node::set_timeout(int duration)
+{
+	m_mgr->set_timeout(m_token, duration);
 }
 
 void lua_socket_node::on_recv(char* data, size_t data_len)

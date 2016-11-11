@@ -19,6 +19,7 @@ struct socket_mgr
 
 	virtual void set_send_cache(int token, size_t size) = 0;
 	virtual void set_recv_cache(int token, size_t size) = 0;
+	virtual void set_timeout(int token, int duration) = 0; // 设置超时时间,默认-1,即永不超时
 	virtual void send(int token, const void* data, size_t data_len) = 0;
 	virtual void close(int token) = 0;
 	virtual bool get_remote_ip(std::string& ip, int token) = 0;

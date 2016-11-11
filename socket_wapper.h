@@ -41,6 +41,7 @@ struct lua_socket_node final
 
 	int call(lua_State* L);
 	void close();
+	void set_timeout(int duration);
 private:
 	void on_recv(char* data, size_t data_len);
 

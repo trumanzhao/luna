@@ -88,16 +88,16 @@ void socket_stream::on_dns_err(const char* err)
 	call_error("domain_error");
 }
 
-bool socket_stream::update(socket_manager* mgr)
+bool socket_stream::update(socket_manager* mgr, int64_t now)
 {
-	if (m_closed && m_socket != INVALID_SOCKET)
-	{
-		close_socket_handle(m_socket);
-		m_socket = INVALID_SOCKET;
-	}
-
 	if (m_closed)
 	{
+		if (m_socket != INVALID_SOCKET)
+		{
+			close_socket_handle(m_socket);
+			m_socket = INVALID_SOCKET;
+		}
+
 #ifdef _MSC_VER
 		return m_ovl_ref != 0;
 #endif
@@ -105,6 +105,12 @@ bool socket_stream::update(socket_manager* mgr)
 #if defined(__linux) || defined(__APPLE__)
 		return false;
 #endif
+	}
+
+	if (m_timeout >= 0 && now - m_alive_time > m_timeout)
+	{
+		call_error("timeout");
+		return false;
 	}
 
 	if (!m_connected)
@@ -565,6 +571,7 @@ void socket_stream::dispatch_package()
 		if (data_len < header_len + package_size)
 			break;
 
+		m_alive_time = get_time_ms();
 		m_package_cb((char*)data + header_len, (size_t)package_size);
 
 		m_recv_buffer->pop_data(header_len + (size_t)package_size);

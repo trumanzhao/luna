@@ -21,7 +21,7 @@ struct socket_stream : public socket_object
 	bool accept_socket(socket_t fd, const char ip[]);
 	void connect(struct addrinfo* addr) override;
 	void on_dns_err(const char* err) override;
-	bool update(socket_manager* mgr) override;
+	bool update(socket_manager* mgr, int64_t now) override;
 	bool do_connect(socket_manager* mgr);
 	void try_connect(socket_manager* mgr);
 	void set_package_callback(const std::function<void(char*, size_t)>& cb) override { m_package_cb = cb; }
@@ -29,6 +29,7 @@ struct socket_stream : public socket_object
 	void set_connect_callback(const std::function<void()>& cb) override { m_connect_cb = cb; }
 	void set_send_cache(size_t size) override { m_send_buffer->resize(size); }
 	void set_recv_cache(size_t size) override { m_recv_buffer->resize(size); }
+	void set_timeout(int duration) override { m_timeout = duration; }
 	void send(const void* data, size_t data_len) override;
 	void stream_send(const char* data, size_t data_len);
 
@@ -54,6 +55,8 @@ struct socket_stream : public socket_object
 	struct addrinfo* m_addr = nullptr;
 	struct addrinfo* m_next = nullptr;
 	bool m_connected = false;
+	int m_timeout = -1;
+	int64_t m_alive_time = get_time_ms();
 
 #ifdef _MSC_VER
 	LPFN_CONNECTEX m_connect_func = nullptr;

@@ -67,7 +67,7 @@ bool socket_listener::setup(socket_t fd)
 	return true;
 }
 
-bool socket_listener::update(socket_manager* mgr)
+bool socket_listener::update(socket_manager* mgr, int64_t)
 {
 	if (m_closed && m_socket != INVALID_SOCKET)
 	{
