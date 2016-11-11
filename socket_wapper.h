@@ -18,7 +18,7 @@ public:
 	void wait(int ms) { m_mgr->wait(ms); }
 	int listen(lua_State* L);
 	int connect(lua_State* L);
-	void set_package_size(size_t size); // 设置序列化缓冲区大小,默认16K
+	void set_package_size(size_t size); // 设置序列化缓冲区大小,默认64K
 	void set_compress_size(size_t size) { m_compress_size = size; }; // 设置启用压缩的阈值,默认UINT_MAX,永不启用
 
 private:

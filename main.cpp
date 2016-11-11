@@ -22,6 +22,11 @@ static void on_quit_signal(int signo)
     lua_call_global_function(g_lvm, "on_quit_signal", std::tie(), signo);
 }
 
+#ifdef _MSC_VER
+void daemon() {  } // do nothing !
+#endif
+
+
 int main(int argc, const char* argv[])
 {
 #if defined(__linux) || defined(__APPLE__)
@@ -52,6 +57,7 @@ int main(int argc, const char* argv[])
         lua_register_function(g_lvm, "get_time_ns", get_time_ns);
         lua_register_function(g_lvm, "get_time_ms", get_time_ms);
         lua_register_function(g_lvm, "sleep_ms", sleep_ms);
+		lua_register_function(g_lvm, "daemon", daemon);
         lua_register_function(g_lvm, "create_socket_mgr", lua_create_socket_mgr);
 
         lua_guard_t g(g_lvm);
