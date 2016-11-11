@@ -11,13 +11,15 @@ EXPORT_CLASS_BEGIN(lua_socket_mgr)
 EXPORT_LUA_FUNCTION(wait)
 EXPORT_LUA_FUNCTION(listen)
 EXPORT_LUA_FUNCTION(connect)
+EXPORT_LUA_FUNCTION(set_package_size)
+EXPORT_LUA_FUNCTION(set_compress_size)
 EXPORT_CLASS_END()
 
 lua_socket_mgr::~lua_socket_mgr()
 {
 }
 
-bool lua_socket_mgr::setup(lua_State* L, int max_fd, size_t buffer_size, size_t compress_threhold)
+bool lua_socket_mgr::setup(lua_State* L, int max_fd)
 {
 	auto mgr = create_socket_mgr(max_fd);
 	if (mgr != nullptr)
@@ -84,9 +86,20 @@ int lua_socket_mgr::connect(lua_State* L)
 	return 2;
 }
 
+void lua_socket_mgr::set_package_size(size_t size)
+{
+	if (size > 0)
+	{
+		m_ar_buffer->resize(size);
+		m_lz_buffer->resize(size);
+	}
+}
+
 EXPORT_CLASS_BEGIN(lua_socket_node)
 EXPORT_LUA_FUNCTION(call)
 EXPORT_LUA_FUNCTION(close)
+EXPORT_LUA_FUNCTION(set_send_cache)
+EXPORT_LUA_FUNCTION(set_recv_cache)
 EXPORT_LUA_FUNCTION(set_timeout)
 EXPORT_LUA_STD_STR_AS_R(m_ip, "ip")
 EXPORT_CLASS_END()
@@ -162,11 +175,6 @@ void lua_socket_node::close()
 	}
 }
 
-void lua_socket_node::set_timeout(int duration)
-{
-	m_mgr->set_timeout(m_token, duration);
-}
-
 void lua_socket_node::on_recv(char* data, size_t data_len)
 {
 	lua_guard_t g(m_lvm);
@@ -183,24 +191,15 @@ void lua_socket_node::on_recv(char* data, size_t data_len)
 
 int lua_create_socket_mgr(lua_State* L)
 {
-	int top = lua_gettop(L);
-	if (top != 3)
-	{
-		lua_pushnil(L);
-		return 1;
-	}
-
 	int max_fd = (int)lua_tointeger(L, 1);
-	size_t buffer_size = (size_t)lua_tointeger(L, 2);
-	size_t compress_threhold = (size_t)lua_tointeger(L, 3);
-	if (max_fd <= 0 || buffer_size <= 0)
+	if (max_fd <= 0)
 	{
 		lua_pushnil(L);
 		return 1;
 	}
 
 	auto mgr = new lua_socket_mgr();
-	if (mgr->setup(G(L)->mainthread, max_fd, buffer_size, compress_threhold))
+	if (mgr->setup(G(L)->mainthread, max_fd))
 	{
 		lua_push_object(L, mgr);
 		return 1;

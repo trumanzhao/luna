@@ -14,10 +14,12 @@ struct lua_socket_mgr final
 {
 public:
 	~lua_socket_mgr();
-	bool setup(lua_State* L, int max_fd, size_t buffer_size, size_t compress_threhold);
+	bool setup(lua_State* L, int max_fd);
 	void wait(int ms) { m_mgr->wait(ms); }
 	int listen(lua_State* L);
 	int connect(lua_State* L);
+	void set_package_size(size_t size); // 设置序列化缓冲区大小,默认16K
+	void set_compress_size(size_t size) { m_compress_size = size; }; // 设置启用压缩的阈值,默认UINT_MAX,永不启用
 
 private:
 	lua_State* m_lvm = nullptr;
@@ -25,6 +27,7 @@ private:
 	std::shared_ptr<io_buffer> m_ar_buffer;
 	std::shared_ptr<io_buffer> m_lz_buffer;
 	std::shared_ptr<socket_mgr> m_mgr;
+	size_t m_compress_size = UINT_MAX;
 
 public:
 	DECLARE_LUA_CLASS(lua_socket_mgr);
@@ -36,12 +39,17 @@ public:
 
 struct lua_socket_node final
 {
-	lua_socket_node(int token, lua_State* L, std::shared_ptr<socket_mgr>& mgr, std::shared_ptr<lua_archiver>& ar, std::shared_ptr<io_buffer>& ar_buffer, std::shared_ptr<io_buffer>& lz_buffer);
+	lua_socket_node(int token, lua_State* L, std::shared_ptr<socket_mgr>& mgr, std::shared_ptr<lua_archiver>& ar, 
+		std::shared_ptr<io_buffer>& ar_buffer, std::shared_ptr<io_buffer>& lz_buffer);
+
 	~lua_socket_node();
 
 	int call(lua_State* L);
 	void close();
-	void set_timeout(int duration);
+	void set_send_cache(size_t size) { m_mgr->set_send_cache(m_token, size); }
+	void set_recv_cache(size_t size) { m_mgr->set_recv_cache(m_token, size); }
+	void set_timeout(int duration) { m_mgr->set_timeout(m_token, duration); }
+
 private:
 	void on_recv(char* data, size_t data_len);
 

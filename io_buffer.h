@@ -150,5 +150,5 @@ private:
 	BYTE* m_data_begin = nullptr;
 	BYTE* m_data_end = nullptr;
 	BYTE* m_buffer = nullptr;
-	size_t m_buffer_size = 4096;
+	size_t m_buffer_size = USHRT_MAX;
 };
