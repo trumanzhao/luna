@@ -29,8 +29,9 @@
 #include "socket_listener.h"
 
 #ifdef _MSC_VER
-socket_listener::socket_listener(LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func)
+socket_listener::socket_listener(socket_manager* mgr, LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func)
 {
+	m_mgr = mgr;
 	m_accept_func = accept_func;
 	m_addrs_func = addrs_func;
 	memset(m_nodes, 0, sizeof(m_nodes));
@@ -67,7 +68,7 @@ bool socket_listener::setup(socket_t fd)
 	return true;
 }
 
-bool socket_listener::update(socket_manager* mgr, int64_t)
+bool socket_listener::update(int64_t)
 {
 	if (m_closed && m_socket != INVALID_SOCKET)
 	{
@@ -82,7 +83,7 @@ bool socket_listener::update(socket_manager* mgr, int64_t)
 		{
 			if (node.fd == INVALID_SOCKET)
 			{
-				queue_accept(mgr, &node.ovl);
+				queue_accept(&node.ovl);
 			}
 		}
 	}
@@ -102,7 +103,7 @@ bool socket_listener::update(socket_manager* mgr, int64_t)
 }
 
 #ifdef _MSC_VER
-void socket_listener::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
+void socket_listener::on_complete(WSAOVERLAPPED* ovl)
 {
 	m_ovl_ref--;
 	if (m_closed)
@@ -123,7 +124,7 @@ void socket_listener::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 
 	set_none_block(node->fd);
 
-	auto token = mgr->accept_stream(node->fd, ip);
+	auto token = m_mgr->accept_stream(node->fd, ip);
 	if (token == 0)
 	{
 		close_socket_handle(node->fd);
@@ -135,10 +136,10 @@ void socket_listener::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 
 	node->fd = INVALID_SOCKET;
 	m_accept_cb(token);
-	queue_accept(mgr, ovl);
+	queue_accept(ovl);
 }
 
-void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
+void socket_listener::queue_accept(WSAOVERLAPPED* ovl)
 {
 	listen_node* node = CONTAINING_RECORD(ovl, listen_node, ovl);
 
@@ -192,7 +193,7 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 		(*m_addrs_func)(node->buffer, 0, sizeof(node->buffer[0]), sizeof(node->buffer[2]), &local_addr, &local_addr_len, &remote_addr, &remote_addr_len);
 		get_ip_string(ip, sizeof(ip), remote_addr, (size_t)remote_addr_len);
 
-		auto token = mgr->accept_stream(node->fd, ip);
+		auto token = m_mgr->accept_stream(node->fd, ip);
 		if (token == 0)
 		{
 			close_socket_handle(node->fd);
@@ -209,7 +210,7 @@ void socket_listener::queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl)
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-void socket_listener::on_complete(socket_manager* mgr, bool can_read, bool can_write)
+void socket_listener::on_complete(bool can_read, bool can_write)
 {
     while (!m_closed)
     {
@@ -225,7 +226,7 @@ void socket_listener::on_complete(socket_manager* mgr, bool can_read, bool can_w
 
         set_none_block(fd);
 
-        auto token = mgr->accept_stream(fd, ip);
+        auto token = m_mgr->accept_stream(fd, ip);
         if (token != 0)
         {
             m_accept_cb(token);

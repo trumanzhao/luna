@@ -12,30 +12,31 @@
 struct socket_listener : public socket_object
 {
 #ifdef _MSC_VER
-	socket_listener(LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func);
+	socket_listener(socket_manager* mgr, LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func);
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-	socket_listener() {}
+	socket_listener(socket_manager* mgr) { m_mgr = mgr; }
 #endif
 
 	~socket_listener();
 	bool setup(socket_t fd);
 	bool get_remote_ip(std::string& ip) override { return false; }
-	bool update(socket_manager* mgr, int64_t now) override;
+	bool update(int64_t now) override;
 	void set_accept_callback(const std::function<void(int)>& cb) override { m_accept_cb = cb; }
 	void set_error_callback(const std::function<void(const char*)>& cb) override { m_error_cb = cb; }
 
 #ifdef _MSC_VER
-	void on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl);
-	void queue_accept(socket_manager* mgr, WSAOVERLAPPED* ovl);
+	void on_complete(WSAOVERLAPPED* ovl);
+	void queue_accept(WSAOVERLAPPED* ovl);
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-    void on_complete(socket_manager* mgr, bool can_read, bool can_write) override;
+    void on_complete(bool can_read, bool can_write) override;
 #endif
 
 private:
+	socket_manager* m_mgr = nullptr;
 	socket_t m_socket = INVALID_SOCKET;
 	std::function<void(const char*)> m_error_cb;
 	std::function<void(int)> m_accept_cb;

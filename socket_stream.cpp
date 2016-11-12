@@ -30,15 +30,17 @@
 #include "socket_stream.h"
 
 #ifdef _MSC_VER
-socket_stream::socket_stream(LPFN_CONNECTEX connect_func)
+socket_stream::socket_stream(socket_manager* mgr, LPFN_CONNECTEX connect_func)
 {
+	m_mgr = mgr;
 	m_connect_func = connect_func;
 	m_ip[0] = 0;
 }
 #endif
 
-socket_stream::socket_stream()
+socket_stream::socket_stream(socket_manager* mgr)
 {
+	m_mgr = mgr;
 	m_ip[0] = 0;
 }
 
@@ -88,7 +90,7 @@ void socket_stream::on_dns_err(const char* err)
 	call_error("domain_error");
 }
 
-bool socket_stream::update(socket_manager* mgr, int64_t now)
+bool socket_stream::update(int64_t now)
 {
 	if (m_closed)
 	{
@@ -115,7 +117,7 @@ bool socket_stream::update(socket_manager* mgr, int64_t now)
 
 	if (!m_connected)
 	{
-		try_connect(mgr);
+		try_connect();
 	}
 
 	return true;
@@ -144,7 +146,7 @@ static bool bind_any(socket_t s)
 	return ret != SOCKET_ERROR;
 }
 
-bool socket_stream::do_connect(socket_manager* mgr)
+bool socket_stream::do_connect()
 {
 	if (!bind_any(m_socket))
 	{
@@ -152,9 +154,9 @@ bool socket_stream::do_connect(socket_manager* mgr)
 		return false;
 	}
 
-	if (!mgr->watch(m_socket, this, false, false))
+	if (!m_mgr->watch_connecting(m_socket, this))
 	{
-		call_error("watch_failed");
+		call_error("watch_connecting_failed");
 		return false;
 	}
 
@@ -193,7 +195,7 @@ bool socket_stream::do_connect(socket_manager* mgr)
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-bool socket_stream::do_connect(socket_manager* mgr)
+bool socket_stream::do_connect()
 {
 	while (true)
 	{
@@ -217,9 +219,9 @@ bool socket_stream::do_connect(socket_manager* mgr)
 		if (err != EINPROGRESS)
 			return false;
 
-		if (!mgr->watch(m_socket, this, false, true))
+		if (!m_mgr->watch_connecting(m_socket, this))
 		{
-			call_error("watch_failed");
+			call_error("watch_connecting_failed");
 			return false;
 		}
 		break;
@@ -228,7 +230,7 @@ bool socket_stream::do_connect(socket_manager* mgr)
 }
 #endif
 
-void socket_stream::try_connect(socket_manager* mgr)
+void socket_stream::try_connect()
 {
 	// wait for dns resolver, or, socket connecting
 	if (m_addr == nullptr || m_socket != INVALID_SOCKET)
@@ -252,7 +254,7 @@ void socket_stream::try_connect(socket_manager* mgr)
 		set_none_block(m_socket);
 		get_ip_string(m_ip, sizeof(m_ip), m_next->ai_addr, m_next->ai_addrlen);
 
-		if (do_connect(mgr))
+		if (do_connect())
 			return;
 
 		if (m_socket != INVALID_SOCKET)
@@ -326,7 +328,15 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 				if (!m_send_buffer->push_data(data, data_len))
 				{
 					call_error("send_cache_full");
+					return;
 				}
+
+				if (!m_mgr->watch_send(m_socket, this, true))
+				{
+					call_error("enable_watch_send_failed");
+					return;
+				}
+
 				return;
 			}
 #endif
@@ -347,7 +357,7 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 }
 
 #ifdef _MSC_VER
-void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
+void socket_stream::on_complete(WSAOVERLAPPED* ovl)
 {
 	m_ovl_ref--;
 	if (m_closed)
@@ -400,7 +410,7 @@ void socket_stream::on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl)
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-void socket_stream::on_complete(socket_manager* mgr, bool can_read, bool can_write)
+void socket_stream::on_complete(bool can_read, bool can_write)
 {
     if (m_closed)
         return;
@@ -430,7 +440,7 @@ void socket_stream::on_complete(socket_manager* mgr, bool can_read, bool can_wri
         m_addr = nullptr;
         m_next = nullptr;
 
-        if (!mgr->watch(m_socket, this, true, true, true))
+        if (!mgr->watch_connected(m_socket, this))
         {
             call_error("connection_watch_failed");
             return;
@@ -458,7 +468,14 @@ void socket_stream::do_send()
 		size_t data_len = 0;
 		auto* data = m_send_buffer->peek_data(&data_len);
 		if (data_len == 0)
+		{
+			if (!m_mgr->watch_send(m_socket, this, false))
+			{
+				call_error("disable_watch_send_failed");
+				return;
+			}
 			break;
+		}
 
 		size_t try_len = data_len < MAX_SIZE_PER_SEND ? data_len : MAX_SIZE_PER_SEND;
 		int send_len = ::send(m_socket, (char*)data, (int)try_len, 0);

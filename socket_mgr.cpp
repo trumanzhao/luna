@@ -153,7 +153,7 @@ void socket_manager::wait(int timeout)
 		{
 			OVERLAPPED_ENTRY& oe = m_events[i];
 			auto object = (socket_object*)oe.lpCompletionKey;
-			object->on_complete(this, oe.lpOverlapped);
+			object->on_complete(oe.lpOverlapped);
 		}
 	}
 #endif
@@ -164,7 +164,7 @@ void socket_manager::wait(int timeout)
 	{
 		epoll_event& ev = m_events[i];
 		auto object = (socket_object*)ev.data.ptr;
-        object->on_complete(this, ev.events & EPOLLIN != 0, ev.events & EPOLLOUT != 0);
+        object->on_complete(ev.events & EPOLLIN != 0, ev.events & EPOLLOUT != 0);
 	}
 #endif
 
@@ -178,7 +178,7 @@ void socket_manager::wait(int timeout)
 		struct kevent& ev = m_events[i];
 		auto object = (socket_object*)ev.udata;
 		assert(ev.filter == EVFILT_READ || ev.filter == EVFILT_WRITE);
-        object->on_complete(this, ev.filter == EVFILT_READ, ev.filter == EVFILT_WRITE);
+        object->on_complete(ev.filter == EVFILT_READ, ev.filter == EVFILT_WRITE);
 	}
 #endif
 
@@ -189,7 +189,7 @@ void socket_manager::wait(int timeout)
 	while (it != end)
 	{
 		socket_object* object = it->second;
-		if (!object->update(this, now))
+		if (!object->update(now))
 		{
 			it = m_objects.erase(it);
 			delete object;
@@ -208,11 +208,11 @@ int socket_manager::listen(std::string& err, const char ip[], int port)
 	int one = 1;
 
 #ifdef _MSC_VER
-	auto* listener = new socket_listener(m_accept_func, m_addrs_func);
+	auto* listener = new socket_listener(this, m_accept_func, m_addrs_func);
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-	auto* listener = new socket_listener();
+	auto* listener = new socket_listener(this);
 #endif
 
 	ret = make_ip_addr(&addr, &addr_len, ip, port);
@@ -233,7 +233,7 @@ int socket_manager::listen(std::string& err, const char ip[], int port)
 	ret = ::listen(fd, 16);
 	FAILED_JUMP(ret != SOCKET_ERROR);
 
-	if (watch(fd, listener, true, false) && listener->setup(fd))
+	if (watch_listen(fd, listener) && listener->setup(fd))
 	{
 		int token = new_token();
 		m_objects[token] = listener;
@@ -257,11 +257,11 @@ int socket_manager::connect(std::string& err, const char domain[], const char se
 	dns_request_t* req = new dns_request_t;
 
 #ifdef _MSC_VER
-	socket_stream* stm = new socket_stream(m_connect_func);
+	socket_stream* stm = new socket_stream(this, m_connect_func);
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-	socket_stream* stm = new socket_stream();
+	socket_stream* stm = new socket_stream(this);
 #endif
 
 	req->node = domain;
@@ -386,71 +386,112 @@ void socket_manager::set_error_callback(int token, const std::function<void(cons
 	}
 }
 
-bool socket_manager::watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send, bool modify)
+bool socket_manager::watch_listen(socket_t fd, socket_object* object)
 {
 #ifdef _MSC_VER
-	auto ret = CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)object, 0);
-	if (ret != m_handle)
-		return false;
+	return CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)object, 0) == m_handle;
 #endif
 
 #ifdef __linux
 	epoll_event ev;
 	ev.data.ptr = object;
-	ev.events = EPOLLET;
-
-	assert(watch_recv || watch_send);
-
-	if (watch_recv)
-	{
-		ev.events |= EPOLLIN;
-	}
-
-	if (watch_send)
-	{
-		ev.events |= EPOLLOUT;
-	}
-
-	auto ret = epoll_ctl(m_handle, modify ? EPOLL_CTL_MOD : EPOLL_CTL_ADD, fd, &ev);
-	if (ret != 0)
-    {
-        char txt[128];
-        get_error_string(txt, sizeof(txt), errno);
-        printf("epoll_ctl: %s\n", txt);
-	    return false;
-    }
+	ev.events = EPOLLIN | EPOLLET;
+	return epoll_ctl(m_handle, EPOLL_CTL_ADD, fd, &ev) == 0;
 #endif
 
 #ifdef __APPLE__
-	struct kevent ev[2];
-	struct kevent* pev = ev;
+	struct kevent evt;
+	EV_SET(&evt, fd, EVFILT_READ, EV_ADD, 0, 0, object);
+	return kevent(m_handle, &evt, 1, nullptr, 0, nullptr) == 0;
+#endif
+}
 
-	assert(watch_recv || watch_send);
-
-	if (watch_recv)
-	{
-		EV_SET(pev, fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, object);
-		pev++;
-	}
-
-	if (watch_send)
-	{
-		EV_SET(pev, fd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, object);
-		pev++;
-	}
-
-	auto ret = kevent(m_handle, ev, (int)(pev - ev), nullptr, 0, nullptr);
-	if (ret != 0)
-		return false;
+bool socket_manager::watch_accepted(socket_t fd, socket_object* object)
+{
+#ifdef _MSC_VER
+	return CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)object, 0) == m_handle;
 #endif
 
+#ifdef __linux
+	epoll_event ev;
+	ev.data.ptr = object;
+	ev.events = EPOLLIN | EPOLLET;
+	return epoll_ctl(m_handle, EPOLL_CTL_ADD, fd, &ev) == 0;
+#endif
+
+#ifdef __APPLE__
+	struct kevent evt[2];
+	EV_SET(&evt[0], fd, EVFILT_READ, EV_ADD, 0, 0, object);
+	EV_SET(&evt[1], fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, object);
+	return kevent(m_handle, evt, _countof(evt), nullptr, 0, nullptr) == 0;
+#endif
+}
+
+bool socket_manager::watch_connecting(socket_t fd, socket_object* object)
+{
+#ifdef _MSC_VER
+	return CreateIoCompletionPort((HANDLE)fd, m_handle, (ULONG_PTR)object, 0) == m_handle;
+#endif
+
+#ifdef __linux
+	epoll_event ev;
+	ev.data.ptr = object;
+	ev.events = EPOLLOUT | EPOLLET;
+	return epoll_ctl(m_handle, EPOLL_CTL_ADD, fd, &ev) == 0;
+#endif
+
+#ifdef __APPLE__
+	struct kevent evt;
+	EV_SET(&evt, fd, EVFILT_WRITE, EV_ADD, 0, 0, object);
+	return kevent(m_handle, &evt, 1, nullptr, 0, nullptr) == 0;
+#endif
+}
+
+bool socket_manager::watch_connected(socket_t fd, socket_object* object)
+{
+#ifdef _MSC_VER
 	return true;
+#endif
+
+#ifdef __linux
+	epoll_event ev;
+	ev.data.ptr = object;
+	ev.events = EPOLLIN | EPOLLET;
+	return epoll_ctl(m_handle, EPOLL_CTL_MOD, fd, &ev) == 0;
+#endif
+
+#ifdef __APPLE__
+	struct kevent evt[2];
+	EV_SET(&evt[0], fd, EVFILT_READ, EV_ADD, 0, 0, object);
+	EV_SET(&evt[1], fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, object);
+	return kevent(m_handle, evt, _countof(evt), nullptr, 0, nullptr) == 0;
+#endif
+}
+
+bool socket_manager::watch_send(socket_t fd, socket_object* object, bool enable)
+{
+#ifdef _MSC_VER
+	return true;
+#endif
+
+#ifdef __linux
+	epoll_event ev;
+	ev.data.ptr = object;
+	ev.events = EPOLLIN | (enable ? EPOLLOUT : 0) | EPOLLET;
+	return epoll_ctl(m_handle, EPOLL_CTL_MOD, fd, &ev) == 0;
+#endif
+
+#ifdef __APPLE__
+	struct kevent evt;
+	EV_SET(&evt, fd, EVFILT_WRITE, EV_ADD | (enable ? 0 : EV_DISABLE), 0, 0, object);
+	return kevent(m_handle, &evt, 1, nullptr, 0, nullptr) == 0;
+#endif
 }
 
 int socket_manager::accept_stream(socket_t fd, const char ip[])
 {
-	auto* stm = new socket_stream();
-	if (watch(fd, stm, true, true) && stm->accept_socket(fd, ip))
+	auto* stm = new socket_stream(this);
+	if (watch_accepted(fd, stm) && stm->accept_socket(fd, ip))
 	{
 		auto token = new_token();
 		m_objects[token] = stm;

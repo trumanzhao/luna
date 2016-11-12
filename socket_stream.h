@@ -12,18 +12,18 @@
 struct socket_stream : public socket_object
 {
 #ifdef _MSC_VER
-	socket_stream(LPFN_CONNECTEX connect_func);
+	socket_stream(socket_manager* mgr, LPFN_CONNECTEX connect_func);
 #endif
-	socket_stream();
+	socket_stream(socket_manager* mgr);
 
 	~socket_stream();
 	bool get_remote_ip(std::string& ip) override;
 	bool accept_socket(socket_t fd, const char ip[]);
 	void connect(struct addrinfo* addr) override;
 	void on_dns_err(const char* err) override;
-	bool update(socket_manager* mgr, int64_t now) override;
-	bool do_connect(socket_manager* mgr);
-	void try_connect(socket_manager* mgr);
+	bool update(int64_t now) override;
+	bool do_connect();
+	void try_connect();
 	void set_package_callback(const std::function<void(char*, size_t)>& cb) override { m_package_cb = cb; }
 	void set_error_callback(const std::function<void(const char*)>& cb) override { m_error_cb = cb; }
 	void set_connect_callback(const std::function<void()>& cb) override { m_connect_cb = cb; }
@@ -34,11 +34,11 @@ struct socket_stream : public socket_object
 	void stream_send(const char* data, size_t data_len);
 
 #ifdef _MSC_VER
-	void on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl) override;
+	void on_complete(WSAOVERLAPPED* ovl) override;
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-    void on_complete(socket_manager* mgr, bool can_read, bool can_write) override;
+    void on_complete(bool can_read, bool can_write) override;
 #endif
 
 	void do_send();
@@ -47,13 +47,14 @@ struct socket_stream : public socket_object
 	void dispatch_package();
 	void call_error(const char err[]);
 
-	char m_ip[INET6_ADDRSTRLEN];
+	socket_manager* m_mgr = nullptr;
 	socket_t m_socket = INVALID_SOCKET;
 	std::unique_ptr<io_buffer> m_recv_buffer = std::make_unique<io_buffer>();
 	std::unique_ptr<io_buffer> m_send_buffer = std::make_unique<io_buffer>();
 
 	struct addrinfo* m_addr = nullptr;
 	struct addrinfo* m_next = nullptr;
+	char m_ip[INET6_ADDRSTRLEN];
 	bool m_connected = false;
 	int m_timeout = -1;
 	int64_t m_alive_time = get_time_ms();

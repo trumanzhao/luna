@@ -18,7 +18,7 @@ struct socket_manager;
 struct socket_object
 {
 	virtual ~socket_object() {};
-	virtual bool update(socket_manager* mgr, int64_t now) = 0;
+	virtual bool update(int64_t now) = 0;
 	virtual void close() final { m_closed = true; };
 	virtual bool get_remote_ip(std::string& ip) = 0;
 	virtual void connect(struct addrinfo* addr) { }
@@ -33,11 +33,11 @@ struct socket_object
 	virtual void set_error_callback(const std::function<void(const char*)>& cb) { }
 
 #ifdef _MSC_VER
-	virtual void on_complete(socket_manager* mgr, WSAOVERLAPPED* ovl) = 0;
+	virtual void on_complete(WSAOVERLAPPED* ovl) = 0;
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-    virtual void on_complete(socket_manager* mgr, bool can_read, bool can_write) = 0;
+    virtual void on_complete(bool can_read, bool can_write) = 0;
 #endif
 
 protected:
@@ -73,7 +73,11 @@ struct socket_manager : socket_mgr
 	virtual void set_package_callback(int token, const std::function<void(char*, size_t)>& cb) override;
 	virtual void set_error_callback(int token, const std::function<void(const char*)>& cb) override;
 
-	bool watch(socket_t fd, socket_object* object, bool watch_recv, bool watch_send, bool modify = false);
+	bool watch_listen(socket_t fd, socket_object* object);
+	bool watch_accepted(socket_t fd, socket_object* object);
+	bool watch_connecting(socket_t fd, socket_object* object);
+	bool watch_connected(socket_t fd, socket_object* object);
+	bool watch_send(socket_t fd, socket_object* object, bool enable);
 	int accept_stream(socket_t fd, const char ip[]);
 
 private:

@@ -1,13 +1,14 @@
-mgr = create_socket_mgr(100, 1024 * 1024, 1024 * 8);
+mgr = create_socket_mgr(100);
 
-client = mgr.connect("10.12.91.16", 7571);
+client = mgr.connect("10.0.1.3", 7571);
 if not client then
     print("client connect failed !");
 end
 
 client.on_connected = function ()
     print("client connected, remote="..client.ip);
-    client.call("begin", 1);
+    client.call("hello", 123);
+	client.call("fuck", 456);
 end
 
 client.on_error = function (err)
@@ -16,7 +17,7 @@ end
 
 client.on_recv = function (msg, n)
     print("msg="..msg..", n="..tostring(n));
-    client.call("fuck", n + 1);
+    --client.call("fuck", n + 1);
 end
 
 local frame = 0;
