@@ -603,6 +603,13 @@ void socket_stream::call_error(const char err[])
 {
 	if (!m_closed)
 	{
+		// kqueue实现下,如果eof时不及时关闭或unwatch,则会触发很多次eof
+		if (m_socket != INVALID_SOCKET)
+		{
+			close_socket_handle(m_socket);
+			m_socket = INVALID_SOCKET;
+		}
+
 		m_error_cb(err);
 		m_closed = true;
 	}

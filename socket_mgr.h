@@ -117,7 +117,7 @@ private:
 		{
 			++m_token;
 		}
-		return m_token;
+		return m_token++;
 	}
 
 	int m_max_connection = 0;
