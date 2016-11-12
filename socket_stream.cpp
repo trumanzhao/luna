@@ -81,9 +81,9 @@ bool socket_stream::accept_socket(socket_t fd, const char ip[])
 }
 
 void socket_stream::connect(struct addrinfo* addr)
-{ 
-	m_addr = addr; 
-	m_next = addr; 
+{
+	m_addr = addr;
+	m_next = addr;
 }
 
 void socket_stream::on_dns_err(const char* err)

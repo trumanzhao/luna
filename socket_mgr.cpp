@@ -179,7 +179,7 @@ void socket_manager::wait(int timeout)
 		struct kevent& ev = m_events[i];
 		auto object = (socket_object*)ev.udata;
 		if (ev.filter == EVFILT_READ) object->on_can_recv((size_t)ev.data, ev.flags & EV_EOF)
-		else (ev.filter == EVFILT_WRITE) object->on_can_send((size_t)ev.data, ev.flags & EV_EOF)
+		else if(ev.filter == EVFILT_WRITE) object->on_can_send((size_t)ev.data, ev.flags & EV_EOF)
 	}
 #endif
 
