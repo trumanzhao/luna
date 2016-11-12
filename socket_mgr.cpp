@@ -185,17 +185,23 @@ void socket_manager::wait(int timeout)
 	m_dns.update();
 
 	int64_t now = get_time_ms();
-	auto it = m_objects.begin(), end = m_objects.end();
-	while (it != end)
+	if (now >= m_next_update)
 	{
-		socket_object* object = it->second;
-		if (!object->update(now))
+		// 没必要每次都update
+		m_next_update = now + 10;
+
+		auto it = m_objects.begin(), end = m_objects.end();
+		while (it != end)
 		{
-			it = m_objects.erase(it);
-			delete object;
-			continue;
+			socket_object* object = it->second;
+			if (!object->update(now))
+			{
+				it = m_objects.erase(it);
+				delete object;
+				continue;
+			}
+			++it;
 		}
-		++it;
 	}
 }
 

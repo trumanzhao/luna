@@ -121,6 +121,7 @@ private:
 
 	int m_max_connection = 0;
 	int m_token = 0;
+	int64_t m_next_update = 0;
 	std::unordered_map<int, socket_object*> m_objects;
 	dns_resolver m_dns;
 };
