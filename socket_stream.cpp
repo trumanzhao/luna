@@ -23,6 +23,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
+#include <algorithm>
 #include <assert.h>
 #include "tools.h"
 #include "var_int.h"
@@ -294,8 +295,7 @@ void socket_stream::stream_send(const char* data, size_t data_len)
 
 	while (data_len > 0)
 	{
-		size_t try_len = data_len < MAX_SIZE_PER_SEND ? data_len : MAX_SIZE_PER_SEND;
-		int send_len = ::send(m_socket, data, (int)try_len, 0);
+		int send_len = ::send(m_socket, data, (int)data_len, 0);
 		if (send_len == SOCKET_ERROR)
 		{
 			int err = get_socket_error();
@@ -367,11 +367,11 @@ void socket_stream::on_complete(WSAOVERLAPPED* ovl)
 	{
 		if (ovl == &m_recv_ovl)
 		{
-			do_recv();
+			do_recv(UINT_MAX, false);
 		}
 		else
 		{
-			do_send();
+			do_send(UINT_MAX, false);
 		}
 		return;
 	}
@@ -407,60 +407,51 @@ void socket_stream::on_complete(WSAOVERLAPPED* ovl)
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-void socket_stream::on_complete(bool can_read, bool can_write)
+void socket_stream::on_can_send(size_t max_len, bool is_eof)
 {
-    if (m_closed)
-        return;
+	if (m_closed)
+		return;
 
-    if (m_connected)
-    {
-        if (can_read)
-        {
-            do_recv();
-        }
+	if (m_connected)
+	{
+		do_send(max_len, is_eof);
+		return;
+	}
 
-        if (can_write)
-        {
-            do_send();
-        }
-        return;
-    }
+	int err = 0;
+	socklen_t sock_len = sizeof(err);
+	auto ret = getsockopt(m_socket, SOL_SOCKET, SO_ERROR, (char*)&err, &sock_len);
+	if (ret == 0 && err == 0 && !is_eof)
+	{
+		freeaddrinfo(m_addr);
+		m_addr = nullptr;
+		m_next = nullptr;
 
-    assert(!can_read);
+		if (!m_mgr->watch_connected(m_socket, this))
+		{
+			call_error("connection_watch_failed");
+			return;
+		}
+		m_connected = true;
+		m_connect_cb();
+		return;
+	}
 
-    int err = 0;
-    socklen_t sock_len = sizeof(err);
-    auto ret = getsockopt(m_socket, SOL_SOCKET, SO_ERROR, (char*)&err, &sock_len);
-    if (ret == 0 && err == 0)
-    {
-        freeaddrinfo(m_addr);
-        m_addr = nullptr;
-        m_next = nullptr;
-
-        if (!m_mgr->watch_connected(m_socket, this))
-        {
-            call_error("connection_watch_failed");
-            return;
-        }
-        m_connected = true;
-        m_connect_cb();
-        return;
-    }
-
-    // socket连接失败,还可以继续dns解析的下一个地址继续尝试
-    close_socket_handle(m_socket);
-    m_socket = INVALID_SOCKET;
-    if (m_next == nullptr)
-    {
-        call_error("connect_failed");
-    }
+	// socket连接失败,还可以继续dns解析的下一个地址继续尝试
+	close_socket_handle(m_socket);
+	m_socket = INVALID_SOCKET;
+	if (m_next == nullptr)
+	{
+		call_error("connect_failed");
+	}
 }
 #endif
 
 
-void socket_stream::do_send()
+void socket_stream::do_send(size_t max_len, bool is_eof)
 {
-	while (!m_closed)
+	size_t total_send = 0;
+	while (total_send < max_len && !m_closed)
 	{
 		size_t data_len = 0;
 		auto* data = m_send_buffer->peek_data(&data_len);
@@ -474,7 +465,7 @@ void socket_stream::do_send()
 			break;
 		}
 
-		size_t try_len = data_len < MAX_SIZE_PER_SEND ? data_len : MAX_SIZE_PER_SEND;
+		size_t try_len = min(data_len, max_len - total_send);
 		int send_len = ::send(m_socket, (char*)data, (int)try_len, 0);
 		if (send_len == SOCKET_ERROR)
 		{
@@ -511,15 +502,22 @@ void socket_stream::do_send()
 			return;
 		}
 
+		total_send += send_len;
 		m_send_buffer->pop_data((size_t)send_len);
 	}
 
 	m_send_buffer->regularize(true);
+
+	if (is_eof || max_len == 0)
+	{
+		call_error("connection_lost");
+	}
 }
 
-void socket_stream::do_recv()
+void socket_stream::do_recv(size_t max_len, bool is_eof)
 {
-	while (!m_closed)
+	size_t total_recv = 0;
+	while (total_recv < max_len && !m_closed)
 	{
 		size_t space_len = 0;
 		auto* space = m_recv_buffer->peek_space(&space_len);
@@ -529,7 +527,8 @@ void socket_stream::do_recv()
 			return;
 		}
 
-		int recv_len = recv(m_socket, (char*)space, (int)space_len, 0);
+		size_t try_len = min(space_len, max_len - total_recv);
+		int recv_len = recv(m_socket, (char*)space, (int)try_len, 0);
 		if (recv_len < 0)
 		{
 			int err = get_socket_error();
@@ -565,8 +564,14 @@ void socket_stream::do_recv()
 			return;
 		}
 
+		total_recv += recv_len;
 		m_recv_buffer->pop_space(recv_len);
 		dispatch_package();
+	}
+
+	if (is_eof || max_len == 0)
+	{
+		call_error("connection_lost");
 	}
 }
 

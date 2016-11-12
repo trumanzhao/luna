@@ -32,7 +32,7 @@ struct socket_listener : public socket_object
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-    void on_complete(bool can_read, bool can_write) override;
+	void on_can_recv(size_t max_len, bool is_eof) override;
 #endif
 
 private:

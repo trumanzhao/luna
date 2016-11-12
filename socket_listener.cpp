@@ -210,9 +210,10 @@ void socket_listener::queue_accept(WSAOVERLAPPED* ovl)
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-void socket_listener::on_complete(bool can_read, bool can_write)
+void socket_listener::on_can_recv(size_t max_len, bool is_eof)
 {
-    while (!m_closed)
+	size_t total_accept = 0;
+    while (total_accept < max_len && !m_closed)
     {
 		sockaddr_storage addr;
 		socklen_t addr_len = (socklen_t)sizeof(addr);
@@ -222,8 +223,8 @@ void socket_listener::on_complete(bool can_read, bool can_write)
         if (fd == INVALID_SOCKET)
             break;
 
+		total_accept++;
 		get_ip_string(ip, sizeof(ip), &addr, (size_t)addr_len);
-
         set_none_block(fd);
 
         auto token = m_mgr->accept_stream(fd, ip);

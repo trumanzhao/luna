@@ -34,6 +34,3 @@ void set_none_block(socket_t nSocket);
 
 #define MAX_HEADER_LEN	16
 
-// 每次调用send时,最多发送的数据量,如果太大,可能会导致EAGAIN错误
-#define MAX_SIZE_PER_SEND	((size_t)1024 * 4)
-

@@ -38,11 +38,12 @@ struct socket_stream : public socket_object
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-    void on_complete(bool can_read, bool can_write) override;
+	void on_can_recv(size_t max_len, bool is_eof) override { do_recv(max_len, is_eof); }
+	void on_can_send(size_t max_len, bool is_eof) override;
 #endif
 
-	void do_send();
-	void do_recv();
+	void do_send(size_t max_len, bool is_eof);
+	void do_recv(size_t max_len, bool is_eof);
 
 	void dispatch_package();
 	void call_error(const char err[]);

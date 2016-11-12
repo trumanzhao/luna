@@ -37,7 +37,8 @@ struct socket_object
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-    virtual void on_complete(bool can_read, bool can_write) = 0;
+	virtual void on_can_recv(size_t data_len = UINT_MAX, bool is_eof = false) {};
+	virtual void on_can_send(size_t data_len = UINT_MAX, bool is_eof = false) {};
 #endif
 
 protected:
