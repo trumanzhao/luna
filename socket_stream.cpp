@@ -23,6 +23,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
+#include <algorithm>
 #include <assert.h>
 #include "tools.h"
 #include "var_int.h"
@@ -464,7 +465,7 @@ void socket_stream::do_send(size_t max_len, bool is_eof)
 			break;
 		}
 
-		size_t try_len = min(data_len, max_len - total_send);
+		size_t try_len = std::min<size_t>(data_len, max_len - total_send);
 		int send_len = ::send(m_socket, (char*)data, (int)try_len, 0);
 		if (send_len == SOCKET_ERROR)
 		{
@@ -526,7 +527,7 @@ void socket_stream::do_recv(size_t max_len, bool is_eof)
 			return;
 		}
 
-		size_t try_len = min(space_len, max_len - total_recv);
+		size_t try_len = std::min<size_t>(space_len, max_len - total_recv);
 		int recv_len = recv(m_socket, (char*)space, (int)try_len, 0);
 		if (recv_len < 0)
 		{
