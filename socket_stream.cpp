@@ -23,7 +23,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
-#include <algorithm>
 #include <assert.h>
 #include "tools.h"
 #include "var_int.h"
