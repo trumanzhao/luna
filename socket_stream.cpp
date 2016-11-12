@@ -376,24 +376,21 @@ void socket_stream::on_complete(WSAOVERLAPPED* ovl)
 		return;
 	}
 
-	int err = 0;
-	socklen_t sock_len = sizeof(err);
-	auto ret = getsockopt(m_socket, SOL_SOCKET, SO_ERROR, (char*)&err, &sock_len);
-	if (ret == 0 && err == 0)
+	int seconds = 0;
+	socklen_t sock_len = (socklen_t)sizeof(seconds);
+	auto ret = getsockopt(m_socket, SOL_SOCKET, SO_CONNECT_TIME, (char*)&seconds, &sock_len);
+	if (ret == 0 && seconds != 0xffffffff)
 	{
 		freeaddrinfo(m_addr);
 		m_addr = nullptr;
 		m_next = nullptr;
 
-#ifdef _MSC_VER
 		if (!wsa_recv_empty(m_socket, m_recv_ovl))
 		{
 			call_error("connect_failed");
 			return;
 		}
 		m_ovl_ref++;
-#endif
-
 		m_connected = true;
 		m_connect_cb();
 		return;
@@ -440,7 +437,7 @@ void socket_stream::on_complete(bool can_read, bool can_write)
         m_addr = nullptr;
         m_next = nullptr;
 
-        if (!mgr->watch_connected(m_socket, this))
+        if (!m_mgr->watch_connected(m_socket, this))
         {
             call_error("connection_watch_failed");
             return;
