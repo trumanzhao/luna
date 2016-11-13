@@ -453,6 +453,7 @@ template <typename T>
 T lua_to_object(lua_State* L, int idx)
 {
     static_assert(has_meta_data<typename std::remove_pointer<T>::type>::value, "T should be declared export !");
+	static_assert(std::is_final<typename std::remove_pointer<T>::type>::value, "T should be declared final !");
     T obj = nullptr;
      if (lua_istable(L, idx))
      {
@@ -537,7 +538,6 @@ lua_member_item* ClassName::lua_get_meta_data()   \
 #define EXPORT_LUA_FUNCTION(Member) EXPORT_LUA_FUNCTION_AS(Member, #Member)
 #define EXPORT_LUA_FUNCTION_R(Member) EXPORT_LUA_FUNCTION_AS_R(Member, #Member)
 
-// 注册全局函数
 void lua_register_function(lua_State* L, const char* name, lua_global_function func);
 
 template <typename T>
