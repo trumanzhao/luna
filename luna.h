@@ -356,12 +356,10 @@ struct has_member_gc
 };
 
 template <class T>
-typename std::enable_if<has_member_gc<T>::value, void>::type lua_handle__gc(T* obj) { obj->gc(); }
+typename std::enable_if<has_member_gc<T>::value, void>::type lua_handle_gc(T* obj) { obj->gc(); }
 
-// has_member_gc的实现关键就是调用一下gc方法.
-// 而之所以要实现为has_member_gc<T>::value,就是因为下面这句中,不能出现.gc的调用,因为它就是对应没有gc方法的情况嘛
 template <class T>
-typename std::enable_if<!has_member_gc<T>::value, void>::type lua_handle__gc(T* obj) { delete obj; }
+typename std::enable_if<!has_member_gc<T>::value, void>::type lua_handle_gc(T* obj) { delete obj; }
 
 template <typename T>
 int lua_object_gc(lua_State* L)
@@ -372,7 +370,7 @@ int lua_object_gc(lua_State* L)
         puts("__gc error: nullptr !");
         return 0;
     }
-    lua_handle__gc(obj);
+	lua_handle_gc(obj);
     return 0;
 }
 
