@@ -33,6 +33,7 @@
 #ifdef _MSC_VER
 socket_stream::socket_stream(socket_manager* mgr, LPFN_CONNECTEX connect_func)
 {
+	mgr->increase_count();
 	m_mgr = mgr;
 	m_connect_func = connect_func;
 	m_ip[0] = 0;
@@ -41,6 +42,7 @@ socket_stream::socket_stream(socket_manager* mgr, LPFN_CONNECTEX connect_func)
 
 socket_stream::socket_stream(socket_manager* mgr)
 {
+	mgr->increase_count();
 	m_mgr = mgr;
 	m_ip[0] = 0;
 }
@@ -58,6 +60,7 @@ socket_stream::~socket_stream()
 		freeaddrinfo(m_addr);
 		m_addr = nullptr;
 	}
+	m_mgr->decrease_count();
 }
 
 bool socket_stream::get_remote_ip(std::string& ip)

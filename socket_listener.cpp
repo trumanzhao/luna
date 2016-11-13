@@ -31,6 +31,7 @@
 #ifdef _MSC_VER
 socket_listener::socket_listener(socket_manager* mgr, LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func)
 {
+	mgr->increase_count();
 	m_mgr = mgr;
 	m_accept_func = accept_func;
 	m_addrs_func = addrs_func;
@@ -39,6 +40,14 @@ socket_listener::socket_listener(socket_manager* mgr, LPFN_ACCEPTEX accept_func,
 	{
 		node.fd = INVALID_SOCKET;
 	}
+}
+#endif
+
+#if defined(__linux) || defined(__APPLE__)
+socket_listener::socket_listener(socket_manager* mgr)
+{
+	mgr->increase_count();
+	m_mgr = mgr;
 }
 #endif
 
@@ -60,6 +69,7 @@ socket_listener::~socket_listener()
 		close_socket_handle(m_socket);
 		m_socket = INVALID_SOCKET;
 	}
+	m_mgr->decrease_count();
 }
 
 bool socket_listener::setup(socket_t fd)
@@ -113,6 +123,14 @@ void socket_listener::on_complete(WSAOVERLAPPED* ovl)
 	assert(node >= m_nodes && node < m_nodes + _countof(m_nodes));
 	assert(node->fd != INVALID_SOCKET);
 
+	if (m_mgr->is_full())
+	{
+		close_socket_handle(node->fd);
+		node->fd = INVALID_SOCKET;
+		queue_accept(ovl);
+		return;
+	}
+
 	sockaddr* local_addr = nullptr;
 	sockaddr* remote_addr = nullptr;
 	int local_addr_len = 0;
@@ -128,14 +146,13 @@ void socket_listener::on_complete(WSAOVERLAPPED* ovl)
 	if (token == 0)
 	{
 		close_socket_handle(node->fd);
-		node->fd = INVALID_SOCKET;
-		m_closed = true;
-		m_error_cb("accept_stream_failed");
-		return;
+	}
+	else
+	{
+		m_accept_cb(token);
 	}
 
 	node->fd = INVALID_SOCKET;
-	m_accept_cb(token);
 	queue_accept(ovl);
 }
 
@@ -224,6 +241,12 @@ void socket_listener::on_can_recv(size_t max_len, bool is_eof)
             break;
 
 		total_accept++;
+		if (m_mgr->is_full())
+		{
+			close_socket_handle(fd);
+			continue;
+		}
+
 		get_ip_string(ip, sizeof(ip), &addr, (size_t)addr_len);
         set_none_block(fd);
 
@@ -234,10 +257,7 @@ void socket_listener::on_can_recv(size_t max_len, bool is_eof)
         }
         else
         {
-            // TODO: 这种情况,真的要关闭么?
             close_socket_handle(fd);
-            m_closed = true;
-            m_error_cb("accept_stream_failed");
         }
     }
 }

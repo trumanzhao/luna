@@ -98,7 +98,7 @@ bool socket_manager::setup(int max_connection)
 		return false;
 #endif
 
-	m_max_connection = max_connection;
+	m_max_count = max_connection;
 	m_events.resize(max_connection);
 
 	return true;
@@ -178,8 +178,8 @@ void socket_manager::wait(int timeout)
 	{
 		struct kevent& ev = m_events[i];
 		auto object = (socket_object*)ev.udata;
-		if (ev.filter == EVFILT_READ) object->on_can_recv((size_t)ev.data, ev.flags & EV_EOF);
-		else if (ev.filter == EVFILT_WRITE) object->on_can_send((size_t)ev.data, ev.flags & EV_EOF);
+		if (ev.filter == EVFILT_READ) object->on_can_recv((size_t)ev.data, ev.flags & EV_EOF != 0);
+		else if (ev.filter == EVFILT_WRITE) object->on_can_send((size_t)ev.data, ev.flags & EV_EOF != 0);
 	}
 #endif
 
@@ -260,8 +260,10 @@ Exit0:
 
 int socket_manager::connect(std::string& err, const char domain[], const char service[])
 {
-	int token = new_token();
-	dns_request_t* req = new dns_request_t;
+	if (is_full())
+	{
+		return 0;
+	}
 
 #ifdef _MSC_VER
 	socket_stream* stm = new socket_stream(this, m_connect_func);
@@ -271,6 +273,8 @@ int socket_manager::connect(std::string& err, const char domain[], const char se
 	socket_stream* stm = new socket_stream(this);
 #endif
 
+	int token = new_token();
+	dns_request_t* req = new dns_request_t;
 	req->node = domain;
 	req->service = service;
 
@@ -298,7 +302,6 @@ int socket_manager::connect(std::string& err, const char domain[], const char se
 
 	m_dns.request(req);
 	m_objects[token] = stm;
-
 	return token;
 }
 

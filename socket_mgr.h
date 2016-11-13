@@ -81,6 +81,9 @@ struct socket_manager : socket_mgr
 	bool watch_send(socket_t fd, socket_object* object, bool enable);
 	int accept_stream(socket_t fd, const char ip[]);
 
+	void increase_count() { m_count++; }
+	void decrease_count() { m_count--; }
+	bool is_full() { return m_count >= m_max_count; }
 private:
 
 #ifdef _MSC_VER
@@ -120,7 +123,8 @@ private:
 		return m_token++;
 	}
 
-	int m_max_connection = 0;
+	int m_max_count = 0;
+	int m_count = 0;
 	int m_token = 0;
 	int64_t m_next_update = 0;
 	std::unordered_map<int, socket_object*> m_objects;

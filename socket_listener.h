@@ -16,7 +16,7 @@ struct socket_listener : public socket_object
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-	socket_listener(socket_manager* mgr) { m_mgr = mgr; }
+	socket_listener(socket_manager* mgr);
 #endif
 
 	~socket_listener();
