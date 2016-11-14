@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <limits.h>
 #include <unordered_map>
 #include <string>
 #include <thread>
