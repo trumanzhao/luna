@@ -6,6 +6,7 @@
 #pragma once
 
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 
 struct io_buffer
