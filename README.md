@@ -1,6 +1,7 @@
 # 关于`luna`
 
 ## 这是个什么东西?
+
 luna的目的,早期是一个lua的C++绑定工具,现在的目的是实现一个机遇lua的集群服务器框架.
 主要特性:
 
@@ -11,6 +12,7 @@ luna的目的,早期是一个lua的C++绑定工具,现在的目的是实现一�
 - 方便的使用脚本热加载,以实现高效开发&运维.
 
 ## 环境
+
 luna同时支持Windows, Linux, macOS三平台,但是,你的编译器必须支持C++14.
 我的开发环境如下(目前只支持64位,32位未经测试):
 
@@ -25,6 +27,7 @@ luna同时支持Windows, Linux, macOS三平台,但是,你的编译器必须支�
 - luna_entry中会首先加载(import)用户指定(命令行)的入口文件, 然后循环调用其中的on_loop函数.
 
 ## 文件沙盒及文件热加载
+
 在luna中,用户主要通过全局的import函数加载lua文件.
 - import为每个文件创建了一个沙盒环境,这使得各个文件中的变量名不会冲突.
 - 在需要的地方,用户还可以继续使用require.
@@ -52,21 +55,22 @@ lua_register_function(L, func_c);
 首先需要在你得类声明中插入导出声明:
 
 ``` c++
-class my_export_class_t
+class my_class final
 {
 	// ... other code ...
 	int func_a(const char* a, int b);
 	int func_b(some_class_t* a, int b);
     char m_name[32];
-  	// 插入这句:
-	DECLARE_LUA_CLASS(my_export_class_t);
+public:
+    // 插入导出声明:
+	DECLARE_LUA_CLASS(my_class);
 };
 ```
 
-在cpp中增加导出表的定义:
+在cpp中增加导出表的实现:
 
 ``` c++
-EXPORT_CLASS_BEGIN(my_export_class_t)
+EXPORT_CLASS_BEGIN(my_class)
 EXPORT_LUA_FUNCTION(func_a)
 EXPORT_LUA_FUNCTION(func_b)
 EXPORT_LUA_STRING(m_name)
@@ -76,7 +80,19 @@ EXPORT_CLASS_END()
 可以用带`_AS`的导出宏指定导出的名字,用带`_R`的宏指定导出为只读变量.
 比如: `EXPORT_LUA_STRING_AS(m_name, Name)`
 
-***注意不要对导出对象memset***
+## 关于导出类(对象)的注意点
+
+### 目前通过静态断言作了限制: 只能导出声明为final的类
+
+这是为了避免无意间在父类和子类做出错误的指针转换
+如果需要父类子类同时导出且保证不会出现这种错误,可以自行去掉这个断言
+
+### 关于C++导出对象的生存期问题
+
+注意,对象一旦被push进入lua,那么C++层面就不能随便删除它了.
+绑定到lua中的C++对象,将会在lua影子对象gc时,自动delete.
+如果这个对象在gc时不能调用delete,请在对象中实现gc方法: void gc();
+这时gc将调用该函数,而不会直接delete对象.
 
 
 ## lua中访问导出对象
@@ -95,12 +111,6 @@ obj.name = "new name";
 - 重载(覆盖)对象上的C\+\+导出方法.
 - 在影子对象上增加额外的成员变量和方法.
 - 在C\+\+中调用lua中为对象增加的方法,参见`lua_call_object_function`.
-
-## 关于C++导出对象的生存期问题
-注意,对象一旦被push进入lua,那么C++层面就不能随便删除它了.
-绑定到lua中的C++对象,将会在lua影子对象gc时,自动delete.
-如果这个对象在gc时不能调用delete,请在对象中实现gc方法: void gc();
-这时gc将调用该函数,而不会直接delete对象.
 
 ## C\+\+中调用lua函数
 
@@ -127,7 +137,8 @@ lua_guard_t g(L);
 lua_call_table_function(L, "s2s", "test.lua", "some_func", std::tie(x, y), 11, 2);
 ```
 
-注意上面这里的lua_guard_t,请注意它的生存期,它实际上做的事情是:
+注意上面这里的lua_guard_t,所有从C++调用Lua的地方,都需要通过它来做栈保护.
+请注意它的生存期,它实际上做的事情是:
 
 1. 在构造是调用`lua_gettop`保存栈.
 2. 析构时调用`lua_settop`恢复栈.
@@ -149,10 +160,6 @@ char* b;
 std::string c;
 lua_call_table_function(L, "s2s", "some_func", std::tie(), a, b, c);
 ```
-
-## lua的C++绑定可能遇到的问题
-如果类之间有继承关系,同时导出基类和子类时,要小心操作指针,比如用基类指针push子类对象,结果可能就是非预期的.
-问题的根本原因是C++对象的子类指针和其基类指针可能是不一样的,而luna在lua影子对象中存储了对象的指针.之前的版本使用了虚函数来取得导出表之类的元数据,但是并不能完全解决问题,所以在新版中去掉了虚函数.使用者需要了解这一点,以在实践中有针对性的规避这一问题了.
 
 
 ## 网络
