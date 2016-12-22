@@ -13,9 +13,9 @@
 
 enum class ar_type
 {
-    integer,
-    number,
-    nill,
+	nill,
+	number,
+	integer,
     string,
     string_idx,
     bool_true,
@@ -80,6 +80,9 @@ bool lua_archiver::save_value(lua_State* L, int idx)
     int type = lua_type(L, idx);
     switch (type)
     {
+	case LUA_TNIL:
+		return save_nill();
+
     case LUA_TNUMBER:
         return lua_isinteger(L, idx) ? save_integer(lua_tointeger(L, idx)) : save_number(lua_tonumber(L, idx));
 
@@ -88,9 +91,6 @@ bool lua_archiver::save_value(lua_State* L, int idx)
 
     case LUA_TSTRING:
         return save_string(L, idx);
-
-    case LUA_TNIL:
-        return save_nill();
 
     case LUA_TTABLE:
         return save_table(L, idx);
@@ -242,6 +242,10 @@ bool lua_archiver::load_value(lua_State* L)
 
     switch ((ar_type)code)
     {
+	case ar_type::nill:
+		lua_pushnil(L);
+		break;
+
     case ar_type::number:
         if (m_end - m_pos < (ptrdiff_t)sizeof(double))
             return false;
@@ -289,10 +293,6 @@ bool lua_archiver::load_value(lua_State* L)
             return false;
         m_pos += decode_len;
         lua_pushlstring(L, m_shared_string[(int)str_idx], m_shared_strlen[(int)str_idx]);
-        break;
-
-    case ar_type::nill:
-        lua_pushnil(L);
         break;
 
     case ar_type::table_head:
