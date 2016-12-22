@@ -351,7 +351,6 @@ struct has_member_gc
 {
     template<typename U> static auto check(int) -> decltype(std::declval<U>().gc(), std::true_type());
     template<typename U> static std::false_type check(...);
-    // 注意编译器在check函数两个版本(int参数, ...变参)同时存在时,优先匹配int参数版
     enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
 };
 
@@ -626,11 +625,11 @@ inline bool lua_call_table_function(lua_State* L, const char table[], const char
 template <typename T> inline bool lua_call_object_function(lua_State* L, T* o, const char function[]) { return lua_call_object_function(L, o, function, std::tie()); }
 inline bool lua_call_global_function(lua_State* L, const char function[]) { return lua_call_global_function(L, function, std::tie()); }
 
-class lua_guard_t
+class lua_guard
 {
     int m_top = 0;
     lua_State* m_lvm = nullptr;
 public:
-    lua_guard_t(lua_State* L) : m_lvm(L) { m_top = lua_gettop(L); }
-    ~lua_guard_t() { lua_settop(m_lvm, m_top); }
+    lua_guard(lua_State* L) : m_lvm(L) { m_top = lua_gettop(L); }
+    ~lua_guard() { lua_settop(m_lvm, m_top); }
 };

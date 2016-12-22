@@ -26,6 +26,9 @@ enum class ar_type
 };
 
 static const int small_int_max = UCHAR_MAX - (int)ar_type::count;
+static const int max_share_string = UCHAR_MAX;
+static const int max_table_depth = 16;
+
 static int normal_index(lua_State* L, int idx) { return idx >= 0 ? idx : lua_gettop(L) + idx + 1; }
 
 bool lua_archiver::save(size_t* data_len, BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last)
@@ -33,6 +36,7 @@ bool lua_archiver::save(size_t* data_len, BYTE* buffer, size_t buffer_size, lua_
 	m_begin = buffer;
 	m_pos = m_begin;
 	m_end = m_begin+ buffer_size;
+	m_table_depth = 0;
 	m_shared_string.clear();
 	m_shared_strlen.clear();
 
@@ -151,6 +155,9 @@ bool lua_archiver::save_table(lua_State* L, int idx)
     if (m_end - m_pos < (ptrdiff_t)sizeof(BYTE))
         return false;
 
+	if (++m_table_depth > max_table_depth)
+		return false;
+
     *m_pos++ = (BYTE)ar_type::table_head;
     idx = normal_index(L, idx);
 
@@ -162,8 +169,11 @@ bool lua_archiver::save_table(lua_State* L, int idx)
         lua_pop(L, 1);
     }
 
+	--m_table_depth;
+
     if (m_end - m_pos < (ptrdiff_t)sizeof(BYTE))
         return false;
+
     *m_pos++ = (BYTE)ar_type::table_tail;
     return true;
 }
@@ -196,7 +206,12 @@ bool lua_archiver::save_string(lua_State* L, int idx)
         return false;
     memcpy(m_pos, str, len);
     m_pos += len;
-    m_shared_string.push_back(str);
+	
+	if (m_shared_string.size() < max_share_string)
+	{
+		m_shared_string.push_back(str);
+	}
+
     return true;
 }
 

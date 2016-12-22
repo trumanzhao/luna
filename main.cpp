@@ -60,7 +60,7 @@ int main(int argc, const char* argv[])
 		lua_register_function(g_lvm, "daemon", daemon);
         lua_register_function(g_lvm, "create_socket_mgr", lua_create_socket_mgr);
 
-        lua_guard_t g(g_lvm);
+        lua_guard g(g_lvm);
         lua_call_global_function(g_lvm, "luna_entry", std::tie(), argc > 1 ? argv[1] : "main.lua");
     }
 

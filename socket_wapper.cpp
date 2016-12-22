@@ -177,7 +177,7 @@ void lua_socket_node::close()
 
 void lua_socket_node::on_recv(char* data, size_t data_len)
 {
-	lua_guard_t g(m_lvm);
+	lua_guard g(m_lvm);
 
 	if (!lua_get_object_function(m_lvm, this, "on_recv"))
 		return;

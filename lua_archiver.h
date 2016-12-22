@@ -30,6 +30,7 @@ private:
 	BYTE* m_begin = nullptr;
 	BYTE* m_pos = nullptr;
 	BYTE* m_end = nullptr;
+	int m_table_depth = 0;
     std::vector<const char*> m_shared_string;
     std::vector<size_t> m_shared_strlen;
 };
