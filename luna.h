@@ -322,10 +322,10 @@ int lua_member_new_index(lua_State* L)
             size_t str_len = strlen(str);
             if (str_len >= item->size)
             {
-				str_len = item->size - 1;
+                str_len = item->size - 1;
             }
-			memcpy(addr, str, str_len + 1);
-		}
+            memcpy(addr, str, str_len + 1);
+        }
         break;
 
     case lua_member_type::member_std_str:
@@ -369,7 +369,7 @@ int lua_object_gc(lua_State* L)
         puts("__gc error: nullptr !");
         return 0;
     }
-	lua_handle_gc(obj);
+    lua_handle_gc(obj);
     return 0;
 }
 
@@ -450,7 +450,7 @@ template <typename T>
 T lua_to_object(lua_State* L, int idx)
 {
     static_assert(has_meta_data<typename std::remove_pointer<T>::type>::value, "T should be declared export !");
-	static_assert(std::is_final<typename std::remove_pointer<T>::type>::value, "T should be declared final !");
+    static_assert(std::is_final<typename std::remove_pointer<T>::type>::value, "T should be declared final !");
     T obj = nullptr;
      if (lua_istable(L, idx))
      {

@@ -206,7 +206,7 @@ bool lua_archiver::save_string(lua_State* L, int idx)
         return false;
     memcpy(m_pos, str, len);
     m_pos += len;
-    
+
     if (m_shared_string.size() < max_share_string)
     {
         m_shared_string.push_back(str);

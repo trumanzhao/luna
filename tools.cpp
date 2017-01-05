@@ -51,24 +51,24 @@ time_t get_file_time(const char* file_name)
 
 char* get_error_string(char buffer[], int len, int no)
 {
-	buffer[0] = '\0';
+    buffer[0] = '\0';
 
 #ifdef _MSC_VER
-	FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, no, 0, buffer, len, nullptr);
+    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, no, 0, buffer, len, nullptr);
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-	strerror_r(no, buffer, len);
+    strerror_r(no, buffer, len);
 #endif
 
-	return buffer;
+    return buffer;
 }
 
 void get_error_string(std::string& err, int no)
 {
-	char txt[MAX_ERROR_TXT];
-	get_error_string(txt, sizeof(txt), no);
-	err = txt;
+    char txt[MAX_ERROR_TXT];
+    get_error_string(txt, sizeof(txt), no);
+    err = txt;
 }
 
 void sha1_string(char* buffer, const void* data, size_t data_len)

@@ -37,21 +37,21 @@ time_t get_file_time(const char* file_name);
 template <typename T, int N>
 void safe_cpy(T (&buffer)[N], const T* str)
 {
-	if (str == nullptr)
-	{
-		buffer[0] = 0;
-		return;
-	}
+    if (str == nullptr)
+    {
+        buffer[0] = 0;
+        return;
+    }
 
-	int n = 0;
-	while (n < N && *str)
-	{
-		buffer[n++] = *str++;
-	}
+    int n = 0;
+    while (n < N && *str)
+    {
+        buffer[n++] = *str++;
+    }
 
-	if (n >= N)
-		n--;
-	buffer[n] = 0;
+    if (n >= N)
+        n--;
+    buffer[n] = 0;
 }
 
 #ifdef _MSC_VER
@@ -80,15 +80,15 @@ inline uint64_t get_thread_id() { return (uint64_t)pthread_self(); }
 #endif
 
 
-#define FAILED_JUMP(C)	\
-	do	\
-	{	\
-		if (!(C)) goto Exit0; \
-	} while (0)
+#define FAILED_JUMP(C)  \
+    do  \
+    {   \
+        if (!(C)) goto Exit0; \
+    } while (0)
 
-#define SAFE_FREE(p)	\
-    do	\
-    {	\
+#define SAFE_FREE(p)    \
+    do  \
+    {   \
         if (p)  \
         {   \
             free(p);    \
@@ -96,9 +96,9 @@ inline uint64_t get_thread_id() { return (uint64_t)pthread_self(); }
         }   \
     } while (0)
 
-#define SAFE_DELETE(p)	\
-    do	\
-    {	\
+#define SAFE_DELETE(p)  \
+    do  \
+    {   \
         if (p)  \
         {   \
             delete (p);    \
@@ -106,9 +106,9 @@ inline uint64_t get_thread_id() { return (uint64_t)pthread_self(); }
         }   \
     } while (0)
 
-#define SAFE_DELETE_ARRAY(p)	\
-    do	\
-    {	\
+#define SAFE_DELETE_ARRAY(p)    \
+    do  \
+    {   \
         if (p)  \
         {   \
             delete[] (p);    \
@@ -116,9 +116,9 @@ inline uint64_t get_thread_id() { return (uint64_t)pthread_self(); }
         }   \
     } while (0)
 
-#define SAFE_RELEASE(p)	\
-    do	\
-    {	\
+#define SAFE_RELEASE(p) \
+    do  \
+    {   \
         if (p)  \
         {   \
             (p)->release();    \

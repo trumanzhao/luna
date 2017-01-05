@@ -9,11 +9,11 @@
 
 struct lua_archiver
 {
-	lua_archiver() {}
-	~lua_archiver() {}
+    lua_archiver() {}
+    ~lua_archiver() {}
 
-	bool save(size_t* data_len, BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last);
-	bool load(int* param_count, lua_State* L, BYTE* data, size_t data_len);
+    bool save(size_t* data_len, BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last);
+    bool load(int* param_count, lua_State* L, BYTE* data, size_t data_len);
 
 private:
     bool save_value(lua_State* L, int idx);
@@ -27,10 +27,10 @@ private:
     bool load_value(lua_State* L);
 
 private:
-	BYTE* m_begin = nullptr;
-	BYTE* m_pos = nullptr;
-	BYTE* m_end = nullptr;
-	int m_table_depth = 0;
+    BYTE* m_begin = nullptr;
+    BYTE* m_pos = nullptr;
+    BYTE* m_end = nullptr;
+    int m_table_depth = 0;
     std::vector<const char*> m_shared_string;
     std::vector<size_t> m_shared_strlen;
 };

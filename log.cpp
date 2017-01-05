@@ -15,7 +15,7 @@
 
 #define LOG_DIR         "logs"
 #define LOG_LINE_MAX    (1024 * 2)
-#define LOG_MAX_PATH	1024
+#define LOG_MAX_PATH    1024
 
 struct LogParam
 {
@@ -24,8 +24,8 @@ struct LogParam
     int nMaxFileLine;
     void* pvUsrData;
     XLogCallback* pCallback;
-	std::mutex mutex;
-	char szDir[LOG_MAX_PATH];
+    std::mutex mutex;
+    char szDir[LOG_MAX_PATH];
 };
 
 static LogParam*    g_pLog       = NULL;
@@ -48,11 +48,11 @@ bool LogOpen(const char cszName[], int nMaxLine)
 
     pszRet = getcwd(szCWD, sizeof(szCWD));
     if (pszRet == nullptr)
-		return false;
+        return false;
 
     nRetCode = snprintf(g_pLog->szDir, sizeof(g_pLog->szDir), "%s/%s/%s", szCWD, LOG_DIR, cszName);
     if (nRetCode <= 0 || nRetCode >= (int)sizeof(g_pLog->szDir))
-		return false;
+        return false;
 
     g_pLog = new LogParam;
     g_pLog->pFile           = NULL;
@@ -76,7 +76,7 @@ void LogClose()
     }
 
     delete g_pLog;
-	g_pLog = nullptr;
+    g_pLog = nullptr;
 }
 
 static FILE* CreateLogFile(const char cszPath[])
@@ -96,7 +96,7 @@ static FILE* CreateLogFile(const char cszPath[])
             {
                 nRetCode = make_dir(pszBuffer);
                 if (nRetCode != 0 && errno != EEXIST)
-					return nullptr;
+                    return nullptr;
             }
 
             *pszPos = '/';
@@ -135,11 +135,11 @@ static bool ResetLogFile()
         timeNow.tm_sec
     );
     if (nRetCode <= 0 || nRetCode >= (int)sizeof(szPath))
-		return false;
+        return false;
 
     pFile = CreateLogFile(szPath);
     if (pFile == nullptr)
-		return false;
+        return false;
 
     if (g_pLog->pFile)
     {

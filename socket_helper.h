@@ -32,5 +32,5 @@ bool check_can_write(socket_t fd, int timeout);
 void set_none_block(socket_t nSocket);
 
 
-#define MAX_HEADER_LEN	16
+#define MAX_HEADER_LEN  16
 

@@ -81,9 +81,9 @@ bool lua_call_function(lua_State* L, int arg_count, int ret_count)
     lua_insert(L, func_idx);
     if (lua_pcall(L, arg_count, ret_count, func_idx))
     {
-		// 注意,该函数只在指定的函数不存在时才返回false
-		// lua函数内部执行出错时,并不认为是错误,这是因为lua函数执行时,可能时中途错误,而前面已经执行了部分逻辑
-		// 如果这种情况返回false,上层逻辑会不好处理,比如: 我push的一个对象到底被lua引用了没?我要删除它么?
+        // 注意,该函数只在指定的函数不存在时才返回false
+        // lua函数内部执行出错时,并不认为是错误,这是因为lua函数执行时,可能时中途错误,而前面已经执行了部分逻辑
+        // 如果这种情况返回false,上层逻辑会不好处理,比如: 我push的一个对象到底被lua引用了没?我要删除它么?
         puts(lua_tostring(L, -1));
         return true;
     }

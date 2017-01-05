@@ -9,6 +9,8 @@ import datetime
 
 today = datetime.datetime.now().strftime("%Y-%m-%d");
 
+#检测文件编码,如果不是的话,统一改为utf-8
+#将table转换为space
 def recode(path):
     raw = open(path, 'rb').read();
     if raw.startswith(codecs.BOM_UTF8):
@@ -19,7 +21,7 @@ def recode(path):
 
     lines = io.open(path, "r", encoding=encoding).readlines();
     for i in range(0, len(lines)):
-        lines[i] = lines[i].rstrip() + "\n";
+        lines[i] = lines[i].rstrip().expandtabs(4) + "\n";
     io.open(path, "w", encoding="utf-8-sig").writelines(lines);
 
 sign = list();
