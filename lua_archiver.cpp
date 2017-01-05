@@ -13,9 +13,9 @@
 
 enum class ar_type
 {
-	nill,
-	number,
-	integer,
+    nill,
+    number,
+    integer,
     string,
     string_idx,
     bool_true,
@@ -33,46 +33,46 @@ static int normal_index(lua_State* L, int idx) { return idx >= 0 ? idx : lua_get
 
 bool lua_archiver::save(size_t* data_len, BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last)
 {
-	m_begin = buffer;
-	m_pos = m_begin;
-	m_end = m_begin+ buffer_size;
-	m_table_depth = 0;
-	m_shared_string.clear();
-	m_shared_strlen.clear();
+    m_begin = buffer;
+    m_pos = m_begin;
+    m_end = m_begin+ buffer_size;
+    m_table_depth = 0;
+    m_shared_string.clear();
+    m_shared_strlen.clear();
 
-	first = normal_index(L, first);
-	last = normal_index(L, last);
+    first = normal_index(L, first);
+    last = normal_index(L, last);
 
-	for (int i = first; i <= last; i++)
-	{
-		if (!save_value(L, i))
-			return false;
-	}
+    for (int i = first; i <= last; i++)
+    {
+        if (!save_value(L, i))
+            return false;
+    }
 
-	*data_len = (size_t)(m_pos - m_begin);
-	return true;
+    *data_len = (size_t)(m_pos - m_begin);
+    return true;
 }
 
 bool lua_archiver::load(int* param_count, lua_State* L, BYTE* data, size_t data_len)
 {
-	m_pos = data;
-	m_end = data + data_len;
-	m_shared_string.clear();
-	m_shared_strlen.clear();
+    m_pos = data;
+    m_end = data + data_len;
+    m_shared_string.clear();
+    m_shared_strlen.clear();
 
-	int count = 0;
-	int top = lua_gettop(L);
-	while (m_pos < m_end)
-	{
-		if (!load_value(L))
-		{
-			lua_settop(L, top);
-			return false;
-		}
-		count++;
-	}
-	*param_count = count;
-	return true;
+    int count = 0;
+    int top = lua_gettop(L);
+    while (m_pos < m_end)
+    {
+        if (!load_value(L))
+        {
+            lua_settop(L, top);
+            return false;
+        }
+        count++;
+    }
+    *param_count = count;
+    return true;
 }
 
 bool lua_archiver::save_value(lua_State* L, int idx)
@@ -80,8 +80,8 @@ bool lua_archiver::save_value(lua_State* L, int idx)
     int type = lua_type(L, idx);
     switch (type)
     {
-	case LUA_TNIL:
-		return save_nill();
+    case LUA_TNIL:
+        return save_nill();
 
     case LUA_TNUMBER:
         return lua_isinteger(L, idx) ? save_integer(lua_tointeger(L, idx)) : save_number(lua_tonumber(L, idx));
@@ -155,8 +155,8 @@ bool lua_archiver::save_table(lua_State* L, int idx)
     if (m_end - m_pos < (ptrdiff_t)sizeof(BYTE))
         return false;
 
-	if (++m_table_depth > max_table_depth)
-		return false;
+    if (++m_table_depth > max_table_depth)
+        return false;
 
     *m_pos++ = (BYTE)ar_type::table_head;
     idx = normal_index(L, idx);
@@ -169,7 +169,7 @@ bool lua_archiver::save_table(lua_State* L, int idx)
         lua_pop(L, 1);
     }
 
-	--m_table_depth;
+    --m_table_depth;
 
     if (m_end - m_pos < (ptrdiff_t)sizeof(BYTE))
         return false;
@@ -206,11 +206,11 @@ bool lua_archiver::save_string(lua_State* L, int idx)
         return false;
     memcpy(m_pos, str, len);
     m_pos += len;
-	
-	if (m_shared_string.size() < max_share_string)
-	{
-		m_shared_string.push_back(str);
-	}
+    
+    if (m_shared_string.size() < max_share_string)
+    {
+        m_shared_string.push_back(str);
+    }
 
     return true;
 }
@@ -242,9 +242,9 @@ bool lua_archiver::load_value(lua_State* L)
 
     switch ((ar_type)code)
     {
-	case ar_type::nill:
-		lua_pushnil(L);
-		break;
+    case ar_type::nill:
+        lua_pushnil(L);
+        break;
 
     case ar_type::number:
         if (m_end - m_pos < (ptrdiff_t)sizeof(double))
