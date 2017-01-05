@@ -56,9 +56,9 @@ end
 ```
 
 #### 停止
-收到信号时,会调用全局函数'on_quit_signal',默认会在其中设置退出标志'luna_quit_flag'.
-主循环在检查到'luna_quit_flag'标志时即退出.
-当然,用户可以定义自己的'on_quit_signal'函数.
+收到信号时,会调用全局函数'on_quit_signal',默认会在其中设置退出标志'luna_quit_flag'.  
+主循环在检查到'luna_quit_flag'标志时即退出.   
+当然,用户可以定义自己的'on_quit_signal'函数.  
 
 ## C++导出函数
 
