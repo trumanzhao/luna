@@ -633,3 +633,7 @@ public:
     lua_guard(lua_State* L) : m_lvm(L) { m_top = lua_gettop(L); }
     ~lua_guard() { lua_settop(m_lvm, m_top); }
 };
+
+bool luna_setup(lua_State* L);
+
+
