@@ -19,6 +19,7 @@ lua_State* g_lvm = nullptr;
 
 static void on_quit_signal(int signo)
 {
+    lua_guard g(g_lvm);
     lua_call_global_function(g_lvm, "on_quit_signal", std::tie(), signo);
 }
 

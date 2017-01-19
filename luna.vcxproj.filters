@@ -109,7 +109,6 @@
     </ClCompile>
     <ClCompile Include="tools.cpp" />
     <ClCompile Include="socket_helper.cpp" />
-    <ClCompile Include="log.cpp" />
     <ClCompile Include="socket_mgr.cpp" />
     <ClCompile Include="dns_resolver.cpp" />
     <ClCompile Include="socket_stream.cpp" />
@@ -208,7 +207,6 @@
     <ClInclude Include="io_buffer.h" />
     <ClInclude Include="socket_helper.h" />
     <ClInclude Include="socket_mgr.h" />
-    <ClInclude Include="log.h" />
     <ClInclude Include="socket_io.h" />
     <ClInclude Include="dns_resolver.h" />
     <ClInclude Include="socket_stream.h" />
