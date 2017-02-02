@@ -249,7 +249,7 @@ stream.close();
 
 为了实现这个路由转发,我们把所有的服务进程都连接到router,以它为中心做中转.  
 另外,还需要引入服务进程标识(service id),它通常是服务进程启动时指定的(如命令行参数).
-实际上它是个int32_t整数,最高字节[0-127]被用做服务类型(service class),其余字节用作实例标识(instance id).  
+实际上它是个int32_t整数,最高字节[0-255]被用做服务类型(service class),其余字节用作实例标识(instance id).  
 也就是说: service_id = (service_class << 24) | instance_id;  
 
 现在考虑router如何实现这个数据转发.  
@@ -262,10 +262,11 @@ stream.close();
 当有服务进程连接或者断开时,可以通过下面的方式更新转发表.  
 
 ```lua
---socket_mgr内部会对同一类型的instance_id排序
---如果连接断开(或未连接)时,需要保留空位(固定哈希),可以把token传0
---主从备份模式时,永远转发给排序后的第一个instance_id
-socket_mgr.register(service_id, stream.token);
+--socket_mgr内部会对同一类型的instance_id排序(升序)
+--如果连接断开(或未连接)时,需要保留空位(固定哈希),可以把token传0,需要删除则设置token为nil
+--目前不支持权重参数设置,可以为一个连接配置多个instance_id来实现
+--主从备份模式时,永远转发给排序后的第一个非0的instance_id
+socket_mgr.route(service_id, stream.token);
 ```
 
 这样,比如gamesvr想把玩家加入战斗匹配,就可以额做类似这样的调用:
@@ -277,7 +278,7 @@ socket_mgr.register(service_id, stream.token);
 socket = socket_mgr.connect("127.0.0.1", 2000);
 function call_matchsvr(msg, ...)
 	--将后面的参数打包给router,让它按规则(即主从备份master)转发给matchsvr
-	socket.route(matchsvr, master, msg, ...);
+	socket.forward(matchsvr, master, msg, ...);
 end
 
 call_matchsvr("join_match", player_id, match_mode);

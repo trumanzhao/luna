@@ -305,7 +305,7 @@ int socket_manager::connect(std::string& err, const char domain[], const char se
     return token;
 }
 
-void socket_manager::set_send_cache(int token, size_t size)
+void socket_manager::set_send_cache(uint32_t token, size_t size)
 {
     auto node = get_object(token);
     if (node)
@@ -314,7 +314,7 @@ void socket_manager::set_send_cache(int token, size_t size)
     }
 }
 
-void socket_manager::set_recv_cache(int token, size_t size)
+void socket_manager::set_recv_cache(uint32_t token, size_t size)
 {
     auto node = get_object(token);
     if (node)
@@ -323,7 +323,7 @@ void socket_manager::set_recv_cache(int token, size_t size)
     }
 }
 
-void socket_manager::set_timeout(int token, int duration)
+void socket_manager::set_timeout(uint32_t token, int duration)
 {
     auto node = get_object(token);
     if (node)
@@ -332,7 +332,7 @@ void socket_manager::set_timeout(int token, int duration)
     }
 }
 
-void socket_manager::send(int token, const void* data, size_t data_len)
+void socket_manager::send(uint32_t token, const void* data, size_t data_len)
 {
     auto node = get_object(token);
     if (node)
@@ -341,7 +341,7 @@ void socket_manager::send(int token, const void* data, size_t data_len)
     }
 }
 
-void socket_manager::close(int token)
+void socket_manager::close(uint32_t token)
 {
     auto node = get_object(token);
     if (node)
@@ -350,7 +350,7 @@ void socket_manager::close(int token)
     }
 }
 
-bool socket_manager::get_remote_ip(std::string& ip, int token)
+bool socket_manager::get_remote_ip(std::string& ip, uint32_t token)
 {
     auto node = get_object(token);
     if (node)
@@ -360,7 +360,7 @@ bool socket_manager::get_remote_ip(std::string& ip, int token)
     return false;
 }
 
-void socket_manager::set_accept_callback(int token, const std::function<void(int)>& cb)
+void socket_manager::set_accept_callback(uint32_t token, const std::function<void(uint32_t)>& cb)
 {
     auto node = get_object(token);
     if (node)
@@ -369,7 +369,7 @@ void socket_manager::set_accept_callback(int token, const std::function<void(int
     }
 }
 
-void socket_manager::set_connect_callback(int token, const std::function<void()>& cb)
+void socket_manager::set_connect_callback(uint32_t token, const std::function<void()>& cb)
 {
     auto node = get_object(token);
     if (node)
@@ -378,7 +378,7 @@ void socket_manager::set_connect_callback(int token, const std::function<void()>
     }
 }
 
-void socket_manager::set_package_callback(int token, const std::function<void(char*, size_t)>& cb)
+void socket_manager::set_package_callback(uint32_t token, const std::function<void(char*, size_t)>& cb)
 {
     auto node = get_object(token);
     if (node)
@@ -387,7 +387,7 @@ void socket_manager::set_package_callback(int token, const std::function<void(ch
     }
 }
 
-void socket_manager::set_error_callback(int token, const std::function<void(const char*)>& cb)
+void socket_manager::set_error_callback(uint32_t token, const std::function<void(const char*)>& cb)
 {
     auto node = get_object(token);
     if (node)

@@ -63,17 +63,17 @@ struct socket_manager : socket_mgr
     virtual int listen(std::string& err, const char ip[], int port) override;
     virtual int connect(std::string& err, const char domain[], const char service[]) override;
 
-    virtual void set_send_cache(int token, size_t size) override;
-    virtual void set_recv_cache(int token, size_t size) override;
-    virtual void set_timeout(int token, int duration) override;
-    virtual void send(int token, const void* data, size_t data_len) override;
-    virtual void close(int token) override;
-    virtual bool get_remote_ip(std::string& ip, int token) override;
+    virtual void set_send_cache(uint32_t token, size_t size) override;
+    virtual void set_recv_cache(uint32_t token, size_t size) override;
+    virtual void set_timeout(uint32_t token, int duration) override;
+    virtual void send(uint32_t token, const void* data, size_t data_len) override;
+    virtual void close(uint32_t token) override;
+    virtual bool get_remote_ip(std::string& ip, uint32_t token) override;
 
-    virtual void set_accept_callback(int token, const std::function<void(int)>& cb) override;
-    virtual void set_connect_callback(int token, const std::function<void()>& cb) override;
-    virtual void set_package_callback(int token, const std::function<void(char*, size_t)>& cb) override;
-    virtual void set_error_callback(int token, const std::function<void(const char*)>& cb) override;
+    virtual void set_accept_callback(uint32_t token, const std::function<void(uint32_t)>& cb) override;
+    virtual void set_connect_callback(uint32_t token, const std::function<void()>& cb) override;
+    virtual void set_package_callback(uint32_t token, const std::function<void(char*, size_t)>& cb) override;
+    virtual void set_error_callback(uint32_t token, const std::function<void(const char*)>& cb) override;
 
     bool watch_listen(socket_t fd, socket_object* object);
     bool watch_accepted(socket_t fd, socket_object* object);
@@ -115,7 +115,7 @@ private:
         return nullptr;
     }
 
-    int new_token()
+	uint32_t new_token()
     {
         while (m_token == 0 || m_objects.find(m_token) != m_objects.end())
         {
@@ -126,8 +126,8 @@ private:
 
     int m_max_count = 0;
     int m_count = 0;
-    int m_token = 0;
+	uint32_t m_token = 0;
     int64_t m_next_update = 0;
-    std::unordered_map<int, socket_object*> m_objects;
+    std::unordered_map<uint32_t, socket_object*> m_objects;
     dns_resolver m_dns;
 };

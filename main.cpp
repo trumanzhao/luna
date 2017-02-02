@@ -12,8 +12,6 @@
 #include <signal.h>
 #include "luna.h"
 #include "tools.h"
-#include "socket_io.h"
-#include "socket_wapper.h"
 
 lua_State* g_lvm = nullptr;
 
@@ -22,10 +20,6 @@ static void on_quit_signal(int signo)
     lua_guard g(g_lvm);
     lua_call_global_function(g_lvm, "on_quit_signal", std::tie(), signo);
 }
-
-#ifdef _MSC_VER
-void daemon() {  } // do nothing !
-#endif
 
 int main(int argc, const char* argv[])
 {
@@ -48,16 +42,8 @@ int main(int argc, const char* argv[])
 #endif
 
     g_lvm = luaL_newstate();
-    luaL_openlibs(g_lvm);
     if (luna_setup(g_lvm))
     {
-        lua_register_function(g_lvm, "get_file_time", get_file_time);
-        lua_register_function(g_lvm, "get_time_ns", get_time_ns);
-        lua_register_function(g_lvm, "get_time_ms", get_time_ms);
-        lua_register_function(g_lvm, "sleep_ms", sleep_ms);
-        lua_register_function(g_lvm, "daemon", daemon);
-        lua_register_function(g_lvm, "create_socket_mgr", lua_create_socket_mgr);
-
         lua_guard g(g_lvm);
         lua_call_global_function(g_lvm, "luna_entry", std::tie(), argc > 1 ? argv[1] : "main.lua");
     }

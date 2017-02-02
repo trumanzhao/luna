@@ -13,6 +13,9 @@
 #include <algorithm>
 #include <cstdio>
 #include "luna.h"
+#include "tools.h"
+#include "socket_io.h"
+#include "socket_wapper.h"
 
 struct luna_function_wapper final
 {
@@ -181,8 +184,21 @@ function luna_entry(filename)
 end
 )---";
 
+#ifdef _MSC_VER
+void daemon() {  } // do nothing !
+#endif
+
 bool luna_setup(lua_State* L)
 {
-    return luaL_dostring(L, luna_code) == 0;
+	luaL_openlibs(L);
+
+	lua_register_function(L, "get_file_time", get_file_time);
+	lua_register_function(L, "get_time_ns", get_time_ns);
+	lua_register_function(L, "get_time_ms", get_time_ms);
+	lua_register_function(L, "sleep_ms", sleep_ms);
+	lua_register_function(L, "daemon", daemon);
+	lua_register_function(L, "create_socket_mgr", lua_create_socket_mgr);
+
+	return luaL_dostring(L, luna_code) == 0;
 }
 
