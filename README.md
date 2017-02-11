@@ -249,7 +249,7 @@ stream.close();
 
 为了实现这个路由转发,我们把所有的服务进程都连接到router,以它为中心做中转.  
 另外,还需要引入服务进程标识(service id),它通常是服务进程启动时指定的(如命令行参数).
-实际上它是个int32_t整数,最高字节[0-255]被用做服务类型(service class),其余字节用作实例标识(instance id).  
+实际上它是个uint32_t整数,最高字节[0-255]被用做服务类型(service class),其余3字节用作实例标识(instance id).  
 也就是说: service_id = (service_class << 24) | instance_id;  
 
 现在考虑router如何实现这个数据转发.  

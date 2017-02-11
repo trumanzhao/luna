@@ -117,6 +117,7 @@
       <Filter>sha1</Filter>
     </ClCompile>
     <ClCompile Include="socket_wapper.cpp" />
+    <ClCompile Include="socket_router.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lua\lapi.h">
@@ -215,6 +216,7 @@
       <Filter>sha1</Filter>
     </ClInclude>
     <ClInclude Include="socket_wapper.h" />
+    <ClInclude Include="socket_router.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lua">

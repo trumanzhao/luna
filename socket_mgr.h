@@ -115,7 +115,7 @@ private:
         return nullptr;
     }
 
-	uint32_t new_token()
+    uint32_t new_token()
     {
         while (m_token == 0 || m_objects.find(m_token) != m_objects.end())
         {
@@ -126,7 +126,7 @@ private:
 
     int m_max_count = 0;
     int m_count = 0;
-	uint32_t m_token = 0;
+    uint32_t m_token = 0;
     int64_t m_next_update = 0;
     std::unordered_map<uint32_t, socket_object*> m_objects;
     dns_resolver m_dns;
