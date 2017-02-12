@@ -66,7 +66,7 @@ void socket_router::erase(uint32_t service_id)
 }
 
 template <typename T>
-static inline bool read_bytes(T& to, char*& data, size_t& data_len)
+static inline bool read_var(T& to, char*& data, size_t& data_len)
 {
     if (data_len < sizeof(to))
         return false;
@@ -76,11 +76,20 @@ static inline bool read_bytes(T& to, char*& data, size_t& data_len)
     return true;
 }
 
+static inline void set_call_header(char*& data, size_t& data_len)
+{	
+	data--;
+	data_len++;
+	*data = (char)msg_id::remote_call;
+}
+
 void socket_router::forward_target(char* data, size_t data_len)
 {
     uint32_t target_id = 0;
-    if (!read_bytes(target_id, data, data_len) || data_len == 0)
+    if (!read_var(target_id, data, data_len) || data_len == 0)
         return;
+
+	set_call_header(data, data_len);
 
     uint32_t class_idx = get_service_class(target_id);
     auto& class_tab = m_routes[class_idx];
@@ -95,8 +104,10 @@ void socket_router::forward_target(char* data, size_t data_len)
 void socket_router::forward_random(char* data, size_t data_len)
 {
     uint8_t class_idx = 0;
-    if (!read_bytes(class_idx, data, data_len) || data_len == 0)
+    if (!read_var(class_idx, data, data_len) || data_len == 0)
         return;
+
+	set_call_header(data, data_len);
 
     auto& class_tab = m_routes[class_idx];
     auto& class_nodes = class_tab.nodes;
@@ -105,22 +116,20 @@ void socket_router::forward_random(char* data, size_t data_len)
         return;
 
     int idx = std::rand() % count;
-    for (int i = 0; i < count; i++)
+    auto& target = class_nodes[idx];
+    if (target.token != 0)
     {
-        auto& target = class_nodes[(idx + i) % count];
-        if (target.token != 0)
-        {
-            m_mgr->send(target.token, data, data_len);
-            break;
-        }
+        m_mgr->send(target.token, data, data_len);
     }
 }
 
 void socket_router::forward_master(char* data, size_t data_len)
 {
     uint8_t class_idx = 0;
-    if (!read_bytes(class_idx, data, data_len) || data_len == 0)
+    if (!read_var(class_idx, data, data_len) || data_len == 0)
         return;
+
+	set_call_header(data, data_len);
 
     auto& class_tab = m_routes[class_idx];
     auto& class_nodes = class_tab.nodes;
@@ -138,8 +147,10 @@ void socket_router::forward_hash(char* data, size_t data_len)
 {
     uint8_t class_idx = 0;
     uint32_t hash = 0;
-    if (!read_bytes(class_idx, data, data_len) || !read_bytes(hash, data, data_len) || data_len == 0)
+    if (!read_var(class_idx, data, data_len) || !read_var(hash, data, data_len) || data_len == 0)
         return;
+
+	set_call_header(data, data_len);
 
     auto& class_tab = m_routes[class_idx];
     auto& class_nodes = class_tab.nodes;
@@ -162,8 +173,10 @@ void socket_router::forward_hash(char* data, size_t data_len)
 void socket_router::forward_broadcast(char* data, size_t data_len)
 {
     uint8_t class_idx = 0;
-    if (!read_bytes(class_idx, data, data_len) || data_len == 0)
+    if (!read_var(class_idx, data, data_len) || data_len == 0)
         return;
+
+	set_call_header(data, data_len);
 
     auto& class_tab = m_routes[class_idx];
     auto& class_nodes = class_tab.nodes;

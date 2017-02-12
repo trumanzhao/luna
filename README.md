@@ -249,8 +249,9 @@ stream.close();
 
 为了实现这个路由转发,我们把所有的服务进程都连接到router,以它为中心做中转.  
 另外,还需要引入服务进程标识(service id),它通常是服务进程启动时指定的(如命令行参数).
-实际上它是个uint32_t整数,最高字节[0-255]被用做服务类型(service class),其余3字节用作实例标识(instance id).  
+实际上它是个uint32_t整数,最高字节[1-255]被用做服务类型(service class),其余3字节用作实例标识(instance id).  
 也就是说: service_id = (service_class << 24) | instance_id;  
+实现中约定, service_class, instance_id均不为0
 
 现在考虑router如何实现这个数据转发.  
 最简单的,当然可以通过上面的远程调用来实现转发.  
@@ -278,7 +279,7 @@ socket_mgr.route(service_id, stream.token);
 socket = socket_mgr.connect("127.0.0.1", 2000);
 function call_matchsvr(msg, ...)
 	--将后面的参数打包给router,让它按规则(即主从备份master)转发给matchsvr
-	socket.forward(matchsvr, master, msg, ...);
+	socket.forward(master, matchsvr, msg, ...);
 end
 
 call_matchsvr("join_match", player_id, match_mode);

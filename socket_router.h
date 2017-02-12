@@ -9,6 +9,16 @@
 #include <vector>
 #include "socket_io.h"
 
+enum class msg_id
+{
+	remote_call,
+	forward_target,
+	forward_master,
+	forward_hash,
+	forward_random,
+	forward_broadcast,
+};
+
 const int MAX_SERVICE_CLASS = UCHAR_MAX + 1;
 
 struct service_node

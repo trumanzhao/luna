@@ -7,16 +7,6 @@
 #include "lua/lstate.h"
 #include "lz4/lz4.h"
 
-enum class msg_id
-{
-    remote_call,
-    forward_target,
-    forward_random,
-    forward_master,
-    forward_hash,
-    forward_broadcast,
-};
-
 EXPORT_CLASS_BEGIN(lua_socket_mgr)
 EXPORT_LUA_FUNCTION(wait)
 EXPORT_LUA_FUNCTION(listen)
@@ -197,8 +187,47 @@ int lua_socket_node::call(lua_State* L)
     return 1;
 }
 
+static inline bool write_var()
+{
+	//TODO: ...
+	return false;
+}
+
 int lua_socket_node::forward(lua_State* L)
 {
+	int top = lua_gettop(L);
+
+	m_ar_buffer->clear();
+
+	size_t buffer_size = 0;
+	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
+	uint32_t class_idx = 0;
+	msg_id forward_method = (msg_id)lua_tointeger(L, 1);
+	//TODO: ...
+	switch (forward_method)
+	{
+	case msg_id::forward_target:
+		break;
+
+	case msg_id::forward_master:
+		break;
+
+	case msg_id::forward_hash:
+		class_idx = (uint32_t)lua_tointeger(L, 2);
+		if (class_idx <= 0 || class_idx >= MAX_SERVICE_CLASS)
+			return 0;
+		break;
+
+	case msg_id::forward_random:
+		break;
+
+	case msg_id::forward_broadcast:
+		break;
+
+	default:
+		return 0;
+	}
+
     return 0;
 }
 
