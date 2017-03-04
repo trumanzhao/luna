@@ -113,9 +113,6 @@
     <ClCompile Include="dns_resolver.cpp" />
     <ClCompile Include="socket_stream.cpp" />
     <ClCompile Include="socket_listener.cpp" />
-    <ClCompile Include="sha1\sha1.c">
-      <Filter>sha1</Filter>
-    </ClCompile>
     <ClCompile Include="socket_wapper.cpp" />
     <ClCompile Include="socket_router.cpp" />
   </ItemGroup>
@@ -212,9 +209,6 @@
     <ClInclude Include="dns_resolver.h" />
     <ClInclude Include="socket_stream.h" />
     <ClInclude Include="socket_listener.h" />
-    <ClInclude Include="sha1\sha1.h">
-      <Filter>sha1</Filter>
-    </ClInclude>
     <ClInclude Include="socket_wapper.h" />
     <ClInclude Include="socket_router.h" />
   </ItemGroup>
@@ -224,9 +218,6 @@
     </Filter>
     <Filter Include="lz4">
       <UniqueIdentifier>{b5153fde-8b21-4705-b03a-dd30b88322d3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="sha1">
-      <UniqueIdentifier>{8c7c9b32-8b89-4b98-90ae-e562628cd325}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
