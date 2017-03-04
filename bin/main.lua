@@ -1,48 +1,28 @@
-mgr = create_socket_mgr(100, 1024 * 1024, 1024 * 8);
+socket_mgr = create_socket_mgr(100, 1024 * 1024, 1024 * 8);
+listen_socket = socket_mgr.listen("127.0.0.1", 7571);
 
-listen = mgr.listen("", 7571);
-server = nil;
+next_session_id = next_session_id or 1;
+session_tab = session_tab or {};
 
-mid = 0;
+listen_socket.on_accept = function(new_socket)
+    print("accept new connection, ip="..new_socket.ip..", id="..next_session_id);
 
-listen.on_accept = function (stm)
-    print("accept new connection, ip="..stm.ip);
-    server = stm;
+    session_tab[next_session_id] = new_socket;
+    new_socket.id = next_session_id;
+    next_session_id = next_session_id + 1;
 
-    server.on_error = function (err)
-        print("server err: "..err);
+    new_socket.on_error = function(err)
+        print("socket err: "..err);
+        print("close session, id="..new_socket.id);
+        session_tab[new_socket.id] = nil;
     end
 
-    server.on_recv = function (msg, n)
-        print("msg="..msg..", n="..tostring(n));
-        mid = n;
-    end
-end
-
-local frame = 0;
-function on_frame(now)
-    frame = frame + 1;
-    if server and frame % 10 == 0 and mid ~= 0 then
-        print("respond ... "..mid);
-        server.call("ret", mid + 1);
-        mid = 0;
+    new_socket.on_call = function(msg, ...)
+        print(""..msg..": ", ...);
     end
 end
-
-local next_frame_time = 0;
-local next_gc_time = 0;
 
 function on_loop(now)
-    if now >= next_frame_time then
-        next_frame_time = now + 100;
-        on_frame(now);
-    end
-
-    if now >= next_gc_time then
-        collectgarbage();
-        next_gc_time = now + 500;
-    end
-
-    mgr.wait(50);
+    luna_quit_flag = get_guit_signal();
+    socket_mgr.wait(50);
 end
-

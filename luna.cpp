@@ -112,6 +112,7 @@ end
 
 luna_files = luna_files or {};
 luna_file_meta = luna_file_meta or {__index = function(t, k) return _G[k]; end};
+luna_print = print;
 
 function import(filename)
     local file_module = luna_files[filename];
@@ -122,8 +123,10 @@ function import(filename)
     local env = {};
     setmetatable(env, luna_file_meta);
 
-    local trunk = loadfile(filename, "bt", env);
+    local trunk, msg = loadfile(filename, "bt", env);
     if not trunk then
+		luna_print(string.format("load file: %s ... ... [failed]", filename));
+		luna_print(msg);
         return nil;
     end
 
@@ -132,35 +135,43 @@ function import(filename)
 
     local ok, err = pcall(trunk);
     if not ok then
-        print(err);
+		luna_print(string.format("load file: %s ... ... [failed]", filename));
+        luna_print(err);
         return nil;
     end
 
+	luna_print(string.format("load file: %s ... ... [ok]", filename));
     return env;
 end
 
-local try_reload = function()
+local try_reload_one = function(filename, env)
+    local trunk, msg = loadfile(filename, "bt", env);
+    if not trunk then
+        return false, msg;
+    end
+
+    local ok, err = pcall(trunk);
+    if not ok then
+		return false, err;
+    end
+	return true, nil;
+end
+
+local try_reload_all = function()
     for filename, filenode in pairs(luna_files) do
         local filetime = get_file_time(filename);
         if filetime ~= 0 and filetime ~= filenode.time then
             filenode.time = filetime;
-            local trunk = loadfile(filename, "bt", filenode.env);
-            if  trunk then
-                local ok, err = pcall(trunk);
-                if not ok then
-                    print(err);
-                end
-            end
+			local ok, err = try_reload_one(filename, filenode.env);
+			luna_print(string.format("load file: %s ... ... [%s]", filename, ok and "ok" or "failed"));
+			if not ok then
+				luna_print(err);
+			end
         end
     end
 end
 
 luna_quit_flag = false;
-function on_quit_signal(sig_no)
-    print("recv_quit_signal: "..tostring(sig_no));
-    luna_quit_flag = true;
-end
-
 function luna_entry(filename)
     local entry_file = import(filename);
     if entry_file == nil then
@@ -177,7 +188,7 @@ function luna_entry(filename)
         end
 
         if now >= next_reload_time then
-            try_reload();
+            try_reload_all();
             next_reload_time = now + 3000;
         end
     end
@@ -192,6 +203,10 @@ bool luna_setup(lua_State* L)
 {
     luaL_openlibs(L);
 
+	int ret = luaL_dostring(L, luna_code);
+	if (ret != 0)
+		return false;
+
     lua_register_function(L, "get_file_time", get_file_time);
     lua_register_function(L, "get_time_ns", get_time_ns);
     lua_register_function(L, "get_time_ms", get_time_ms);
@@ -199,6 +214,6 @@ bool luna_setup(lua_State* L)
     lua_register_function(L, "daemon", daemon);
     lua_register_function(L, "create_socket_mgr", lua_create_socket_mgr);
 
-    return luaL_dostring(L, luna_code) == 0;
+    return  true;
 }
 

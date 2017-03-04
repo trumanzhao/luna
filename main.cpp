@@ -15,11 +15,9 @@
 
 lua_State* g_lvm = nullptr;
 
-static void on_quit_signal(int signo)
-{
-    lua_guard g(g_lvm);
-    lua_call_global_function(g_lvm, "on_quit_signal", std::tie(), signo);
-}
+static bool g_quit_signal = false;
+static void on_quit_signal(int signo) { g_quit_signal = true; }
+static bool get_guit_signal() { return g_quit_signal; }
 
 int main(int argc, const char* argv[])
 {
@@ -44,6 +42,8 @@ int main(int argc, const char* argv[])
     g_lvm = luaL_newstate();
     if (luna_setup(g_lvm))
     {
+		lua_register_function(g_lvm, "get_guit_signal", get_guit_signal);
+
         lua_guard g(g_lvm);
         lua_call_global_function(g_lvm, "luna_entry", std::tie(), argc > 1 ? argv[1] : "main.lua");
     }
