@@ -65,17 +65,6 @@ void socket_router::erase(uint32_t service_id)
     }
 }
 
-template <typename T>
-static inline bool read_var(T& to, char*& data, size_t& data_len)
-{
-    if (data_len < sizeof(to))
-        return false;
-    memcpy(&to, data, sizeof(to));
-    data += sizeof(to);
-    data_len -= sizeof(to);
-    return true;
-}
-
 static inline void set_call_header(char*& data, size_t& data_len)
 {	
 	data--;
@@ -101,6 +90,26 @@ void socket_router::forward_target(char* data, size_t data_len)
     m_mgr->send(it->token, data, data_len);
 }
 
+void socket_router::forward_master(char* data, size_t data_len)
+{
+	uint8_t class_idx = 0;
+	if (!read_var(class_idx, data, data_len) || data_len == 0)
+		return;
+
+	set_call_header(data, data_len);
+
+	auto& class_tab = m_routes[class_idx];
+	auto& class_nodes = class_tab.nodes;
+	for (auto& target : class_nodes)
+	{
+		if (target.token != 0)
+		{
+			m_mgr->send(target.token, data, data_len);
+			break;
+		}
+	}
+}
+
 void socket_router::forward_random(char* data, size_t data_len)
 {
     uint8_t class_idx = 0;
@@ -123,24 +132,24 @@ void socket_router::forward_random(char* data, size_t data_len)
     }
 }
 
-void socket_router::forward_master(char* data, size_t data_len)
+void socket_router::forward_broadcast(char* data, size_t data_len)
 {
-    uint8_t class_idx = 0;
-    if (!read_var(class_idx, data, data_len) || data_len == 0)
-        return;
+	uint8_t class_idx = 0;
+	if (!read_var(class_idx, data, data_len) || data_len == 0)
+		return;
 
 	set_call_header(data, data_len);
 
-    auto& class_tab = m_routes[class_idx];
-    auto& class_nodes = class_tab.nodes;
-    for (auto& target : class_nodes)
-    {
-        if (target.token != 0)
-        {
-            m_mgr->send(target.token, data, data_len);
-            break;
-        }
-    }
+	auto& class_tab = m_routes[class_idx];
+	auto& class_nodes = class_tab.nodes;
+	int count = (int)class_nodes.size();
+	for (auto& target : class_nodes)
+	{
+		if (target.token != 0)
+		{
+			m_mgr->send(target.token, data, data_len);
+		}
+	}
 }
 
 void socket_router::forward_hash(char* data, size_t data_len)
@@ -170,22 +179,3 @@ void socket_router::forward_hash(char* data, size_t data_len)
     }
 }
 
-void socket_router::forward_broadcast(char* data, size_t data_len)
-{
-    uint8_t class_idx = 0;
-    if (!read_var(class_idx, data, data_len) || data_len == 0)
-        return;
-
-	set_call_header(data, data_len);
-
-    auto& class_tab = m_routes[class_idx];
-    auto& class_nodes = class_tab.nodes;
-    int count = (int)class_nodes.size();
-    for (auto& target : class_nodes)
-    {
-        if (target.token != 0)
-        {
-            m_mgr->send(target.token, data, data_len);
-        }
-    }
-}
