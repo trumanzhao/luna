@@ -177,7 +177,8 @@ bool socket_stream::do_connect()
             return true;
         }
 
-        m_closed = true;("connect_failed");
+        m_closed = true;
+        call_error("connect_failed");
         return false;
     }
 
