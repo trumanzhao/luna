@@ -3,6 +3,7 @@
 ** trumanzhao, 2017-02-11, trumanzhao@foxmail.com
 */
 
+#include <cstdlib>
 #include "tools.h"
 #include "socket_router.h"
 
