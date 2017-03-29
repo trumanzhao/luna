@@ -3,7 +3,10 @@
 ** trumanzhao, 2017-02-11, trumanzhao@foxmail.com
 */
 
-#include <cstdlib>
+#include <stdlib.h>
+#include <limits.h>
+#include <string.h>
+#include <algorithm>
 #include "tools.h"
 #include "socket_router.h"
 
@@ -125,7 +128,7 @@ void socket_router::forward_random(char* data, size_t data_len)
     if (count == 0)
         return;
 
-    int idx = std::rand() % count;
+    int idx = rand() % count;
     auto& target = class_nodes[idx];
     if (target.token != 0)
     {
@@ -179,4 +182,3 @@ void socket_router::forward_hash(char* data, size_t data_len)
         }
     }
 }
-
