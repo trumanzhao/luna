@@ -2,16 +2,14 @@ product = luna
 # execute, dynamic_shared, static_shared
 target_type = execute
 define_macros =
-include_dir = . ./lua
+include_dir = . lua
 # 依赖库列表,空格分开
 lib = dl pthread
-# 编译期临时文件目录
-build_dir = ./build
 # 最终产品目录:
 # 注意,只是对可执行文件和动态库而言,静态库忽略此项
 target_dir = ./bin
-#src_root = ../src
-src_root = .
+# 源码目录,注意不会递归
+src_dir_list = . lua
 # 依赖库目录,多个目录用空格分开:
 lib_dir =
 # 本工程(如果)输出.a,.so文件的目录
@@ -71,50 +69,44 @@ ifneq ($(MAKECMDGOALS),)
 the_goal = $(MAKECMDGOALS)
 endif
 
-do_file=no
-
 ifeq ($(the_goal),debug)
-do_file=yes
 CFLAGS += -g
 define_macros += _DEBUG
 endif
 
 ifeq ($(the_goal),release)
-do_file=yes
 CFLAGS += -O3
 endif
 
-ifeq ($(do_file),yes)
-root_src_c = $(shell find $(src_root) -type f -name '*.c')
-root_src_cpp = $(shell find $(src_root) -type f -name '*.cpp')
-src_c = $(root_src_c:$(src_root)/%=%)
-src_cpp = $(root_src_cpp:$(src_root)/%=%)
-obj_list = $(addsuffix .o, $(src_c)) $(addsuffix .o, $(src_cpp))
+src_c_pattern := $(foreach node, $(src_dir_list), $(node)/*.c)
+src_cpp_pattern := $(foreach node, $(src_dir_list), $(node)/*.cpp)
+clear_o_pattern := $(foreach node, $(src_dir_list), $(node)/*.o)
+clear_d_pattern := $(foreach node, $(src_dir_list), $(node)/*.d)
+make_c_list := $(wildcard $(src_c_pattern))
+make_cpp_list := $(wildcard $(src_cpp_pattern))
+clear_o_list := $(wildcard $(clear_o_pattern))
+clear_d_list := $(wildcard $(clear_d_pattern))
+make_c2o_list := $(patsubst %.c, %.c.o, $(make_c_list))
+make_cpp2o_list := $(patsubst %.cpp, %.cpp.o, $(make_cpp_list))
 env_param = $(include_dir:%=-I%) $(define_macros:%=-D%)
-endif
-
-ifeq ($(do_file),yes)
-my_obj_list = $(obj_list:%=$(build_dir)/%)
-$(foreach obj, $(my_obj_list), $(shell mkdir -p $(dir $(obj))))
-ifeq ($(lib_out),)
-$(shell mkdir -p $(lib_out))
-endif
-$(shell mkdir -p $(target_dir))
-endif
 
 comp_c_echo = @echo gcc $< ...
 comp_cxx_echo = @echo g++ $< ...
 
-.PHONY: debug
-debug: build_prompt $(target)
-
 .PHONY: release
 release: build_prompt $(target)
 
+.PHONY: debug
+debug: build_prompt $(target)
+
 .PHONY: clean
 clean:
-	rm -f $(target)
-	rm -rf $(build_dir)
+	@echo rm $(target)
+	@rm -f $(target)
+	@echo rm "*.o" ...
+	@rm -f $(clear_o_list)
+	@echo rm "*.d" ...
+	@rm -f $(clear_d_list)
 
 .PHONY: build_prompt
 build_prompt:
@@ -126,15 +118,22 @@ build_prompt:
 	@echo lib_dir=$(lib_dir)
 	@echo libs=$(lib)
 
-$(target): $(my_obj_list)
+-include ${make_c2o_list:.o=.d} ${make_cpp2o_list:.o=.d}
+%.c.o: %.c
+	$(CC) $(CFLAGS) $(env_param) -MM -MT $@ -MF $(@:.o=.d) $<
+	$(CC) $(CFLAGS) $(env_param) -c -o $@ $<
+
+%.cpp.o: %.cpp
+	$(CXX) $(CXXFLAGS) $(env_param) -MM -MT $@ -MF $(@:.o=.d) $<
+	$(CXX) $(CXXFLAGS) $(env_param) -c -o $@ $<
+
+$(target): $(make_c2o_list) $(make_cpp2o_list) | $(target_dir) $(lib_out)
 	@echo link "-->" $@
 	@$(link)
 	$(after_link)
 
-$(build_dir)/%.c.o: $(src_root)/%.c
-	$(comp_c_echo)
-	@$(CC) $(CFLAGS) $(env_param) -c -o $@ $<
+$(target_dir):
+	mkdir $(target_dir)
 
-$(build_dir)/%.cpp.o: $(src_root)/%.cpp
-	$(comp_cxx_echo)
-	@$(CXX) $(CXXFLAGS) $(env_param) -c -o $@ $<
+$(lib_out):
+	mkdir $(lib_out)
