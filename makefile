@@ -120,12 +120,14 @@ build_prompt:
 
 -include ${make_c2o_list:.o=.d} ${make_cpp2o_list:.o=.d}
 %.c.o: %.c
-	$(CC) $(CFLAGS) $(env_param) -MM -MT $@ -MF $(@:.o=.d) $<
-	$(CC) $(CFLAGS) $(env_param) -c -o $@ $<
+	$(comp_c_echo)
+	@$(CC) $(CFLAGS) $(env_param) -MM -MT $@ -MF $(@:.o=.d) $<
+	@$(CC) $(CFLAGS) $(env_param) -c -o $@ $<
 
 %.cpp.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(env_param) -MM -MT $@ -MF $(@:.o=.d) $<
-	$(CXX) $(CXXFLAGS) $(env_param) -c -o $@ $<
+	$(comp_cxx_echo)
+	@$(CXX) $(CXXFLAGS) $(env_param) -MM -MT $@ -MF $(@:.o=.d) $<
+	@$(CXX) $(CXXFLAGS) $(env_param) -c -o $@ $<
 
 $(target): $(make_c2o_list) $(make_cpp2o_list) | $(target_dir) $(lib_out)
 	@echo link "-->" $@
