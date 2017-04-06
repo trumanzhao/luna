@@ -23,6 +23,7 @@ listen_socket.on_accept = function(new_socket)
 end
 
 function on_loop(now)
-    luna_quit_flag = get_guit_signal();
+    _G.luna_quit_flag = get_guit_signal();
     socket_mgr.wait(50);
 end
+

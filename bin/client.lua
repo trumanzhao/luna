@@ -21,7 +21,7 @@ client_socket.on_call = function (msg, ...)
 end
 
 function on_loop(now)
-    luna_quit_flag = get_guit_signal();
+    _G.luna_quit_flag = get_guit_signal();
     socket_mgr.wait(50);
 end
 
