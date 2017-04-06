@@ -125,8 +125,8 @@ function import(filename)
 
     local trunk, msg = loadfile(filename, "bt", env);
     if not trunk then
-		luna_print(string.format("load file: %s ... ... [failed]", filename));
-		luna_print(msg);
+        luna_print(string.format("load file: %s ... ... [failed]", filename));
+        luna_print(msg);
         return nil;
     end
 
@@ -135,12 +135,12 @@ function import(filename)
 
     local ok, err = pcall(trunk);
     if not ok then
-		luna_print(string.format("load file: %s ... ... [failed]", filename));
+        luna_print(string.format("load file: %s ... ... [failed]", filename));
         luna_print(err);
         return nil;
     end
 
-	luna_print(string.format("load file: %s ... ... [ok]", filename));
+    luna_print(string.format("load file: %s ... ... [ok]", filename));
     return env;
 end
 
@@ -152,9 +152,9 @@ local try_reload_one = function(filename, env)
 
     local ok, err = pcall(trunk);
     if not ok then
-		return false, err;
+        return false, err;
     end
-	return true, nil;
+    return true, nil;
 end
 
 local try_reload_all = function()
@@ -162,11 +162,11 @@ local try_reload_all = function()
         local filetime = get_file_time(filename);
         if filetime ~= 0 and filetime ~= filenode.time then
             filenode.time = filetime;
-			local ok, err = try_reload_one(filename, filenode.env);
-			luna_print(string.format("load file: %s ... ... [%s]", filename, ok and "ok" or "failed"));
-			if not ok then
-				luna_print(err);
-			end
+            local ok, err = try_reload_one(filename, filenode.env);
+            luna_print(string.format("load file: %s ... ... [%s]", filename, ok and "ok" or "failed"));
+            if not ok then
+                luna_print(err);
+            end
         end
     end
 end
@@ -203,9 +203,9 @@ bool luna_setup(lua_State* L)
 {
     luaL_openlibs(L);
 
-	int ret = luaL_dostring(L, luna_code);
-	if (ret != 0)
-		return false;
+    int ret = luaL_dostring(L, luna_code);
+    if (ret != 0)
+        return false;
 
     lua_register_function(L, "get_file_time", get_file_time);
     lua_register_function(L, "get_time_ns", get_time_ns);

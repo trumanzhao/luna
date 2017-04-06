@@ -42,7 +42,7 @@ int main(int argc, const char* argv[])
     g_lvm = luaL_newstate();
     if (luna_setup(g_lvm))
     {
-		lua_register_function(g_lvm, "get_guit_signal", get_guit_signal);
+        lua_register_function(g_lvm, "get_guit_signal", get_guit_signal);
 
         lua_guard g(g_lvm);
         lua_call_global_function(g_lvm, "luna_entry", std::tie(), argc > 1 ? argv[1] : "main.lua");

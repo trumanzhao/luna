@@ -172,22 +172,22 @@ lua_socket_node::~lua_socket_node()
 int lua_socket_node::call(lua_State* L)
 {
     int top = lua_gettop(L);
-	if (top < 1)
-		return 0;
+    if (top < 1)
+        return 0;
 
-	m_ar_buffer->clear();
-	size_t buffer_size = 0;
-	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
-	auto* pos = buffer;
+    m_ar_buffer->clear();
+    size_t buffer_size = 0;
+    auto* buffer = m_ar_buffer->peek_space(&buffer_size);
+    auto* pos = buffer;
 
-	if (!write_var(pos, buffer_size, msg_id::remote_call))
-		return 0;
+    if (!write_var(pos, buffer_size, msg_id::remote_call))
+        return 0;
 
     size_t ar_len = 0;
     if (!m_archiver->save(&ar_len, pos, buffer_size, L, 1, top))
         return 0;
 
-	size_t data_len = pos + ar_len - buffer;
+    size_t data_len = pos + ar_len - buffer;
     m_mgr->send(m_token, buffer, data_len);
     lua_pushinteger(L, data_len);
     return 1;
@@ -195,115 +195,115 @@ int lua_socket_node::call(lua_State* L)
 
 int lua_socket_node::forward_target(lua_State* L)
 {
-	int top = lua_gettop(L);
-	if (top < 2)
-		return 0;
+    int top = lua_gettop(L);
+    if (top < 2)
+        return 0;
 
-	m_ar_buffer->clear();
-	size_t buffer_size = 0;
-	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
-	auto* pos = buffer;
+    m_ar_buffer->clear();
+    size_t buffer_size = 0;
+    auto* buffer = m_ar_buffer->peek_space(&buffer_size);
+    auto* pos = buffer;
 
-	uint32_t service_id = (uint32_t)lua_tointeger(L, 1);
-	if (!write_var(pos, buffer_size, msg_id::forward_target) || !write_var(pos, buffer_size, service_id))
-		return 0;
+    uint32_t service_id = (uint32_t)lua_tointeger(L, 1);
+    if (!write_var(pos, buffer_size, msg_id::forward_target) || !write_var(pos, buffer_size, service_id))
+        return 0;
 
-	size_t ar_len = 0;
-	if (!m_archiver->save(&ar_len, pos, buffer_size, L, 2, top))
-		return 0;
+    size_t ar_len = 0;
+    if (!m_archiver->save(&ar_len, pos, buffer_size, L, 2, top))
+        return 0;
 
-	size_t data_len = pos + ar_len - buffer;
-	m_mgr->send(m_token, buffer, data_len);
-	lua_pushinteger(L, data_len);
-	return 1;
+    size_t data_len = pos + ar_len - buffer;
+    m_mgr->send(m_token, buffer, data_len);
+    lua_pushinteger(L, data_len);
+    return 1;
 }
 
 template <msg_id forward_method>
 int lua_socket_node::forward_by_class(lua_State* L)
 {
-	int top = lua_gettop(L);
-	if (top < 2)
-		return 0;
+    int top = lua_gettop(L);
+    if (top < 2)
+        return 0;
 
-	static_assert(forward_method == msg_id::forward_master || forward_method == msg_id::forward_random || 
-		forward_method == msg_id::forward_broadcast, "Unexpected forward method !");
+    static_assert(forward_method == msg_id::forward_master || forward_method == msg_id::forward_random ||
+        forward_method == msg_id::forward_broadcast, "Unexpected forward method !");
 
-	m_ar_buffer->clear();
-	size_t buffer_size = 0;
-	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
-	auto* pos = buffer;
+    m_ar_buffer->clear();
+    size_t buffer_size = 0;
+    auto* buffer = m_ar_buffer->peek_space(&buffer_size);
+    auto* pos = buffer;
 
-	uint8_t class_id = (uint8_t)lua_tointeger(L, 1);
-	if (!write_var(pos, buffer_size, forward_method) || !write_var(pos, buffer_size, class_id))
-		return 0;
+    uint8_t class_id = (uint8_t)lua_tointeger(L, 1);
+    if (!write_var(pos, buffer_size, forward_method) || !write_var(pos, buffer_size, class_id))
+        return 0;
 
-	size_t ar_len = 0;
-	if (!m_archiver->save(&ar_len, pos, buffer_size, L, 2, top))
-		return 0;
+    size_t ar_len = 0;
+    if (!m_archiver->save(&ar_len, pos, buffer_size, L, 2, top))
+        return 0;
 
-	size_t data_len = pos + ar_len - buffer;
-	m_mgr->send(m_token, buffer, data_len);
-	lua_pushinteger(L, data_len);
-	return 1;
+    size_t data_len = pos + ar_len - buffer;
+    m_mgr->send(m_token, buffer, data_len);
+    lua_pushinteger(L, data_len);
+    return 1;
 }
 
 // BKDR Hash
 static uint32_t string_hash(const char* str)
 {
-	uint32_t seed = 131; // 31 131 1313 13131 131313 etc..
-	uint32_t hash = 0;
-	while (*str)
-	{
-		hash = hash * seed + (*str++);
-	}
-	return (hash & 0x7FFFFFFF);
+    uint32_t seed = 131; // 31 131 1313 13131 131313 etc..
+    uint32_t hash = 0;
+    while (*str)
+    {
+        hash = hash * seed + (*str++);
+    }
+    return (hash & 0x7FFFFFFF);
 }
 
 int lua_socket_node::forward_hash(lua_State* L)
 {
-	int top = lua_gettop(L);
-	if (top < 3)
-		return 0;
+    int top = lua_gettop(L);
+    if (top < 3)
+        return 0;
 
-	m_ar_buffer->clear();
-	size_t buffer_size = 0;
-	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
-	auto* pos = buffer;
+    m_ar_buffer->clear();
+    size_t buffer_size = 0;
+    auto* buffer = m_ar_buffer->peek_space(&buffer_size);
+    auto* pos = buffer;
 
-	uint8_t class_id = (uint8_t)lua_tointeger(L, 1);
-	if (!write_var(pos, buffer_size, msg_id::forward_master) || !write_var(pos, buffer_size, class_id))
-		return 0;
+    uint8_t class_id = (uint8_t)lua_tointeger(L, 1);
+    if (!write_var(pos, buffer_size, msg_id::forward_master) || !write_var(pos, buffer_size, class_id))
+        return 0;
 
-	int type = lua_type(L, 2);
-	uint32_t hash_key = 0;
-	if (type == LUA_TNUMBER)
-	{
-		hash_key = (uint32_t)lua_tointeger(L, 2);
-	}
-	else if (type == LUA_TSTRING)
-	{
-		const char* str = lua_tostring(L, 2);
-		if (str == nullptr)
-			return 0;
-		hash_key = string_hash(str);
-	}
-	else
-	{
-		// unexpected hash key
-		return 0;
-	}
+    int type = lua_type(L, 2);
+    uint32_t hash_key = 0;
+    if (type == LUA_TNUMBER)
+    {
+        hash_key = (uint32_t)lua_tointeger(L, 2);
+    }
+    else if (type == LUA_TSTRING)
+    {
+        const char* str = lua_tostring(L, 2);
+        if (str == nullptr)
+            return 0;
+        hash_key = string_hash(str);
+    }
+    else
+    {
+        // unexpected hash key
+        return 0;
+    }
 
-	if (!write_var(pos, buffer_size, hash_key))
-		return 0;
+    if (!write_var(pos, buffer_size, hash_key))
+        return 0;
 
-	size_t ar_len = 0;
-	if (!m_archiver->save(&ar_len, pos, buffer_size, L, 3, top))
-		return 0;
+    size_t ar_len = 0;
+    if (!m_archiver->save(&ar_len, pos, buffer_size, L, 3, top))
+        return 0;
 
-	size_t data_len = pos + ar_len - buffer;
-	m_mgr->send(m_token, buffer, data_len);
-	lua_pushinteger(L, data_len);
-	return 1;
+    size_t data_len = pos + ar_len - buffer;
+    m_mgr->send(m_token, buffer, data_len);
+    lua_pushinteger(L, data_len);
+    return 1;
 }
 
 
@@ -318,9 +318,9 @@ void lua_socket_node::close()
 
 void lua_socket_node::on_recv(char* data, size_t data_len)
 {
-	msg_id msg;
-	if (!read_var(msg, data, data_len))
-		return;
+    msg_id msg;
+    if (!read_var(msg, data, data_len))
+        return;
 
     switch (msg)
     {

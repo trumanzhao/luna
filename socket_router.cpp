@@ -1,4 +1,4 @@
-/*
+﻿/*
 ** repository: https://github.com/trumanzhao/luna
 ** trumanzhao, 2017-02-11, trumanzhao@foxmail.com
 */
@@ -70,10 +70,10 @@ void socket_router::erase(uint32_t service_id)
 }
 
 static inline void set_call_header(char*& data, size_t& data_len)
-{	
-	data--;
-	data_len++;
-	*data = (char)msg_id::remote_call;
+{
+    data--;
+    data_len++;
+    *data = (char)msg_id::remote_call;
 }
 
 void socket_router::forward_target(char* data, size_t data_len)
@@ -82,7 +82,7 @@ void socket_router::forward_target(char* data, size_t data_len)
     if (!read_var(target_id, data, data_len) || data_len == 0)
         return;
 
-	set_call_header(data, data_len);
+    set_call_header(data, data_len);
 
     uint32_t class_idx = get_service_class(target_id);
     auto& class_tab = m_routes[class_idx];
@@ -96,22 +96,22 @@ void socket_router::forward_target(char* data, size_t data_len)
 
 void socket_router::forward_master(char* data, size_t data_len)
 {
-	uint8_t class_idx = 0;
-	if (!read_var(class_idx, data, data_len) || data_len == 0)
-		return;
+    uint8_t class_idx = 0;
+    if (!read_var(class_idx, data, data_len) || data_len == 0)
+        return;
 
-	set_call_header(data, data_len);
+    set_call_header(data, data_len);
 
-	auto& class_tab = m_routes[class_idx];
-	auto& class_nodes = class_tab.nodes;
-	for (auto& target : class_nodes)
-	{
-		if (target.token != 0)
-		{
-			m_mgr->send(target.token, data, data_len);
-			break;
-		}
-	}
+    auto& class_tab = m_routes[class_idx];
+    auto& class_nodes = class_tab.nodes;
+    for (auto& target : class_nodes)
+    {
+        if (target.token != 0)
+        {
+            m_mgr->send(target.token, data, data_len);
+            break;
+        }
+    }
 }
 
 void socket_router::forward_random(char* data, size_t data_len)
@@ -120,7 +120,7 @@ void socket_router::forward_random(char* data, size_t data_len)
     if (!read_var(class_idx, data, data_len) || data_len == 0)
         return;
 
-	set_call_header(data, data_len);
+    set_call_header(data, data_len);
 
     auto& class_tab = m_routes[class_idx];
     auto& class_nodes = class_tab.nodes;
@@ -138,22 +138,22 @@ void socket_router::forward_random(char* data, size_t data_len)
 
 void socket_router::forward_broadcast(char* data, size_t data_len)
 {
-	uint8_t class_idx = 0;
-	if (!read_var(class_idx, data, data_len) || data_len == 0)
-		return;
+    uint8_t class_idx = 0;
+    if (!read_var(class_idx, data, data_len) || data_len == 0)
+        return;
 
-	set_call_header(data, data_len);
+    set_call_header(data, data_len);
 
-	auto& class_tab = m_routes[class_idx];
-	auto& class_nodes = class_tab.nodes;
-	int count = (int)class_nodes.size();
-	for (auto& target : class_nodes)
-	{
-		if (target.token != 0)
-		{
-			m_mgr->send(target.token, data, data_len);
-		}
-	}
+    auto& class_tab = m_routes[class_idx];
+    auto& class_nodes = class_tab.nodes;
+    int count = (int)class_nodes.size();
+    for (auto& target : class_nodes)
+    {
+        if (target.token != 0)
+        {
+            m_mgr->send(target.token, data, data_len);
+        }
+    }
 }
 
 void socket_router::forward_hash(char* data, size_t data_len)
@@ -163,7 +163,7 @@ void socket_router::forward_hash(char* data, size_t data_len)
     if (!read_var(class_idx, data, data_len) || !read_var(hash, data, data_len) || data_len == 0)
         return;
 
-	set_call_header(data, data_len);
+    set_call_header(data, data_len);
 
     auto& class_tab = m_routes[class_idx];
     auto& class_nodes = class_tab.nodes;

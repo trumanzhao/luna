@@ -51,12 +51,12 @@ struct lua_socket_node final
 
     int call(lua_State* L);
     int forward(lua_State* L);
-	int forward_target(lua_State* L);
+    int forward_target(lua_State* L);
 
-	template <msg_id forward_method>
-	int forward_by_class(lua_State* L);
+    template <msg_id forward_method>
+    int forward_by_class(lua_State* L);
 
-	int forward_hash(lua_State* L);
+    int forward_hash(lua_State* L);
 
     void close();
     void set_send_cache(size_t size) { m_mgr->set_send_cache(m_token, size); }
