@@ -1,5 +1,5 @@
-socket_mgr = create_socket_mgr(100, 1024 * 1024, 1024 * 8);
-listen_socket = socket_mgr.listen("127.0.0.1", 7571);
+socket_mgr = socket_mgr or create_socket_mgr(100, 1024 * 1024, 1024 * 8);
+listen_socket = listen_socket or socket_mgr.listen("127.0.0.1", 7571);
 
 next_session_id = next_session_id or 1;
 session_tab = session_tab or {};

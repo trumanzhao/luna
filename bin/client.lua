@@ -1,6 +1,6 @@
-socket_mgr = create_socket_mgr(100);
+socket_mgr = socket_mgr or create_socket_mgr(100);
 
-client_socket = socket_mgr.connect("127.0.0.1", 7571);
+client_socket = client_socket or socket_mgr.connect("127.0.0.1", 7571);
 if not client_socket then
     print("connect failed !");
     return;
