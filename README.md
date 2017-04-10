@@ -286,7 +286,9 @@ call_matchsvr("join_match", player_id, match_mode);
 ```
 
 
-## 模块扩展(TODO)
-即如何方便的进行自定义扩展模块(dll,so之类),待定.
+## TODO
+- 消息路由,目前完成了大部分
+- 异步DNS,目前只是简单的用了一个线程来解析域名,临时做法,预计会换成c-ares或者adns之类的.
+- 模块扩展,即如何方便的进行自定义扩展模块(dll,so之类)
 
 
