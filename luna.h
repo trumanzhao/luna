@@ -368,7 +368,7 @@ int lua_object_gc(lua_State* L)
     T* obj = lua_to_object<T*>(L, 1);
     if (obj == nullptr)
     {
-		perror("__gc error: nullptr !");
+        perror("__gc error: nullptr !");
         return 0;
     }
     lua_handle_gc(obj);
@@ -543,14 +543,14 @@ inline void lua_push_function(lua_State* L, lua_CFunction func) { lua_pushcfunct
 template <typename T>
 void lua_push_function(lua_State* L, T func)
 {
-	lua_push_function(L, lua_adapter(func));
+    lua_push_function(L, lua_adapter(func));
 }
 
 template <typename T>
 void lua_register_function(lua_State* L, const char* name, T func)
 {
-	lua_push_function(L, func);
-	lua_setglobal(L, name);
+    lua_push_function(L, func);
+    lua_setglobal(L, name);
 }
 
 // get function from global table

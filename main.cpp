@@ -28,15 +28,15 @@ int main(int argc, const char* argv[])
     setlocale(LC_ALL, "");
 
 #if defined(__linux) || defined(__APPLE__)
-	signal(SIGPIPE, SIG_IGN);
-	signal(SIGCHLD, SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
 #endif
 
     g_lvm = luaL_newstate();
     if (luna_setup(g_lvm))
     {
         lua_guard g(g_lvm);
-		lua_call_table_function(g_lvm, "luna", "entry", std::tie(), argc > 1 ? argv[1] : "main.lua");
+        lua_call_table_function(g_lvm, "luna", "entry", std::tie(), argc > 1 ? argv[1] : "main.lua");
     }
 
     lua_close(g_lvm);
