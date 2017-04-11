@@ -13,7 +13,8 @@ EXPORT_LUA_FUNCTION(listen)
 EXPORT_LUA_FUNCTION(connect)
 EXPORT_LUA_FUNCTION(set_package_size)
 EXPORT_LUA_FUNCTION(set_compress_size)
-EXPORT_LUA_FUNCTION(route)
+EXPORT_LUA_FUNCTION(set_route)
+EXPORT_LUA_FUNCTION(set_master)
 EXPORT_CLASS_END()
 
 lua_socket_mgr::~lua_socket_mgr()
@@ -97,7 +98,7 @@ void lua_socket_mgr::set_package_size(size_t size)
     }
 }
 
-int lua_socket_mgr::route(lua_State* L)
+int lua_socket_mgr::set_route(lua_State* L)
 {
     uint32_t service_id = (uint32_t)lua_tointeger(L, 1);
     if (lua_isnil(L, 2))
@@ -110,6 +111,11 @@ int lua_socket_mgr::route(lua_State* L)
         m_router->update(service_id, token);
     }
     return 0;
+}
+
+void lua_socket_mgr::set_master(uint8_t group_idx, uint32_t token)
+{
+    m_router->set_master(group_idx, token);
 }
 
 EXPORT_CLASS_BEGIN(lua_socket_node)

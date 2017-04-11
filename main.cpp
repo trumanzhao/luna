@@ -15,16 +15,19 @@
 
 lua_State* g_lvm = nullptr;
 
+#ifdef _MSC_VER
+#define tzset _tzset
+#endif
+
 int main(int argc, const char* argv[])
 {
-#if defined(__linux) || defined(__APPLE__)
+    if (argc < 2)
+    {
+        puts("luna entry.lua [options ...]");
+        return 1;
+    }
+
     tzset();
-#endif
-
-#ifdef _MSC_VER
-    _tzset();
-#endif
-
     setlocale(LC_ALL, "");
 
 #if defined(__linux) || defined(__APPLE__)
@@ -36,7 +39,7 @@ int main(int argc, const char* argv[])
     if (luna_setup(g_lvm))
     {
         lua_guard g(g_lvm);
-        lua_call_table_function(g_lvm, "luna", "entry", std::tie(), argc > 1 ? argv[1] : "main.lua");
+        lua_call_table_function(g_lvm, "luna", "entry", std::tie(), argv[1]);
     }
 
     lua_close(g_lvm);

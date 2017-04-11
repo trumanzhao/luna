@@ -19,7 +19,7 @@ enum class msg_id : char
     forward_hash,
 };
 
-const int MAX_SERVICE_CLASS = UCHAR_MAX + 1;
+const int MAX_SERVICE_GROUP = (UCHAR_MAX + 1);
 
 struct service_node
 {
@@ -27,9 +27,9 @@ struct service_node
     uint32_t token = 0;
 };
 
-struct service_class
+struct service_group
 {
-    service_node master;
+    uint32_t master = 0;
     std::vector<service_node> nodes;
 };
 
@@ -62,6 +62,7 @@ struct socket_router
     socket_router(std::shared_ptr<socket_mgr> mgr) { m_mgr = mgr; }
 
     void update(uint32_t service_id, uint32_t token);
+    void set_master(uint8_t group_idx, uint32_t token);
     void erase(uint32_t service_id);
     void forward_target(char* data, size_t data_len);
     void forward_master(char* data, size_t data_len);
@@ -70,6 +71,6 @@ struct socket_router
     void forward_hash(char* data, size_t data_len);
 
     std::shared_ptr<socket_mgr> m_mgr;
-    std::array<service_class, MAX_SERVICE_CLASS> m_routes;
+    std::array<service_group, MAX_SERVICE_GROUP> m_groups;
 };
 

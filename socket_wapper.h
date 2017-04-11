@@ -23,7 +23,8 @@ public:
     int connect(lua_State* L);
     void set_package_size(size_t size); // 设置序列化缓冲区大小,默认64K
     void set_compress_size(size_t size) { m_compress_size = size; }; // 设置启用压缩的阈值,默认UINT_MAX,永不启用
-    int route(lua_State* L);
+    int set_route(lua_State* L);
+    void set_master(uint8_t group_idx, uint32_t token);
 
 private:
     lua_State* m_lvm = nullptr;

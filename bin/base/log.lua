@@ -15,7 +15,7 @@ function _G.log_close()
     end
 end
 
-function log_out(line)
+function log_write(line)
     if log_line_count >= log_max_line then
         log_file:close();
         log_file = nil;
@@ -41,8 +41,7 @@ function _G.log_debug(fmt, ...)
         return;
     end
 
-    line = string.format("DEBUG:\t%s\n", line);
-    log_out(line);
+    log_write(string.format("DEBUG:\t%s\n", line));
 end
 
 
@@ -52,8 +51,7 @@ function _G.log_info(fmt, ...)
         return;
     end
 
-    line = string.format("INFO:\t%s\n", line);
-    log_out(line);
+    log_write(string.format("INFO:\t%s\n", line));
 end
 
 function _G.log_err(fmt, ...)
@@ -62,6 +60,5 @@ function _G.log_err(fmt, ...)
         return;
     end
 
-    line = string.format("ERROR:\t%s\n", line);
-    log_out(line);
+    log_write(string.format("ERROR:\t%s\n", line));
 end
