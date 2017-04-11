@@ -8,10 +8,11 @@
 #ifdef __linux
 #include <dirent.h>
 #endif
+#include <stdio.h>
+#include <signal.h>
 #include <map>
 #include <string>
 #include <algorithm>
-#include <cstdio>
 #include "luna.h"
 #include "tools.h"
 #include "socket_io.h"
@@ -37,11 +38,10 @@ static int Lua_global_bridge(lua_State* L)
     return 0;
 }
 
-void lua_register_function(lua_State* L, const char* name, lua_global_function func)
+void lua_push_function(lua_State* L, lua_global_function func)
 {
     lua_push_object(L, new luna_function_wapper(func));
     lua_pushcclosure(L, Lua_global_bridge, 1);
-    lua_setglobal(L, name);
 }
 
 int Lua_object_bridge(lua_State* L)
@@ -73,7 +73,7 @@ bool lua_call_function(lua_State* L, int arg_count, int ret_count)
     int func_idx = lua_gettop(L) - arg_count;
     if (func_idx <= 0 || !lua_isfunction(L, func_idx))
     {
-        puts("call invalid function !");
+		perror("call invalid function !");
         return false;
     }
 
@@ -87,7 +87,7 @@ bool lua_call_function(lua_State* L, int arg_count, int ret_count)
         // 注意,该函数只在指定的函数不存在时才返回false
         // lua函数内部执行出错时,并不认为是错误,这是因为lua函数执行时,可能时中途错误,而前面已经执行了部分逻辑
         // 如果这种情况返回false,上层逻辑会不好处理,比如: 我push的一个对象到底被lua引用了没?我要删除它么?
-        puts(lua_tostring(L, -1));
+        perror(lua_tostring(L, -1));
         return true;
     }
     lua_remove(L, -ret_count - 1); // remove 'traceback'
@@ -96,101 +96,80 @@ bool lua_call_function(lua_State* L, int arg_count, int ret_count)
 
 static const char* luna_code =
 u8R"---(
---map<native_ptr, shadow_table>
-luna_objects = luna_objects or {};
-setmetatable(luna_objects, { __mode = "v" });
+luna = luna or {files={}, meta={__index = function(t, k) return _G[k]; end}, print=print, objects={}};
+setmetatable(luna.objects, { __mode = "v" });
 
-function luna_export(ptr, meta)
-    local tab = luna_objects[ptr];
+function export(ptr, meta)
+    local tab = luna.objects[ptr];
     if not tab then
         tab = { __pointer__ = ptr };
         setmetatable(tab, meta);
-        luna_objects[ptr] = tab;
+        luna.objects[ptr] = tab;
     end
     return tab;
 end
 
-luna_files = luna_files or {};
-luna_file_meta = luna_file_meta or {__index = function(t, k) return _G[k]; end};
-luna_print = print;
-
 function import(filename)
-    local file_module = luna_files[filename];
+    local file_module = luna.files[filename];
     if file_module then
         return file_module.env;
     end
 
-    local env = {};
-    setmetatable(env, luna_file_meta);
+	local env = {};
+    setmetatable(env, luna.meta);
 
-    local trunk, msg = loadfile(filename, "bt", env);
+	local trunk, msg = loadfile(filename, "bt", env);
     if not trunk then
-        luna_print(string.format("load file: %s ... ... [failed]", filename));
-        luna_print(msg);
+        luna.print(string.format("load file: %s ... ... [failed]", filename));
+        luna.print(msg);
         return nil;
     end
 
-    local file_time = get_file_time(filename);
-    luna_files[filename] = { filename = filename, time = file_time, env = env };
+	local file_time = luna.get_file_time(filename);
+    luna.files[filename] = {filename=filename, time=file_time, env=env };
 
-    local ok, err = pcall(trunk);
+	local ok, err = pcall(trunk);
     if not ok then
-        luna_print(string.format("load file: %s ... ... [failed]", filename));
-        luna_print(err);
+        luna.print(string.format("load file: %s ... ... [failed]", filename));
+        luna.print(err);
         return nil;
     end
 
-    luna_print(string.format("load file: %s ... ... [ok]", filename));
+	luna.print(string.format("load file: %s ... ... [ok]", filename));
     return env;
 end
 
-local try_reload_one = function(filename, env)
+local reload_script = function(filename, env)
     local trunk, msg = loadfile(filename, "bt", env);
     if not trunk then
         return false, msg;
     end
 
-    local ok, err = pcall(trunk);
+	local ok, err = pcall(trunk);
     if not ok then
         return false, err;
     end
     return true, nil;
 end
 
-local try_reload_all = function()
-    for filename, filenode in pairs(luna_files) do
-        local filetime = get_file_time(filename);
+luna.try_reload = function()
+    for filename, filenode in pairs(luna.files) do
+        local filetime = luna.get_file_time(filename);
         if filetime ~= 0 and filetime ~= filenode.time then
             filenode.time = filetime;
-            local ok, err = try_reload_one(filename, filenode.env);
-            luna_print(string.format("load file: %s ... ... [%s]", filename, ok and "ok" or "failed"));
+            local ok, err = reload_script(filename, filenode.env);
+            luna.print(string.format("load file: %s ... ... [%s]", filename, ok and "ok" or "failed"));
             if not ok then
-                luna_print(err);
+                luna.print(err);
             end
         end
     end
 end
 
-luna_quit_flag = false;
-function luna_entry(filename)
+luna.entry = function(filename)
     local entry_file = import(filename);
-    if entry_file == nil then
-        return;
-    end
-
-    local next_reload_time = 0;
-    while not luna_quit_flag do
-        local now = get_time_ms();
-        local on_loop = entry_file.on_loop;
-
-        if on_loop then
-            pcall(on_loop, now);
-        end
-
-        if now >= next_reload_time then
-            try_reload_all();
-            next_reload_time = now + 3000;
-        end
+    if entry_file and entry_file.main then
+        entry_file.main();
     end
 end
 )---";
@@ -199,21 +178,37 @@ end
 void daemon() {  } // do nothing !
 #endif
 
+static bool g_quit_signal = false;
+static void on_quit_signal(int signo) { g_quit_signal = true; }
+static bool get_guit_signal() { return g_quit_signal; }
+
+#define luna_new_function(L, func) lua_push_function(L, func), lua_setfield(L, -2, #func)
+
 bool luna_setup(lua_State* L)
 {
+	lua_guard g(L);
     luaL_openlibs(L);
 
     int ret = luaL_dostring(L, luna_code);
-    if (ret != 0)
-        return false;
+	if (ret != 0)
+	{
+		perror(lua_tostring(L, -1));
+		return false;
+	}
 
-    lua_register_function(L, "get_file_time", get_file_time);
-    lua_register_function(L, "get_time_ns", get_time_ns);
-    lua_register_function(L, "get_time_ms", get_time_ms);
-    lua_register_function(L, "sleep_ms", sleep_ms);
-    lua_register_function(L, "daemon", daemon);
-    lua_register_function(L, "create_socket_mgr", lua_create_socket_mgr);
+	signal(SIGINT, on_quit_signal);
+	signal(SIGTERM, on_quit_signal);
 
+	lua_getglobal(L, "luna");
+	luna_new_function(L, get_file_time);
+	luna_new_function(L, get_time_ms);
+	luna_new_function(L, get_time_ns);
+	luna_new_function(L, sleep_ms);
+	luna_new_function(L, daemon);
+	luna_new_function(L, create_socket_mgr);
+	luna_new_function(L, get_guit_signal);
+	lua_pop(L, 1);
+	
     return  true;
 }
 

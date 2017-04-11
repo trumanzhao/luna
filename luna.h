@@ -22,7 +22,7 @@ template <typename T>
 T lua_to_native(lua_State* L, int i) { return lua_to_object<T>(L, i); }
 
 template <> inline  const char* lua_to_native<const char*>(lua_State* L, int i) { return lua_tostring(L, i); }
-template <> inline  bool lua_to_native<bool>(lua_State* L, int i) { return lua_toboolean(L, i); }
+template <> inline  bool lua_to_native<bool>(lua_State* L, int i) { return lua_toboolean(L, i) != 0; }
 template <> inline long long lua_to_native<long long>(lua_State* L, int i) { return lua_tointeger(L, i); }
 template <> inline unsigned long long lua_to_native<unsigned long long>(lua_State* L, int i) { return (unsigned long long)lua_tointeger(L, i); }
 template <> inline long lua_to_native<long>(lua_State* L, int i) { return (long)lua_tointeger(L, i); }
@@ -368,7 +368,7 @@ int lua_object_gc(lua_State* L)
     T* obj = lua_to_object<T*>(L, 1);
     if (obj == nullptr)
     {
-        puts("__gc error: nullptr !");
+		perror("__gc error: nullptr !");
         return 0;
     }
     lua_handle_gc(obj);
@@ -420,7 +420,7 @@ void lua_push_object(lua_State* L, T obj)
         return;
     }
 
-    if (lua_getglobal(L, "luna_export") != LUA_TFUNCTION)
+    if (lua_getglobal(L, "export") != LUA_TFUNCTION)
     {
         lua_pop(L, 1);
         lua_pushnil(L);
@@ -537,17 +537,20 @@ lua_member_item* ClassName::lua_get_meta_data()   \
 #define EXPORT_LUA_FUNCTION(Member) EXPORT_LUA_FUNCTION_AS(Member, #Member)
 #define EXPORT_LUA_FUNCTION_R(Member) EXPORT_LUA_FUNCTION_AS_R(Member, #Member)
 
-void lua_register_function(lua_State* L, const char* name, lua_global_function func);
+void lua_push_function(lua_State* L, lua_global_function func);
+inline void lua_push_function(lua_State* L, lua_CFunction func) { lua_pushcfunction(L, func); }
+
+template <typename T>
+void lua_push_function(lua_State* L, T func)
+{
+	lua_push_function(L, lua_adapter(func));
+}
 
 template <typename T>
 void lua_register_function(lua_State* L, const char* name, T func)
 {
-    lua_register_function(L, name, lua_adapter(func));
-}
-
-inline void lua_register_function(lua_State* L, const char* name, lua_CFunction func)
-{
-    lua_register(L, name, func);
+	lua_push_function(L, func);
+	lua_setglobal(L, name);
 }
 
 // get function from global table

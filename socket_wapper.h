@@ -80,4 +80,4 @@ public:
     DECLARE_LUA_CLASS(lua_socket_listener);
 };
 
-int lua_create_socket_mgr(lua_State* L);
+int create_socket_mgr(lua_State* L);

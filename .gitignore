@@ -40,3 +40,4 @@
 *.tlog
 *.idb
 *.log
+.DS_Store

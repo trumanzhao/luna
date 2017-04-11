@@ -1,10 +1,7 @@
-socket_mgr = socket_mgr or create_socket_mgr(100, 1024 * 1024, 1024 * 8);
-listen_socket = listen_socket or socket_mgr.listen("127.0.0.1", 7571);
-
 next_session_id = next_session_id or 1;
 session_tab = session_tab or {};
 
-listen_socket.on_accept = function(new_socket)
+local on_accept = function(new_socket)
     print("accept new connection, ip="..new_socket.ip..", id="..next_session_id);
 
     session_tab[next_session_id] = new_socket;
@@ -22,8 +19,21 @@ listen_socket.on_accept = function(new_socket)
     end
 end
 
-function on_loop(now)
-    _G.luna_quit_flag = get_guit_signal();
-    socket_mgr.wait(50);
-end
+function main()
+	socket_mgr = luna.create_socket_mgr(100, 1024 * 1024, 1024 * 8);
+	listen_socket = socket_mgr.listen("127.0.0.1", 7571);
+	listen_socket.on_accept = on_accept;
 
+    local next_reload_time = 0;
+	local quit_flag = false;
+    while not quit_flag do
+		quit_flag = luna.get_guit_signal();
+		socket_mgr.wait(50);
+
+        local now = luna.get_time_ms();
+        if now >= next_reload_time then
+            luna.try_reload();
+            next_reload_time = now + 3000;
+        end
+    end
+end

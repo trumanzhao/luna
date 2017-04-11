@@ -1,23 +1,16 @@
-socket_mgr = socket_mgr or create_socket_mgr(100);
 
-client_socket = client_socket or socket_mgr.connect("127.0.0.1", 7571);
-if not client_socket then
-    print("connect failed !");
-    return;
+local on_connected = function ()
+    socket.call("hello", 123);
+	socket.call("fuck", 456);
 end
 
-client_socket.on_connected = function ()
-    client_socket.call("hello", 123);
-	client_socket.call("fuck", 456);
+local on_error = function (err)
+    print("socket err: "..err);
 end
 
-client_socket.on_error = function (err)
-    print("client err: "..err);
-end
-
-client_socket.on_call = function (msg, ...)
+local on_call = function (msg, ...)
     print(""..tostring(msg)..": ", ...);
-    --client.call("fuck", n + 1);
+    --socket.call("fuck", n + 1);
 end
 
 function on_loop(now)
@@ -25,3 +18,28 @@ function on_loop(now)
     socket_mgr.wait(50);
 end
 
+function main()
+	socket_mgr = luna.create_socket_mgr(100);
+	socket = socket_mgr.connect("127.0.0.1", 7571);
+	if not socket then
+		print("connect failed !");
+		return;
+	end
+
+	socket.on_connected = on_connected;
+	socket.on_error = on_error;
+	socket.on_call = on_call;
+
+    local next_reload_time = 0;
+	local quit_flag = false;
+    while not quit_flag do
+		quit_flag = luna.get_guit_signal();
+		socket_mgr.wait(50);
+
+        local now = luna.get_time_ms();
+        if now >= next_reload_time then
+            luna.try_reload();
+            next_reload_time = now + 3000;
+        end
+    end
+end

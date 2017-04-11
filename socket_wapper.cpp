@@ -367,7 +367,7 @@ void lua_socket_node::on_call(char* data, size_t data_len)
     lua_call_function(m_lvm, param_count, 0);
 }
 
-int lua_create_socket_mgr(lua_State* L)
+int create_socket_mgr(lua_State* L)
 {
     int max_fd = (int)lua_tointeger(L, 1);
     if (max_fd <= 0)
