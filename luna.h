@@ -22,6 +22,8 @@ template <typename T>
 T lua_to_native(lua_State* L, int i) { return lua_to_object<T>(L, i); }
 
 template <> inline  const char* lua_to_native<const char*>(lua_State* L, int i) { return lua_tostring(L, i); }
+template <> inline  char lua_to_native<char>(lua_State* L, int i) { return (char)lua_tointeger(L, i); }
+template <> inline  unsigned char lua_to_native<unsigned char>(lua_State* L, int i) { return (unsigned char)lua_tointeger(L, i); }
 template <> inline  bool lua_to_native<bool>(lua_State* L, int i) { return lua_toboolean(L, i) != 0; }
 template <> inline long long lua_to_native<long long>(lua_State* L, int i) { return lua_tointeger(L, i); }
 template <> inline unsigned long long lua_to_native<unsigned long long>(lua_State* L, int i) { return (unsigned long long)lua_tointeger(L, i); }
@@ -40,6 +42,8 @@ template <> inline std::string lua_to_native<std::string>(lua_State* L, int i)
 template <typename T>
 void native_to_lua(lua_State* L, T* v) { lua_push_object(L, v); }
 inline void native_to_lua(lua_State* L, const char* v) { lua_pushstring(L, v); }
+inline void native_to_lua(lua_State* L, char v) { lua_pushinteger(L, v); }
+inline void native_to_lua(lua_State* L, unsigned char v) { lua_pushinteger(L, v); }
 inline void native_to_lua(lua_State* L, bool v) { lua_pushboolean(L, v); }
 inline void native_to_lua(lua_State* L, int v) { lua_pushinteger(L, v); }
 inline void native_to_lua(lua_State* L, unsigned int v) { lua_pushinteger(L, v); }
