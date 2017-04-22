@@ -15,44 +15,55 @@ function s2s.register(socket, group, index)
     --将id映射到nil的token表示将这个id从路由表中删除
     socket.id = id;
 	socket.name = string.format("%02d:%04d", group, index);
-    socket_mgr.set_route(id, socket.token);
-	
+    socket_mgr.route(id, socket.token);
+
 	--对于主从备份模式,需要设置master
-	--当然,如何选举master也是需要自行设计的
-	--socket_mgr.set_master(group, socket.token);
+	--master的选举逻辑可以自行设计的
+	--socket_mgr.master(group, socket.token);
+end
+
+local on_call = function(socket, msg, ...)
+    local proc = s2s[msg];
+    if proc then
+        proc(socket, ...);
+        return;
+    end
+    log_err("remote call not exist: "..tostring(msg));
+end
+
+local on_error = function(socket, err)
+    print("socket err: "..err);
+    print("close session, name="..socket.name);
+
+    for i, node in ipairs(socket_list) do
+        if node == socket then
+            table.remove(socket_list, i);
+            break;
+        end
+    end
+
+    if socket.id then
+        --如果要实现固定哈希,则 route(socket.id, 0),当然,还得预先将所有的id注册
+        socket_mgr.route(socket.id, nil);
+    end
 end
 
 local on_accept = function(socket)
-    log_debug("accept new connection, ip="..socket.ip..", id="..next_session_id);
-
+    print("accept new connection, ip="..socket.ip);
 	socket.name = "unknown";
     socket_list[#socket_list + 1] = socket;
+    socket.on_call = function(...) on_call(socket, ...); end
+    socket.on_error = function(...) on_error(socket, ...); end
+end
 
-    socket.on_error = function(err)
-        log_debug("socket err: "..err);
-        log_debug("close session, name="..socket.name);
+--为了支持热加载...
+if listen_socket then
+    listen_socket.on_accept = on_accept;
+end
 
-        for i, node in ipairs(socket_list) do
-            if node == socket then
-                table.remove(socket_list, i);
-                break;
-            end
-        end
-
-        if socket.id then
-            --如果要实现固定哈希,则 route(socket.id, 0),当然,还得预先将所有的id注册
-            socket_mgr.route(socket.id, nil);
-        end
-    end
-
-    socket.on_call = function(msg, ...)
-        local proc = s2s[msg];
-        if proc then
-            proc(ss, ...);
-            return;
-        end
-        log_err("remote call not exist: "..tostring(msg));
-    end
+for i, socket in ipairs(socket_list) do
+    socket.on_call = function(...) on_call(socket, ...); end
+    socket.on_error = function(...) on_error(socket, ...); end
 end
 
 function main()

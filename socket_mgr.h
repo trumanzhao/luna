@@ -12,7 +12,6 @@
 #include <mutex>
 #include "socket_helper.h"
 #include "socket_io.h"
-#include "dns_resolver.h"
 
 struct socket_manager;
 
@@ -22,8 +21,7 @@ struct socket_object
     virtual bool update(int64_t now) = 0;
     virtual void close() final { m_closed = true; };
     virtual bool get_remote_ip(std::string& ip) = 0;
-    virtual void connect(struct addrinfo* addr) { }
-    virtual void on_dns_err(const char* err) { }
+    virtual void connect(const char node_name[], const char service_name[]) { }
     virtual void set_send_cache(size_t size) { }
     virtual void set_recv_cache(size_t size) { }
     virtual void set_timeout(int duration) { }
@@ -129,5 +127,4 @@ private:
     uint32_t m_token = 0;
     int64_t m_next_update = 0;
     std::unordered_map<uint32_t, socket_object*> m_objects;
-    dns_resolver m_dns;
 };

@@ -19,8 +19,7 @@ struct socket_stream : public socket_object
     ~socket_stream();
     bool get_remote_ip(std::string& ip) override;
     bool accept_socket(socket_t fd, const char ip[]);
-    void connect(struct addrinfo* addr) override;
-    void on_dns_err(const char* err) override;
+	void connect(const char node_name[], const char service_name[]) override { m_node_name = node_name; m_service_name = service_name; };
     bool update(int64_t now) override;
     bool do_connect();
     void try_connect();
@@ -53,6 +52,8 @@ struct socket_stream : public socket_object
     std::unique_ptr<io_buffer> m_recv_buffer = std::make_unique<io_buffer>();
     std::unique_ptr<io_buffer> m_send_buffer = std::make_unique<io_buffer>();
 
+	std::string m_node_name;
+	std::string m_service_name;
     struct addrinfo* m_addr = nullptr;
     struct addrinfo* m_next = nullptr;
     char m_ip[INET6_ADDRSTRLEN];

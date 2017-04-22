@@ -145,7 +145,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dns_resolver.cpp" />
     <ClCompile Include="lua\lapi.c" />
     <ClCompile Include="lua\lauxlib.c" />
     <ClCompile Include="lua\lbaselib.c" />
@@ -193,7 +192,6 @@
     <ClCompile Include="var_int.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dns_resolver.h" />
     <ClInclude Include="io_buffer.h" />
     <ClInclude Include="lua\lapi.h" />
     <ClInclude Include="lua\lauxlib.h" />

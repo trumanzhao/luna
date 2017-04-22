@@ -83,17 +83,6 @@ bool socket_stream::accept_socket(socket_t fd, const char ip[])
     return true;
 }
 
-void socket_stream::connect(struct addrinfo* addr)
-{
-    m_addr = addr;
-    m_next = addr;
-}
-
-void socket_stream::on_dns_err(const char* err)
-{
-    call_error("domain_error");
-}
-
 bool socket_stream::update(int64_t now)
 {
     if (m_closed)
@@ -237,9 +226,29 @@ bool socket_stream::do_connect()
 
 void socket_stream::try_connect()
 {
-    // wait for dns resolver, or, socket connecting
-    if (m_addr == nullptr || m_socket != INVALID_SOCKET)
-        return;
+	if (m_addr == nullptr)
+	{
+		addrinfo hints;
+		struct addrinfo* addr = nullptr;
+
+		memset(&hints, 0, sizeof hints);
+		hints.ai_family = AF_UNSPEC; // use AF_INET6 to force IPv6
+		hints.ai_socktype = SOCK_STREAM;
+
+		int ret = getaddrinfo(m_node_name.c_str(), m_service_name.c_str(), &hints, &addr);
+		if (ret != 0 || addr == nullptr)
+		{
+			call_error("dns_error");
+			return;
+		}
+
+		m_addr = addr;
+		m_next = addr;
+	}
+
+	// socket connecting
+	if (m_socket != INVALID_SOCKET)
+		return;
 
     while (m_next != nullptr && !m_closed)
     {
@@ -614,7 +623,7 @@ void socket_stream::call_error(const char err[])
             m_socket = INVALID_SOCKET;
         }
 
-        m_error_cb(err);
         m_closed = true;
-    }
+		m_error_cb(err);
+	}
 }

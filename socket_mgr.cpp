@@ -183,8 +183,6 @@ void socket_manager::wait(int timeout)
     }
 #endif
 
-    m_dns.update();
-
     int64_t now = get_time_ms();
     if (now >= m_next_update)
     {
@@ -262,6 +260,7 @@ int socket_manager::connect(std::string& err, const char domain[], const char se
 {
     if (is_full())
     {
+		err = "too_many_connection";
         return 0;
     }
 
@@ -273,34 +272,9 @@ int socket_manager::connect(std::string& err, const char domain[], const char se
     socket_stream* stm = new socket_stream(this);
 #endif
 
+	stm->connect(domain, service);
+
     int token = new_token();
-    dns_request_t* req = new dns_request_t;
-    req->node = domain;
-    req->service = service;
-
-    req->dns_cb = [this, token](addrinfo* addr)
-    {
-        socket_object* obj = get_object(token);
-        if (obj)
-        {
-            obj->connect(addr);
-        }
-        else
-        {
-            freeaddrinfo(addr);
-        }
-    };
-
-    req->err_cb = [this, token](const char* err)
-    {
-        socket_object* obj = get_object(token);
-        if (obj)
-        {
-            obj->on_dns_err(err);
-        }
-    };
-
-    m_dns.request(req);
     m_objects[token] = stm;
     return token;
 }
