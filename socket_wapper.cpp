@@ -3,6 +3,7 @@
 ** trumanzhao, 2016-11-01, trumanzhao@foxmail.com
 */
 #include "tools.h"
+#include "var_int.h"
 #include "socket_wapper.h"
 #include "lua/lstate.h"
 #include "lz4/lz4.h"
@@ -181,21 +182,19 @@ int lua_socket_node::call(lua_State* L)
     if (top < 1)
         return 0;
 
+	BYTE msg_id_data[MAX_ENCODE_LEN];
+	size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)msg_id::remote_call);
+
     m_ar_buffer->clear();
     size_t buffer_size = 0;
     auto* buffer = m_ar_buffer->peek_space(&buffer_size);
-    auto* pos = buffer;
-
-    if (!write_var(pos, buffer_size, msg_id::remote_call))
-        return 0;
-
     size_t ar_len = 0;
-    if (!m_archiver->save(&ar_len, pos, buffer_size, L, 1, top))
+    if (!m_archiver->save(&ar_len, buffer, buffer_size, L, 1, top))
         return 0;
 
-    size_t data_len = pos + ar_len - buffer;
-    m_mgr->send(m_token, buffer, data_len);
-    lua_pushinteger(L, data_len);
+	sendv_item items[] = {{msg_id_data, msg_id_len}, {buffer, ar_len}};
+	m_mgr->sendv(m_token, items, _countof(items));
+    lua_pushinteger(L, ar_len);
     return 1;
 }
 
@@ -205,22 +204,23 @@ int lua_socket_node::forward_target(lua_State* L)
     if (top < 2)
         return 0;
 
-    m_ar_buffer->clear();
-    size_t buffer_size = 0;
-    auto* buffer = m_ar_buffer->peek_space(&buffer_size);
-    auto* pos = buffer;
+	BYTE msg_id_data[MAX_ENCODE_LEN];
+	size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)msg_id::forward_target);
 
-    uint32_t service_id = (uint32_t)lua_tointeger(L, 1);
-    if (!write_var(pos, buffer_size, msg_id::forward_target) || !write_var(pos, buffer_size, service_id))
-        return 0;
+	uint32_t service_id = (uint32_t)lua_tointeger(L, 1);
+	BYTE svr_id_data[MAX_ENCODE_LEN];
+	size_t svr_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), service_id);
 
+	m_ar_buffer->clear();
+	size_t buffer_size = 0;
+	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
     size_t ar_len = 0;
-    if (!m_archiver->save(&ar_len, pos, buffer_size, L, 2, top))
+    if (!m_archiver->save(&ar_len, buffer, buffer_size, L, 2, top))
         return 0;
 
-    size_t data_len = pos + ar_len - buffer;
-    m_mgr->send(m_token, buffer, data_len);
-    lua_pushinteger(L, data_len);
+	sendv_item items[] = {{msg_id_data, msg_id_len}, {svr_id_data, svr_id_len}, {buffer, ar_len}};
+    m_mgr->sendv(m_token, items, _countof(items));
+    lua_pushinteger(L, ar_len);
     return 1;
 }
 
@@ -234,22 +234,23 @@ int lua_socket_node::forward_by_class(lua_State* L)
     static_assert(forward_method == msg_id::forward_master || forward_method == msg_id::forward_random ||
         forward_method == msg_id::forward_broadcast, "Unexpected forward method !");
 
+	BYTE msg_id_data[MAX_ENCODE_LEN];
+	size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)forward_method);
+
+	uint8_t group_id = (uint8_t)lua_tointeger(L, 1);
+	BYTE group_id_data[MAX_ENCODE_LEN];
+	size_t group_id_len = encode_u64(group_id_data, sizeof(group_id_data), group_id);
+
     m_ar_buffer->clear();
     size_t buffer_size = 0;
     auto* buffer = m_ar_buffer->peek_space(&buffer_size);
-    auto* pos = buffer;
-
-    uint8_t class_id = (uint8_t)lua_tointeger(L, 1);
-    if (!write_var(pos, buffer_size, forward_method) || !write_var(pos, buffer_size, class_id))
-        return 0;
-
     size_t ar_len = 0;
-    if (!m_archiver->save(&ar_len, pos, buffer_size, L, 2, top))
+    if (!m_archiver->save(&ar_len, buffer, buffer_size, L, 2, top))
         return 0;
 
-    size_t data_len = pos + ar_len - buffer;
-    m_mgr->send(m_token, buffer, data_len);
-    lua_pushinteger(L, data_len);
+	sendv_item items[] = {{msg_id_data, msg_id_len}, {group_id_data, group_id_len},{buffer, ar_len}};
+	m_mgr->sendv(m_token, items, _countof(items));
+	lua_pushinteger(L, ar_len);
     return 1;
 }
 
@@ -271,14 +272,12 @@ int lua_socket_node::forward_hash(lua_State* L)
     if (top < 3)
         return 0;
 
-    m_ar_buffer->clear();
-    size_t buffer_size = 0;
-    auto* buffer = m_ar_buffer->peek_space(&buffer_size);
-    auto* pos = buffer;
+	BYTE msg_id_data[MAX_ENCODE_LEN];
+	size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)msg_id::forward_hash);
 
-    uint8_t class_id = (uint8_t)lua_tointeger(L, 1);
-    if (!write_var(pos, buffer_size, msg_id::forward_master) || !write_var(pos, buffer_size, class_id))
-        return 0;
+    uint8_t group_id = (uint8_t)lua_tointeger(L, 1);
+	BYTE group_id_data[MAX_ENCODE_LEN];
+	size_t group_id_len = encode_u64(group_id_data, sizeof(group_id_data), group_id);
 
     int type = lua_type(L, 2);
     uint32_t hash_key = 0;
@@ -299,19 +298,21 @@ int lua_socket_node::forward_hash(lua_State* L)
         return 0;
     }
 
-    if (!write_var(pos, buffer_size, hash_key))
-        return 0;
+	BYTE hash_data[MAX_ENCODE_LEN];
+	size_t hash_len = encode_u64(hash_data, sizeof(hash_data), hash_key);
 
+	m_ar_buffer->clear();
+	size_t buffer_size = 0;
+	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
     size_t ar_len = 0;
-    if (!m_archiver->save(&ar_len, pos, buffer_size, L, 3, top))
+    if (!m_archiver->save(&ar_len, buffer, buffer_size, L, 3, top))
         return 0;
 
-    size_t data_len = pos + ar_len - buffer;
-    m_mgr->send(m_token, buffer, data_len);
-    lua_pushinteger(L, data_len);
+	sendv_item items[] = {{msg_id_data, msg_id_len}, {group_id_data, group_id_len}, {hash_data, hash_len}, {buffer, ar_len}};
+	m_mgr->sendv(m_token, items, _countof(items));
+    lua_pushinteger(L, ar_len);
     return 1;
 }
-
 
 void lua_socket_node::close()
 {
@@ -324,11 +325,14 @@ void lua_socket_node::close()
 
 void lua_socket_node::on_recv(char* data, size_t data_len)
 {
-    msg_id msg;
-    if (!read_var(msg, data, data_len))
-        return;
+    uint64_t msg = 0;
+	size_t len = decode_u64(&msg, (BYTE*)data, data_len);
+	if (len == 0)
+		return;
+	data += len;
+	data_len -= len;
 
-    switch (msg)
+    switch ((msg_id)msg)
     {
     case msg_id::remote_call:
         on_call(data, data_len);

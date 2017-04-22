@@ -286,7 +286,7 @@ void socket_stream::send(const void* data, size_t data_len)
     if (m_closed)
         return;
 
-    BYTE  header[MAX_HEADER_LEN];
+    BYTE  header[MAX_ENCODE_LEN];
     size_t header_len = encode_u64(header, sizeof(header), data_len);
     stream_send((char*)header, header_len);
     stream_send((char*)data, data_len);
@@ -303,7 +303,7 @@ void socket_stream::sendv(const sendv_item items[], int count)
 		data_len += items[i].len;
 	}
 
-	BYTE  header[MAX_HEADER_LEN];
+	BYTE  header[MAX_ENCODE_LEN];
 	size_t header_len = encode_u64(header, sizeof(header), data_len);
 	stream_send((char*)header, header_len);
 

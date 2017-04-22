@@ -17,6 +17,8 @@ function s2s.register(socket, group, index)
 	socket.name = string.format("%02d:%04d", group, index);
     socket_mgr.route(id, socket.token);
 
+    print("register: "..socket.name);
+
 	--对于主从备份模式,需要设置master
 	--master的选举逻辑可以自行设计的
 	--socket_mgr.master(group, socket.token);
