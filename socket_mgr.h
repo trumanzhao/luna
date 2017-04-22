@@ -26,6 +26,7 @@ struct socket_object
     virtual void set_recv_cache(size_t size) { }
     virtual void set_timeout(int duration) { }
     virtual void send(const void* data, size_t data_len) { }
+	virtual void sendv(const sendv_item items[], int count) { };
     virtual void set_accept_callback(const std::function<void(int)>& cb) { }
     virtual void set_connect_callback(const std::function<void()>& cb) { }
     virtual void set_package_callback(const std::function<void(char*, size_t)>& cb) { }
@@ -65,6 +66,7 @@ struct socket_manager : socket_mgr
     virtual void set_recv_cache(uint32_t token, size_t size) override;
     virtual void set_timeout(uint32_t token, int duration) override;
     virtual void send(uint32_t token, const void* data, size_t data_len) override;
+	virtual void sendv(uint32_t token, const sendv_item items[], int count) override;
     virtual void close(uint32_t token) override;
     virtual bool get_remote_ip(std::string& ip, uint32_t token) override;
 

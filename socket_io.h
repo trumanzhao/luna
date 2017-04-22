@@ -8,6 +8,12 @@
 #include <memory>
 #include <functional>
 
+struct sendv_item
+{
+	const void* data;
+	size_t len;
+};
+
 struct socket_mgr
 {
     virtual void release() = 0;
@@ -21,6 +27,7 @@ struct socket_mgr
     virtual void set_recv_cache(uint32_t token, size_t size) = 0;
     virtual void set_timeout(uint32_t token, int duration) = 0; // 设置超时时间,默认-1,即永不超时
     virtual void send(uint32_t token, const void* data, size_t data_len) = 0;
+	virtual void sendv(uint32_t token, const sendv_item items[], int count) = 0;
     virtual void close(uint32_t token) = 0;
     virtual bool get_remote_ip(std::string& ip, uint32_t token) = 0;
 

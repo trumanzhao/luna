@@ -30,6 +30,7 @@ struct socket_stream : public socket_object
     void set_recv_cache(size_t size) override { m_recv_buffer->resize(size); }
     void set_timeout(int duration) override { m_timeout = duration; }
     void send(const void* data, size_t data_len) override;
+	void sendv(const sendv_item items[], int count) override;
     void stream_send(const char* data, size_t data_len);
 
 #ifdef _MSC_VER
