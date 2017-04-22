@@ -78,7 +78,7 @@ private:
     std::shared_ptr<socket_router> m_router;
 
 public:
-    DECLARE_LUA_CLASS(lua_socket_listener);
+    DECLARE_LUA_CLASS(lua_socket_node);
 };
 
 int create_socket_mgr(lua_State* L);
