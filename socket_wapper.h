@@ -55,7 +55,7 @@ struct lua_socket_node final
     int forward_target(lua_State* L);
 
     template <msg_id forward_method>
-    int forward_by_class(lua_State* L);
+    int forward_by_group(lua_State* L);
 
     int forward_hash(lua_State* L);
 

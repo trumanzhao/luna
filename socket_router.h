@@ -33,30 +33,6 @@ struct service_group
     std::vector<service_node> nodes;
 };
 
-template <typename T>
-static inline bool read_var(T& to, char*& data, size_t& data_len)
-{
-    static_assert(std::is_enum<T>::value == false || sizeof(T) == 1, "sizeof(enum T) should == 1 !");
-    if (data_len < sizeof(to))
-        return false;
-    memcpy(&to, data, sizeof(to));
-    data += sizeof(to);
-    data_len -= sizeof(to);
-    return true;
-}
-
-template <typename T>
-static inline bool write_var(BYTE*& buffer, size_t& buffer_size, const T& v)
-{
-    static_assert(std::is_enum<T>::value == false || sizeof(T) == 1, "sizeof(enum T) should == 1 !");
-    if (buffer_size < sizeof(v))
-        return false;
-    memcpy(buffer, &v, sizeof(v));
-    buffer += sizeof(v);
-    buffer_size -= sizeof(v);
-    return true;
-}
-
 struct socket_router
 {
     socket_router(std::shared_ptr<socket_mgr> mgr) { m_mgr = mgr; }

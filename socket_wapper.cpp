@@ -122,9 +122,9 @@ void lua_socket_mgr::master(uint8_t group_idx, uint32_t token)
 EXPORT_CLASS_BEGIN(lua_socket_node)
 EXPORT_LUA_FUNCTION(call)
 EXPORT_LUA_FUNCTION(forward_target)
-EXPORT_LUA_FUNCTION_AS(forward_by_class<msg_id::forward_master>, "forward_master")
-EXPORT_LUA_FUNCTION_AS(forward_by_class<msg_id::forward_random>, "forward_random")
-EXPORT_LUA_FUNCTION_AS(forward_by_class<msg_id::forward_broadcast>, "forward_broadcast")
+EXPORT_LUA_FUNCTION_AS(forward_by_group<msg_id::forward_master>, "forward_master")
+EXPORT_LUA_FUNCTION_AS(forward_by_group<msg_id::forward_random>, "forward_random")
+EXPORT_LUA_FUNCTION_AS(forward_by_group<msg_id::forward_broadcast>, "forward_broadcast")
 EXPORT_LUA_FUNCTION(forward_hash)
 EXPORT_LUA_FUNCTION(close)
 EXPORT_LUA_FUNCTION(set_send_cache)
@@ -225,7 +225,7 @@ int lua_socket_node::forward_target(lua_State* L)
 }
 
 template <msg_id forward_method>
-int lua_socket_node::forward_by_class(lua_State* L)
+int lua_socket_node::forward_by_group(lua_State* L)
 {
     int top = lua_gettop(L);
     if (top < 2)
