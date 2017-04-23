@@ -185,6 +185,7 @@
     <ClCompile Include="socket_helper.cpp" />
     <ClCompile Include="socket_listener.cpp" />
     <ClCompile Include="socket_mgr.cpp" />
+    <ClCompile Include="socket_mgr_impl.cpp" />
     <ClCompile Include="socket_router.cpp" />
     <ClCompile Include="socket_stream.cpp" />
     <ClCompile Include="socket_wapper.cpp" />
@@ -223,9 +224,9 @@
     <ClInclude Include="luna.h" />
     <ClInclude Include="lz4\lz4.h" />
     <ClInclude Include="socket_helper.h" />
-    <ClInclude Include="socket_io.h" />
-    <ClInclude Include="socket_listener.h" />
     <ClInclude Include="socket_mgr.h" />
+    <ClInclude Include="socket_listener.h" />
+    <ClInclude Include="socket_mgr_impl.h" />
     <ClInclude Include="socket_router.h" />
     <ClInclude Include="socket_stream.h" />
     <ClInclude Include="socket_wapper.h" />

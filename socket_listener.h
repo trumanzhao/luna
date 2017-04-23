@@ -7,16 +7,16 @@
 
 #include "socket_helper.h"
 #include "io_buffer.h"
-#include "socket_mgr.h"
+#include "socket_mgr_impl.h"
 
 struct socket_listener : public socket_object
 {
 #ifdef _MSC_VER
-    socket_listener(socket_manager* mgr, LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func);
+    socket_listener(socket_mgr_impl* mgr, LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func);
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-    socket_listener(socket_manager* mgr);
+    socket_listener(socket_mgr_impl* mgr);
 #endif
 
     ~socket_listener();
@@ -36,7 +36,7 @@ struct socket_listener : public socket_object
 #endif
 
 private:
-    socket_manager* m_mgr = nullptr;
+    socket_mgr_impl* m_mgr = nullptr;
     socket_t m_socket = INVALID_SOCKET;
     std::function<void(const char*)> m_error_cb;
     std::function<void(int)> m_accept_cb;

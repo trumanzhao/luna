@@ -25,11 +25,11 @@
 #include <assert.h>
 #include "tools.h"
 #include "var_int.h"
-#include "socket_mgr.h"
+#include "socket_mgr_impl.h"
 #include "socket_listener.h"
 
 #ifdef _MSC_VER
-socket_listener::socket_listener(socket_manager* mgr, LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func)
+socket_listener::socket_listener(socket_mgr_impl* mgr, LPFN_ACCEPTEX accept_func, LPFN_GETACCEPTEXSOCKADDRS addrs_func)
 {
     mgr->increase_count();
     m_mgr = mgr;
@@ -44,7 +44,7 @@ socket_listener::socket_listener(socket_manager* mgr, LPFN_ACCEPTEX accept_func,
 #endif
 
 #if defined(__linux) || defined(__APPLE__)
-socket_listener::socket_listener(socket_manager* mgr)
+socket_listener::socket_listener(socket_mgr_impl* mgr)
 {
     mgr->increase_count();
     m_mgr = mgr;

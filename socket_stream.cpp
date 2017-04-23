@@ -27,11 +27,11 @@
 #include <assert.h>
 #include "tools.h"
 #include "var_int.h"
-#include "socket_mgr.h"
+#include "socket_mgr_impl.h"
 #include "socket_stream.h"
 
 #ifdef _MSC_VER
-socket_stream::socket_stream(socket_manager* mgr, LPFN_CONNECTEX connect_func)
+socket_stream::socket_stream(socket_mgr_impl* mgr, LPFN_CONNECTEX connect_func)
 {
     mgr->increase_count();
     m_mgr = mgr;
@@ -40,7 +40,7 @@ socket_stream::socket_stream(socket_manager* mgr, LPFN_CONNECTEX connect_func)
 }
 #endif
 
-socket_stream::socket_stream(socket_manager* mgr)
+socket_stream::socket_stream(socket_mgr_impl* mgr)
 {
     mgr->increase_count();
     m_mgr = mgr;
@@ -226,29 +226,29 @@ bool socket_stream::do_connect()
 
 void socket_stream::try_connect()
 {
-	if (m_addr == nullptr)
-	{
-		addrinfo hints;
-		struct addrinfo* addr = nullptr;
+    if (m_addr == nullptr)
+    {
+        addrinfo hints;
+        struct addrinfo* addr = nullptr;
 
-		memset(&hints, 0, sizeof hints);
-		hints.ai_family = AF_UNSPEC; // use AF_INET6 to force IPv6
-		hints.ai_socktype = SOCK_STREAM;
+        memset(&hints, 0, sizeof hints);
+        hints.ai_family = AF_UNSPEC; // use AF_INET6 to force IPv6
+        hints.ai_socktype = SOCK_STREAM;
 
-		int ret = getaddrinfo(m_node_name.c_str(), m_service_name.c_str(), &hints, &addr);
-		if (ret != 0 || addr == nullptr)
-		{
-			call_error("dns_error");
-			return;
-		}
+        int ret = getaddrinfo(m_node_name.c_str(), m_service_name.c_str(), &hints, &addr);
+        if (ret != 0 || addr == nullptr)
+        {
+            call_error("dns_error");
+            return;
+        }
 
-		m_addr = addr;
-		m_next = addr;
-	}
+        m_addr = addr;
+        m_next = addr;
+    }
 
-	// socket connecting
-	if (m_socket != INVALID_SOCKET)
-		return;
+    // socket connecting
+    if (m_socket != INVALID_SOCKET)
+        return;
 
     while (m_next != nullptr && !m_closed)
     {
@@ -294,24 +294,24 @@ void socket_stream::send(const void* data, size_t data_len)
 
 void socket_stream::sendv(const sendv_item items[], int count)
 {
-	if (m_closed)
-		return;
+    if (m_closed)
+        return;
 
-	size_t data_len = 0;
-	for (int i = 0; i < count; i++)
-	{
-		data_len += items[i].len;
-	}
+    size_t data_len = 0;
+    for (int i = 0; i < count; i++)
+    {
+        data_len += items[i].len;
+    }
 
-	BYTE  header[MAX_ENCODE_LEN];
-	size_t header_len = encode_u64(header, sizeof(header), data_len);
-	stream_send((char*)header, header_len);
+    BYTE  header[MAX_ENCODE_LEN];
+    size_t header_len = encode_u64(header, sizeof(header), data_len);
+    stream_send((char*)header, header_len);
 
-	for (int i = 0; i < count; i++)
-	{
-		auto item = items[i];
-		stream_send((char*)item.data, item.len);
-	}
+    for (int i = 0; i < count; i++)
+    {
+        auto item = items[i];
+        stream_send((char*)item.data, item.len);
+    }
 }
 
 void socket_stream::stream_send(const char* data, size_t data_len)
@@ -646,6 +646,6 @@ void socket_stream::call_error(const char err[])
         }
 
         m_closed = true;
-		m_error_cb(err);
-	}
+        m_error_cb(err);
+    }
 }

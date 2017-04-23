@@ -24,18 +24,16 @@ lua_socket_mgr::~lua_socket_mgr()
 
 bool lua_socket_mgr::setup(lua_State* L, int max_fd)
 {
-    auto mgr = create_socket_mgr(max_fd);
-    if (mgr != nullptr)
-    {
-        m_lvm = L;
-        m_mgr = std::shared_ptr<socket_mgr>(mgr, [](auto o) { o->release(); });
-        m_archiver = std::make_shared<lua_archiver>();
-        m_ar_buffer = std::make_shared<io_buffer>();
-        m_lz_buffer = std::make_shared<io_buffer>();
-        m_router = std::make_shared<socket_router>(m_mgr);
-        return true;
-    }
-    return false;
+    m_mgr = std::make_shared<socket_mgr>();
+    if (!m_mgr->setup(max_fd))
+        return false;
+
+    m_lvm = L;
+    m_archiver = std::make_shared<lua_archiver>();
+    m_ar_buffer = std::make_shared<io_buffer>();
+    m_lz_buffer = std::make_shared<io_buffer>();
+    m_router = std::make_shared<socket_router>(m_mgr);
+    return true;
 }
 
 int lua_socket_mgr::listen(lua_State* L)
@@ -145,7 +143,7 @@ lua_socket_node::lua_socket_node(uint32_t token, lua_State* L, std::shared_ptr<s
     m_lz_buffer = lz_buffer;
     m_router = router;
 
-    m_mgr->get_remote_ip(m_ip, m_token); // just valid for accepted stream
+    m_mgr->get_remote_ip(m_token, m_ip); // just valid for accepted stream
 
     m_mgr->set_accept_callback(token, [this](uint32_t steam_token)
     {
@@ -156,7 +154,7 @@ lua_socket_node::lua_socket_node(uint32_t token, lua_State* L, std::shared_ptr<s
 
     m_mgr->set_connect_callback(token, [this]()
     {
-        m_mgr->get_remote_ip(m_ip, m_token);
+        m_mgr->get_remote_ip(m_token, m_ip);
         lua_call_object_function(m_lvm, this, "on_connected");
     });
 
@@ -182,8 +180,8 @@ int lua_socket_node::call(lua_State* L)
     if (top < 1)
         return 0;
 
-	BYTE msg_id_data[MAX_ENCODE_LEN];
-	size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)msg_id::remote_call);
+    BYTE msg_id_data[MAX_ENCODE_LEN];
+    size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)msg_id::remote_call);
 
     m_ar_buffer->clear();
     size_t buffer_size = 0;
@@ -192,8 +190,8 @@ int lua_socket_node::call(lua_State* L)
     if (!m_archiver->save(&ar_len, buffer, buffer_size, L, 1, top))
         return 0;
 
-	sendv_item items[] = {{msg_id_data, msg_id_len}, {buffer, ar_len}};
-	m_mgr->sendv(m_token, items, _countof(items));
+    sendv_item items[] = {{msg_id_data, msg_id_len}, {buffer, ar_len}};
+    m_mgr->sendv(m_token, items, _countof(items));
     lua_pushinteger(L, ar_len);
     return 1;
 }
@@ -204,21 +202,21 @@ int lua_socket_node::forward_target(lua_State* L)
     if (top < 2)
         return 0;
 
-	BYTE msg_id_data[MAX_ENCODE_LEN];
-	size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)msg_id::forward_target);
+    BYTE msg_id_data[MAX_ENCODE_LEN];
+    size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)msg_id::forward_target);
 
-	uint32_t service_id = (uint32_t)lua_tointeger(L, 1);
-	BYTE svr_id_data[MAX_ENCODE_LEN];
-	size_t svr_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), service_id);
+    uint32_t service_id = (uint32_t)lua_tointeger(L, 1);
+    BYTE svr_id_data[MAX_ENCODE_LEN];
+    size_t svr_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), service_id);
 
-	m_ar_buffer->clear();
-	size_t buffer_size = 0;
-	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
+    m_ar_buffer->clear();
+    size_t buffer_size = 0;
+    auto* buffer = m_ar_buffer->peek_space(&buffer_size);
     size_t ar_len = 0;
     if (!m_archiver->save(&ar_len, buffer, buffer_size, L, 2, top))
         return 0;
 
-	sendv_item items[] = {{msg_id_data, msg_id_len}, {svr_id_data, svr_id_len}, {buffer, ar_len}};
+    sendv_item items[] = {{msg_id_data, msg_id_len}, {svr_id_data, svr_id_len}, {buffer, ar_len}};
     m_mgr->sendv(m_token, items, _countof(items));
     lua_pushinteger(L, ar_len);
     return 1;
@@ -234,12 +232,12 @@ int lua_socket_node::forward_by_group(lua_State* L)
     static_assert(forward_method == msg_id::forward_master || forward_method == msg_id::forward_random ||
         forward_method == msg_id::forward_broadcast, "Unexpected forward method !");
 
-	BYTE msg_id_data[MAX_ENCODE_LEN];
-	size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)forward_method);
+    BYTE msg_id_data[MAX_ENCODE_LEN];
+    size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)forward_method);
 
-	uint8_t group_id = (uint8_t)lua_tointeger(L, 1);
-	BYTE group_id_data[MAX_ENCODE_LEN];
-	size_t group_id_len = encode_u64(group_id_data, sizeof(group_id_data), group_id);
+    uint8_t group_id = (uint8_t)lua_tointeger(L, 1);
+    BYTE group_id_data[MAX_ENCODE_LEN];
+    size_t group_id_len = encode_u64(group_id_data, sizeof(group_id_data), group_id);
 
     m_ar_buffer->clear();
     size_t buffer_size = 0;
@@ -248,9 +246,9 @@ int lua_socket_node::forward_by_group(lua_State* L)
     if (!m_archiver->save(&ar_len, buffer, buffer_size, L, 2, top))
         return 0;
 
-	sendv_item items[] = {{msg_id_data, msg_id_len}, {group_id_data, group_id_len},{buffer, ar_len}};
-	m_mgr->sendv(m_token, items, _countof(items));
-	lua_pushinteger(L, ar_len);
+    sendv_item items[] = {{msg_id_data, msg_id_len}, {group_id_data, group_id_len},{buffer, ar_len}};
+    m_mgr->sendv(m_token, items, _countof(items));
+    lua_pushinteger(L, ar_len);
     return 1;
 }
 
@@ -272,12 +270,12 @@ int lua_socket_node::forward_hash(lua_State* L)
     if (top < 3)
         return 0;
 
-	BYTE msg_id_data[MAX_ENCODE_LEN];
-	size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)msg_id::forward_hash);
+    BYTE msg_id_data[MAX_ENCODE_LEN];
+    size_t msg_id_len = encode_u64(msg_id_data, sizeof(msg_id_data), (char)msg_id::forward_hash);
 
     uint8_t group_id = (uint8_t)lua_tointeger(L, 1);
-	BYTE group_id_data[MAX_ENCODE_LEN];
-	size_t group_id_len = encode_u64(group_id_data, sizeof(group_id_data), group_id);
+    BYTE group_id_data[MAX_ENCODE_LEN];
+    size_t group_id_len = encode_u64(group_id_data, sizeof(group_id_data), group_id);
 
     int type = lua_type(L, 2);
     uint32_t hash_key = 0;
@@ -298,18 +296,18 @@ int lua_socket_node::forward_hash(lua_State* L)
         return 0;
     }
 
-	BYTE hash_data[MAX_ENCODE_LEN];
-	size_t hash_len = encode_u64(hash_data, sizeof(hash_data), hash_key);
+    BYTE hash_data[MAX_ENCODE_LEN];
+    size_t hash_len = encode_u64(hash_data, sizeof(hash_data), hash_key);
 
-	m_ar_buffer->clear();
-	size_t buffer_size = 0;
-	auto* buffer = m_ar_buffer->peek_space(&buffer_size);
+    m_ar_buffer->clear();
+    size_t buffer_size = 0;
+    auto* buffer = m_ar_buffer->peek_space(&buffer_size);
     size_t ar_len = 0;
     if (!m_archiver->save(&ar_len, buffer, buffer_size, L, 3, top))
         return 0;
 
-	sendv_item items[] = {{msg_id_data, msg_id_len}, {group_id_data, group_id_len}, {hash_data, hash_len}, {buffer, ar_len}};
-	m_mgr->sendv(m_token, items, _countof(items));
+    sendv_item items[] = {{msg_id_data, msg_id_len}, {group_id_data, group_id_len}, {hash_data, hash_len}, {buffer, ar_len}};
+    m_mgr->sendv(m_token, items, _countof(items));
     lua_pushinteger(L, ar_len);
     return 1;
 }
@@ -326,11 +324,11 @@ void lua_socket_node::close()
 void lua_socket_node::on_recv(char* data, size_t data_len)
 {
     uint64_t msg = 0;
-	size_t len = decode_u64(&msg, (BYTE*)data, data_len);
-	if (len == 0)
-		return;
-	data += len;
-	data_len -= len;
+    size_t len = decode_u64(&msg, (BYTE*)data, data_len);
+    if (len == 0)
+        return;
+    data += len;
+    data_len -= len;
 
     switch ((msg_id)msg)
     {

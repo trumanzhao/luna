@@ -7,19 +7,19 @@
 
 #include "socket_helper.h"
 #include "io_buffer.h"
-#include "socket_mgr.h"
+#include "socket_mgr_impl.h"
 
 struct socket_stream : public socket_object
 {
 #ifdef _MSC_VER
-    socket_stream(socket_manager* mgr, LPFN_CONNECTEX connect_func);
+    socket_stream(socket_mgr_impl* mgr, LPFN_CONNECTEX connect_func);
 #endif
-    socket_stream(socket_manager* mgr);
+    socket_stream(socket_mgr_impl* mgr);
 
     ~socket_stream();
     bool get_remote_ip(std::string& ip) override;
     bool accept_socket(socket_t fd, const char ip[]);
-	void connect(const char node_name[], const char service_name[]) override { m_node_name = node_name; m_service_name = service_name; };
+    void connect(const char node_name[], const char service_name[]) override { m_node_name = node_name; m_service_name = service_name; };
     bool update(int64_t now) override;
     bool do_connect();
     void try_connect();
@@ -30,7 +30,7 @@ struct socket_stream : public socket_object
     void set_recv_cache(size_t size) override { m_recv_buffer->resize(size); }
     void set_timeout(int duration) override { m_timeout = duration; }
     void send(const void* data, size_t data_len) override;
-	void sendv(const sendv_item items[], int count) override;
+    void sendv(const sendv_item items[], int count) override;
     void stream_send(const char* data, size_t data_len);
 
 #ifdef _MSC_VER
@@ -48,13 +48,13 @@ struct socket_stream : public socket_object
     void dispatch_package();
     void call_error(const char err[]);
 
-    socket_manager* m_mgr = nullptr;
+    socket_mgr_impl* m_mgr = nullptr;
     socket_t m_socket = INVALID_SOCKET;
     std::unique_ptr<io_buffer> m_recv_buffer = std::make_unique<io_buffer>();
     std::unique_ptr<io_buffer> m_send_buffer = std::make_unique<io_buffer>();
 
-	std::string m_node_name;
-	std::string m_service_name;
+    std::string m_node_name;
+    std::string m_service_name;
     struct addrinfo* m_addr = nullptr;
     struct addrinfo* m_next = nullptr;
     char m_ip[INET6_ADDRSTRLEN];
