@@ -58,7 +58,7 @@ public:
     void wait(int timout);
 
     int listen(std::string& err, const char ip[], int port);
-    int connect(std::string& err, const char domain[], const char service[]);
+    int connect(std::string& err, const char node_name[], const char service_name[]);
 
     void set_send_cache(uint32_t token, size_t size);
     void set_recv_cache(uint32_t token, size_t size);

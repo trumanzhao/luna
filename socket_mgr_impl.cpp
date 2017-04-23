@@ -256,7 +256,7 @@ Exit0:
     return 0;
 }
 
-int socket_mgr_impl::connect(std::string& err, const char domain[], const char service[])
+int socket_mgr_impl::connect(std::string& err, const char node_name[], const char service_name[])
 {
     if (is_full())
     {
@@ -272,7 +272,7 @@ int socket_mgr_impl::connect(std::string& err, const char domain[], const char s
     socket_stream* stm = new socket_stream(this);
 #endif
 
-    stm->connect(domain, service);
+    stm->connect(node_name, service_name);
 
     int token = new_token();
     m_objects[token] = stm;

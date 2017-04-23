@@ -33,9 +33,10 @@ struct service_group
     std::vector<service_node> nodes;
 };
 
-struct socket_router
+class socket_router
 {
-    socket_router(socket_mgr& mgr) { m_mgr = mgr; }
+public:
+    socket_router(socket_mgr& mgr) : m_mgr(mgr){ }
 
     void update(uint32_t service_id, uint32_t token);
     void set_master(uint8_t group_idx, uint32_t token);
@@ -46,6 +47,7 @@ struct socket_router
     void forward_broadcast(char* data, size_t data_len);
     void forward_hash(char* data, size_t data_len);
 
+private:
     socket_mgr m_mgr;
     std::array<service_group, MAX_SERVICE_GROUP> m_groups;
 };

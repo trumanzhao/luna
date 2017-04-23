@@ -21,12 +21,10 @@ public:
     ~socket_mgr();
 
     bool setup(int max_connection);
-
     void wait(int timeout);
-
     int listen(std::string& err, const char ip[], int port);
     // 注意: connect总是异步的,需要通过回调函数确认连接成功后,才能发送数据
-    int connect(std::string& err, const char domain[], const char service[]);
+    int connect(std::string& err, const char node_name[], const char service_name[]);
 
     void set_send_cache(uint32_t token, size_t size);
     void set_recv_cache(uint32_t token, size_t size);

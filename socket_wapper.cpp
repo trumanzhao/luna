@@ -133,15 +133,8 @@ EXPORT_CLASS_END()
 
 lua_socket_node::lua_socket_node(uint32_t token, lua_State* L, socket_mgr& mgr, std::shared_ptr<lua_archiver>& ar,
     std::shared_ptr<io_buffer>& ar_buffer, std::shared_ptr<io_buffer>& lz_buffer, std::shared_ptr<socket_router> router)
+	: m_token(token), m_lvm(L), m_mgr(mgr), m_archiver(ar), m_ar_buffer(ar_buffer), m_lz_buffer(lz_buffer), m_router(router)
 {
-    m_token = token;
-    m_lvm = L;
-    m_mgr = mgr;
-    m_archiver = ar;
-    m_ar_buffer = ar_buffer;
-    m_lz_buffer = lz_buffer;
-    m_router = router;
-
     m_mgr.get_remote_ip(m_token, m_ip); // just valid for accepted stream
 
     m_mgr.set_accept_callback(token, [this](uint32_t steam_token)
