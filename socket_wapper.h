@@ -18,7 +18,7 @@ struct lua_socket_mgr final
 public:
     ~lua_socket_mgr();
     bool setup(lua_State* L, int max_fd);
-    void wait(int ms) { m_mgr->wait(ms); }
+    void wait(int ms) { m_mgr.wait(ms); }
     int listen(lua_State* L);
     int connect(lua_State* L);
     void set_package_size(size_t size); // 设置序列化缓冲区大小,默认64K
@@ -28,10 +28,10 @@ public:
 
 private:
     lua_State* m_lvm = nullptr;
+	socket_mgr m_mgr;
     std::shared_ptr<lua_archiver> m_archiver;
     std::shared_ptr<io_buffer> m_ar_buffer;
     std::shared_ptr<io_buffer> m_lz_buffer;
-    std::shared_ptr<socket_mgr> m_mgr;
     std::shared_ptr<socket_router> m_router;
     size_t m_compress_size = UINT_MAX;
 
@@ -45,7 +45,7 @@ public:
 
 struct lua_socket_node final
 {
-    lua_socket_node(uint32_t token, lua_State* L, std::shared_ptr<socket_mgr>& mgr, std::shared_ptr<lua_archiver>& ar,
+    lua_socket_node(uint32_t token, lua_State* L, socket_mgr& mgr, std::shared_ptr<lua_archiver>& ar,
         std::shared_ptr<io_buffer>& ar_buffer, std::shared_ptr<io_buffer>& lz_buffer, std::shared_ptr<socket_router> router);
 
     ~lua_socket_node();
@@ -60,9 +60,9 @@ struct lua_socket_node final
     int forward_hash(lua_State* L);
 
     void close();
-    void set_send_cache(size_t size) { m_mgr->set_send_cache(m_token, size); }
-    void set_recv_cache(size_t size) { m_mgr->set_recv_cache(m_token, size); }
-    void set_timeout(int duration) { m_mgr->set_timeout(m_token, duration); }
+    void set_send_cache(size_t size) { m_mgr.set_send_cache(m_token, size); }
+    void set_recv_cache(size_t size) { m_mgr.set_recv_cache(m_token, size); }
+    void set_timeout(int duration) { m_mgr.set_timeout(m_token, duration); }
 
 private:
     void on_recv(char* data, size_t data_len);
@@ -71,7 +71,7 @@ private:
     uint32_t m_token = 0;
     lua_State* m_lvm = nullptr;
     std::string m_ip;
-    std::shared_ptr<socket_mgr> m_mgr;
+    socket_mgr m_mgr;
     std::shared_ptr<lua_archiver> m_archiver;
     std::shared_ptr<io_buffer> m_ar_buffer;
     std::shared_ptr<io_buffer> m_lz_buffer;
