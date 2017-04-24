@@ -40,19 +40,13 @@ luna同时支持Windows, Linux, macOS三平台,但是编译器必须支持C++14.
 - import为每个文件创建了一个沙盒环境,这使得各个文件中的变量名不会冲突.
 - 在需要的地方,用户还可以继续使用require.
 - 多次import同一个文件,实际上只会加重一次,import返回的是文件的环境表.
-- 通过import加载的文件会定期的检查文件时间戳,如发生修改,则会自动热加载.
+- import的文件,可以通过定期调用`luna.try_reload()`来检查文件时间戳,如发生修改,则会自动热加载.
 
 ## 启停控制
 
-#### 启动
-程序启动后,默认会调用全局函数'luna\_entry':
-```lua
-function luna_entry(entry_file)
-    --在这里import命令行指定的entry_file
-    --然后循环调用entry_file中的on_loop函数,并定期(3秒)检查文件热加载
-    --on_loop函数内部应该自己处理sleep之类的,以免CPU占用过高
-end
-```
+#### 启动与退出
+程序启动后,默认会调用全局函数入口文件中的main函数,参见示例.
+如果程序收到退出信号,则代码中可以通过函数luna.get_guit_signal()获取.
 
 #### 停止
 收到信号时,会调用全局函数'on\_quit\_signal',默认会在其中设置退出标志'luna\_quit\_flag'.  
