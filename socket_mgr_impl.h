@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <unordered_map>
 #include <string>
+#include <vector>
 #include <thread>
 #include <mutex>
 #include "socket_helper.h"
