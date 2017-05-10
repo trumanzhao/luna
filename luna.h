@@ -355,13 +355,13 @@ int lua_member_new_index(lua_State* L)
 template<typename T>
 struct has_member_gc
 {
-    template<typename U> static auto check(int) -> decltype(std::declval<U>().gc(), std::true_type());
+    template<typename U> static auto check(int) -> decltype(std::declval<U>().__gc(), std::true_type());
     template<typename U> static std::false_type check(...);
     enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
 };
 
 template <class T>
-typename std::enable_if<has_member_gc<T>::value, void>::type lua_handle_gc(T* obj) { obj->gc(); }
+typename std::enable_if<has_member_gc<T>::value, void>::type lua_handle_gc(T* obj) { obj->__gc(); }
 
 template <class T>
 typename std::enable_if<!has_member_gc<T>::value, void>::type lua_handle_gc(T* obj) { delete obj; }
@@ -410,38 +410,59 @@ void lua_register_class(lua_State* L, T* obj)
     lua_settop(L, top);
 }
 
-
 template <typename T>
 void lua_push_object(lua_State* L, T obj)
 {
     // 禁止将对象的父类指针push到lua中去,以免造成指针转换的低级错误(在lua_push_object时).
     // 如果自信不会犯这种错误,并且懒得写final,可以将下一行注释掉:)
     static_assert(std::is_final<typename std::remove_pointer<T>::type>::value, "T should be declared final !");
-
     if (obj == nullptr)
     {
         lua_pushnil(L);
         return;
     }
 
-    if (lua_getglobal(L, "export") != LUA_TFUNCTION)
-    {
-        lua_pop(L, 1);
-        lua_pushnil(L);
-        return;
-    }
+	lua_getfield(L, LUA_REGISTRYINDEX, "__objects__");
+	if (lua_isnil(L, -1))
+	{
+		lua_pop(L, 1);
+		lua_newtable(L);
 
-    lua_pushlightuserdata(L, obj);
+		lua_newtable(L);
+		lua_pushstring(L, "v");
+		lua_setfield(L, -2, "__mode");
+		lua_setmetatable(L, -2);
 
-    const char* meta_name = obj->lua_get_meta_name();
-    luaL_getmetatable(L, meta_name);
-    if (lua_isnil(L, -1))
-    {
-        lua_remove(L, -1);
-        lua_register_class(L, obj);
-        luaL_getmetatable(L, meta_name);
-    }
-    lua_pcall(L, 2, 1, -3);
+		lua_pushvalue(L, -1);
+		lua_setfield(L, LUA_REGISTRYINDEX, "__objects__");
+	}
+
+	// stack: __objects__
+	if (lua_rawgetp(L, -1, obj) != LUA_TTABLE)
+	{
+		lua_pop(L, 1);
+
+		lua_newtable(L);
+		lua_pushstring(L, "__pointer__");
+		lua_pushlightuserdata(L, obj);
+		lua_rawset(L, -3);
+
+		// stack: __objects__, tab
+		const char* meta_name = obj->lua_get_meta_name();
+		luaL_getmetatable(L, meta_name);
+		if (lua_isnil(L, -1))
+		{
+			lua_remove(L, -1);
+			lua_register_class(L, obj);
+			luaL_getmetatable(L, meta_name);
+		}
+		lua_setmetatable(L, -2);
+
+		// stack: __objects__, tab
+		lua_pushvalue(L, -1);
+		lua_rawsetp(L, -3, obj);
+	}
+	lua_remove(L, -2);
 }
 
 template<typename T>
@@ -642,7 +663,5 @@ public:
     lua_guard(lua_State* L) : m_lvm(L) { m_top = lua_gettop(L); }
     ~lua_guard() { lua_settop(m_lvm, m_top); }
 };
-
-bool luna_setup(lua_State* L);
 
 

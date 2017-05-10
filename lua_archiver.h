@@ -7,13 +7,17 @@
 
 #include <vector>
 
-struct lua_archiver
+class lua_archiver
 {
-    lua_archiver() {}
-    ~lua_archiver() {}
+public:
+	lua_archiver(size_t size);
+	~lua_archiver();
 
-    bool save(size_t* data_len, BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last);
-    bool load(int* param_count, lua_State* L, BYTE* data, size_t data_len);
+	void set_buffer_size(size_t size);
+	void set_lz_threshold(size_t size) { m_lz_threshold = size; }
+
+	void* save(size_t* data_len, lua_State* L, int first, int last);
+	bool load(int* param_count, lua_State* L, void* data, size_t data_len);
 
 private:
     bool save_value(lua_State* L, int idx);
@@ -27,10 +31,14 @@ private:
     bool load_value(lua_State* L);
 
 private:
-    BYTE* m_begin = nullptr;
-    BYTE* m_pos = nullptr;
-    BYTE* m_end = nullptr;
+    unsigned char* m_begin = nullptr;
+    unsigned char* m_pos = nullptr;
+    unsigned char* m_end = nullptr;
     int m_table_depth = 0;
     std::vector<const char*> m_shared_string;
     std::vector<size_t> m_shared_strlen;
+	unsigned char* m_ar_buffer = nullptr;
+	unsigned char* m_lz_buffer = nullptr;
+	size_t m_buffer_size;
+	size_t m_lz_threshold;
 };

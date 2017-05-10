@@ -7,9 +7,10 @@
 #include <string.h>
 #include <algorithm>
 #include "lua/lua.hpp"
-#include "tools.h"
+#include "lz4/lz4.h"
 #include "lua_archiver.h"
 #include "var_int.h"
+
 
 enum class ar_type
 {
@@ -31,48 +32,103 @@ static const int max_table_depth = 16;
 
 static int normal_index(lua_State* L, int idx) { return idx >= 0 ? idx : lua_gettop(L) + idx + 1; }
 
-bool lua_archiver::save(size_t* data_len, BYTE* buffer, size_t buffer_size, lua_State* L, int first, int last)
+lua_archiver::lua_archiver(size_t size)
 {
-    m_begin = buffer;
-    m_pos = m_begin;
-    m_end = m_begin+ buffer_size;
-    m_table_depth = 0;
-    m_shared_string.clear();
-    m_shared_strlen.clear();
-
-    first = normal_index(L, first);
-    last = normal_index(L, last);
-
-    for (int i = first; i <= last; i++)
-    {
-        if (!save_value(L, i))
-            return false;
-    }
-
-    *data_len = (size_t)(m_pos - m_begin);
-    return true;
+	m_buffer_size = size;
+	m_lz_threshold = size;
+	m_ar_buffer = new unsigned char[m_buffer_size];
+	m_lz_buffer = new unsigned char[m_buffer_size];
 }
 
-bool lua_archiver::load(int* param_count, lua_State* L, BYTE* data, size_t data_len)
+lua_archiver::~lua_archiver()
 {
-    m_pos = data;
-    m_end = data + data_len;
-    m_shared_string.clear();
-    m_shared_strlen.clear();
+	delete[] m_ar_buffer;
+	delete[] m_lz_buffer;
+}
 
-    int count = 0;
-    int top = lua_gettop(L);
-    while (m_pos < m_end)
-    {
-        if (!load_value(L))
-        {
-            lua_settop(L, top);
-            return false;
-        }
-        count++;
-    }
-    *param_count = count;
-    return true;
+void lua_archiver::set_buffer_size(size_t size)
+{
+	if (size > 0)
+	{
+		delete[] m_ar_buffer;
+		m_ar_buffer = new unsigned char[size];
+		delete[] m_lz_buffer;
+		m_lz_buffer = new unsigned char[size];
+		m_buffer_size = size;
+	}
+}
+
+void* lua_archiver::save(size_t* data_len, lua_State* L, int first, int last)
+{
+	*m_ar_buffer = 'x';
+	m_begin = m_ar_buffer;
+	m_end = m_ar_buffer + m_buffer_size;
+	m_pos = m_begin + 1;
+	m_table_depth = 0;
+	m_shared_string.clear();
+	m_shared_strlen.clear();
+
+	for (int i = first; i <= last; i++)
+	{
+		if (!save_value(L, i))
+			return nullptr;
+	}
+
+	*data_len = (size_t)(m_pos - m_begin);
+
+	if (*data_len >= m_lz_threshold && m_buffer_size < 1 + LZ4_COMPRESSBOUND(*data_len))
+	{
+		*m_lz_buffer = 'z';
+		int len = LZ4_compress_default((const char*)m_begin + 1, (char*)m_lz_buffer + 1, (int)*data_len, (int)m_buffer_size - 1);
+		if (len <= 0)
+			return nullptr;
+		*data_len = 1 + len;
+		return m_lz_buffer;
+	}
+
+	return m_begin;
+}
+
+bool lua_archiver::load(int* param_count, lua_State* L, void* data, size_t data_len)
+{
+	if (data_len == 0)
+		return false;
+
+	m_pos = (unsigned char*)data;
+	m_end = (unsigned char*)data + data_len;
+
+	if (*m_pos == 'z')
+	{
+		m_pos++;
+		int len = LZ4_decompress_safe((const char*)m_pos, (char*)m_lz_buffer, (int)data_len - 1, (int)m_buffer_size);
+		if (len <= 0)
+			return false;
+		m_pos = m_lz_buffer;
+		m_end = m_lz_buffer + len;
+	}
+	else
+	{
+		if (*m_pos != 'x')
+			return false;
+		m_pos++;
+	}
+
+	m_shared_string.clear();
+	m_shared_strlen.clear();
+
+	int count = 0;
+	int top = lua_gettop(L);
+	while (m_pos < m_end)
+	{
+		if (!load_value(L))
+		{
+			lua_settop(L, top);
+			return false;
+		}
+		count++;
+	}
+	*param_count = count;
+	return true;
 }
 
 bool lua_archiver::save_value(lua_State* L, int idx)
@@ -103,9 +159,9 @@ bool lua_archiver::save_value(lua_State* L, int idx)
 
 bool lua_archiver::save_number(double v)
 {
-    if (m_end - m_pos < sizeof(BYTE) + sizeof(double))
+    if (m_end - m_pos < sizeof(unsigned char) + sizeof(double))
         return false;
-    *m_pos++ = (BYTE)ar_type::number;
+    *m_pos++ = (unsigned char)ar_type::number;
     memcpy(m_pos, &v, sizeof(double));
     m_pos += sizeof(double);
     return true;
@@ -115,9 +171,9 @@ bool lua_archiver::save_integer(int64_t v)
 {
     if (v >= 0 && v <= small_int_max)
     {
-        if (m_end - m_pos < sizeof(BYTE))
+        if (m_end - m_pos < sizeof(unsigned char))
             return false;
-        *m_pos++ = (BYTE)(v + (int)ar_type::count);
+        *m_pos++ = (unsigned char)(v + (int)ar_type::count);
         return true;
     }
 
@@ -126,9 +182,9 @@ bool lua_archiver::save_integer(int64_t v)
         v -= small_int_max;
     }
 
-    if (m_end - m_pos < sizeof(BYTE))
+    if (m_end - m_pos < sizeof(unsigned char))
         return false;
-    *m_pos++ = (BYTE)ar_type::integer;
+    *m_pos++ = (unsigned char)ar_type::integer;
     size_t len = encode_s64(m_pos, (size_t)(m_end - m_pos), v);
     m_pos += len;
     return len > 0;
@@ -136,29 +192,29 @@ bool lua_archiver::save_integer(int64_t v)
 
 bool lua_archiver::save_bool(bool v)
 {
-    if (m_end - m_pos < sizeof(BYTE))
+    if (m_end - m_pos < sizeof(unsigned char))
         return false;
-    *m_pos++ = (BYTE)(v ? ar_type::bool_true : ar_type::bool_false);
+    *m_pos++ = (unsigned char)(v ? ar_type::bool_true : ar_type::bool_false);
     return true;
 }
 
 bool lua_archiver::save_nill()
 {
-    if (m_end - m_pos < sizeof(BYTE))
+    if (m_end - m_pos < sizeof(unsigned char))
         return false;
-    *m_pos++ = (BYTE)ar_type::nill;
+    *m_pos++ = (unsigned char)ar_type::nill;
     return true;
 }
 
 bool lua_archiver::save_table(lua_State* L, int idx)
 {
-    if (m_end - m_pos < (ptrdiff_t)sizeof(BYTE))
+    if (m_end - m_pos < (ptrdiff_t)sizeof(unsigned char))
         return false;
 
     if (++m_table_depth > max_table_depth)
         return false;
 
-    *m_pos++ = (BYTE)ar_type::table_head;
+    *m_pos++ = (unsigned char)ar_type::table_head;
     idx = normal_index(L, idx);
 
     lua_pushnil(L);
@@ -171,10 +227,10 @@ bool lua_archiver::save_table(lua_State* L, int idx)
 
     --m_table_depth;
 
-    if (m_end - m_pos < (ptrdiff_t)sizeof(BYTE))
+    if (m_end - m_pos < (ptrdiff_t)sizeof(unsigned char))
         return false;
 
-    *m_pos++ = (BYTE)ar_type::table_tail;
+    *m_pos++ = (unsigned char)ar_type::table_tail;
     return true;
 }
 
@@ -185,17 +241,17 @@ bool lua_archiver::save_string(lua_State* L, int idx)
     int shared = find_shared_str(str);
     if (shared >= 0)
     {
-        if (m_end - m_pos < sizeof(BYTE))
+        if (m_end - m_pos < sizeof(unsigned char))
             return false;
-        *m_pos++ = (BYTE)ar_type::string_idx;
+        *m_pos++ = (unsigned char)ar_type::string_idx;
         encode_len = encode_u64(m_pos, (size_t)(m_end - m_pos), shared);
         m_pos += encode_len;
         return encode_len > 0;
     }
 
-    if (m_end - m_pos < sizeof(BYTE))
+    if (m_end - m_pos < sizeof(unsigned char))
         return false;
-    *m_pos++ = (BYTE)ar_type::string;
+    *m_pos++ = (unsigned char)ar_type::string;
 
     encode_len = encode_u64(m_pos, (size_t)(m_end - m_pos), len);
     if (encode_len == 0)
@@ -225,7 +281,7 @@ int lua_archiver::find_shared_str(const char* str)
 
 bool lua_archiver::load_value(lua_State* L)
 {
-    if (m_end - m_pos < (ptrdiff_t)sizeof(BYTE))
+    if (m_end - m_pos < (ptrdiff_t)sizeof(unsigned char))
         return false;
 
     int code = *m_pos++;
@@ -299,7 +355,7 @@ bool lua_archiver::load_value(lua_State* L)
         lua_newtable(L);
         while (m_pos < m_end)
         {
-            if (*m_pos == (BYTE)ar_type::table_tail)
+            if (*m_pos == (unsigned char)ar_type::table_tail)
             {
                 m_pos++;
                 return true;
