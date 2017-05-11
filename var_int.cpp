@@ -2,7 +2,7 @@
 ** repository: https://github.com/trumanzhao/luna
 ** trumanzhao, 2016/10/19, trumanzhao@foxmail.com
 */
-
+#include <stddef.h>
 #include <stdint.h>
 #include "var_int.h"
 

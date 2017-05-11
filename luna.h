@@ -657,11 +657,15 @@ inline bool lua_call_global_function(lua_State* L, const char function[]) { retu
 
 class lua_guard
 {
-    int m_top = 0;
-    lua_State* m_lvm = nullptr;
 public:
     lua_guard(lua_State* L) : m_lvm(L) { m_top = lua_gettop(L); }
     ~lua_guard() { lua_settop(m_lvm, m_top); }
+    lua_guard(const lua_guard& other) = delete;
+    lua_guard(lua_guard&& other) = delete;
+    lua_guard& operator =(const lua_guard&) = delete;
+private:
+    int m_top = 0;
+    lua_State* m_lvm = nullptr;
 };
 
 
