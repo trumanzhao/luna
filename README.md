@@ -74,11 +74,21 @@ EXPORT_CLASS_END()
 
 ### 关于C++导出对象的生存期问题
 
-注意,对象一旦被push进入lua,那么C++层面就不能随便删除它了.
-绑定到lua中的C++对象,将会在lua影子对象gc时,自动delete.
-如果这个对象在gc时不能调用delete,请在对象中实现gc方法: void gc();
-这时gc将调用该函数,而不会直接delete对象.
+注意,C++对象一旦被push进入lua,其生命其就交给lua的gc管理了,C++层面不能随便删除.
+这些lua托管的对象在gc时,会默认调用delete,如果不希望调用delete,可以在对象中实现自定义gc方法: `void __gc()`
 
+``` c++
+class my_class final
+{
+	// ...
+public:
+	DECLARE_LUA_CLASS(my_class);	
+	void __gc()
+	{
+		// lua gc时,如果存在本函数,那么会调用本函数取代默认的delete
+	}
+};
+```
 
 ## lua中访问导出对象
 
