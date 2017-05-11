@@ -42,13 +42,13 @@ lua_register_function(L, func_c);
 ``` c++
 class my_class final
 {
-	// ... other code ...
-	int func_a(const char* a, int b);
-	int func_b(some_class_t* a, int b);
+    // ... other code ...
+    int func_a(const char* a, int b);
+    int func_b(some_class_t* a, int b);
     char m_name[32];
 public:
     // 插入导出声明:
-	DECLARE_LUA_CLASS(my_class);
+    DECLARE_LUA_CLASS(my_class);
 };
 ```
 
@@ -81,13 +81,13 @@ EXPORT_CLASS_END()
 ``` c++
 class my_class final
 {
-	// ...
+    // ...
 public:
-	DECLARE_LUA_CLASS(my_class);	
-	void __gc()
-	{
-		// lua gc时,如果存在本函数,那么会调用本函数取代默认的delete
-	}
+    DECLARE_LUA_CLASS(my_class);	
+    void __gc()
+    {
+        // lua gc时,如果存在本函数,那么会调用本函数取代默认的delete
+    }
 };
 ```
 
@@ -120,7 +120,7 @@ obj.name = "new name";
 
 ``` lua
 function s2s.some_func(a, b)
-  	return a + b, a - b;
+    return a + b, a - b;
 end
 ```
 
