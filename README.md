@@ -42,13 +42,13 @@ lua_register_function(L, func_c);
 ``` c++
 class my_class final
 {
-	// ... other code ...
-	int func_a(const char* a, int b);
-	int func_b(some_class_t* a, int b);
+    // ... other code ...
+    int func_a(const char* a, int b);
+    int func_b(some_class_t* a, int b);
     char m_name[32];
 public:
     // 插入导出声明:
-	DECLARE_LUA_CLASS(my_class);
+    DECLARE_LUA_CLASS(my_class);
 };
 ```
 
@@ -74,19 +74,20 @@ EXPORT_CLASS_END()
 
 ### 关于C++导出对象的生存期问题
 
-注意,C++对象一旦被push进入lua,其生命其就交给lua的gc管理了,C++层面不能随便删除.
-这些lua托管的对象在gc时,会默认调用delete,如果不希望调用delete,可以在对象中实现自定义gc方法: `void __gc()`
+注意,C++对象一旦被push进入lua,其生命期就交给lua的gc管理了,C++层面不能随便删除.
+这些lua托管的对象在gc时,会默认调用delete,如果不希望调用delete,可以在对象中实现自定义gc方法: `void __gc()`.  
+另外,由于lua的gc回收资源总是具有一定延迟的,所以如果C++对象持有较多的资源的话,最好显示释放资源或者在lua层面显示的调用gc.
 
 ``` c++
 class my_class final
 {
-	// ...
+    // ...
 public:
-	DECLARE_LUA_CLASS(my_class);	
-	void __gc()
-	{
-		// lua gc时,如果存在本函数,那么会调用本函数取代默认的delete
-	}
+    DECLARE_LUA_CLASS(my_class);	
+    void __gc()
+    {
+        // lua gc时,如果存在本函数,那么会调用本函数取代默认的delete
+    }
 };
 ```
 
@@ -119,7 +120,7 @@ obj.name = "new name";
 
 ``` lua
 function s2s.some_func(a, b)
-  	return a + b, a - b;
+    return a + b, a - b;
 end
 ```
 
