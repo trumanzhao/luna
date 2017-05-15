@@ -120,19 +120,21 @@ obj.name = "new name";
 
 ``` lua
 function s2s.some_func(a, b)
-    return a + b, a - b;
+    return a + b, a - b, "tom";
 end
 ```
 
-上面的lua函数返回两个值,那么,可以在C++中这样调用:
+上面的lua函数返回三个值,那么,可以在C++中这样调用:
 
 ```cpp
-int x, y; // 用于接收返回值
-lua_guard g(L);
-lua_call_table_function(L, "s2s", "test.lua", "some_func", std::tie(x, y), 11, 2);
+lua_guard g(L); //用它来做栈保护
+int x, y;
+const char* name = nullptr; 
+// 小心,如果用char*做字符串返回值的话,确保name变量不要在lua_guard g的作用域之外使用
+lua_call_table_function(L, "s2s", "test.lua", "some_func", std::tie(x, y, name), 11, 2);
 ```
 
-注意上面这里的lua_guard,这里它来做栈保护,它实际上做的事情是:
+注意上面的lua_guard,它实际上做的事情是:
 
 1. 在构造时调用`lua_gettop`保存栈.
 2. 析构时调用`lua_settop`恢复栈.
@@ -149,6 +151,3 @@ lua_call_table_function(L, "s2s", "some_func", std::tie(), a, b, c);
 ```cpp
 lua_call_table_function(L, "s2s", "some_func");
 ```
-
-
-
