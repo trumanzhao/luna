@@ -127,34 +127,27 @@ end
 上面的lua函数返回两个值,那么,可以在C++中这样调用:
 
 ```cpp
-int x, y;
+int x, y; // 用于接收返回值
 lua_guard g(L);
-// x,y用于接收返回值
 lua_call_table_function(L, "s2s", "test.lua", "some_func", std::tie(x, y), 11, 2);
 ```
 
-注意上面这里的lua_guard,所有从C++调用Lua的地方,都需要通过它来做栈保护.
-请注意它的生存期,它实际上做的事情是:
+注意上面这里的lua_guard,这里它来做栈保护,它实际上做的事情是:
 
-1. 在构造是调用`lua_gettop`保存栈.
+1. 在构造时调用`lua_gettop`保存栈.
 2. 析构时调用`lua_settop`恢复栈.
 
 
-如果lua函数无返回值,也无参数,那么会比较简单:
+如果C++层面不需要返回值,那么也可以不使用lua_guard:
 
 ```cpp
-lua_guard g(L);
-lua_call_table_function(L, "s2s", "some_func");
-```
-
-下面是lua函数无返回, 有a,b,c三个参数的情况:
-
-```cpp
-lua_guard g(L);
-int a;
-char* b;
-std::string c;
+// 注意这里由于需要传入abc三个参数,所以需要写一个std::tie()表示没有返回参数
 lua_call_table_function(L, "s2s", "some_func", std::tie(), a, b, c);
+```
+如果没有参数,也没有返回值,那就是最简单的写法了:
+
+```cpp
+lua_call_table_function(L, "s2s", "some_func");
 ```
 
 
