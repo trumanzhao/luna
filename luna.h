@@ -622,7 +622,7 @@ bool lua_call_table_function(lua_State* L, const char table[], const char functi
     if (!lua_get_table_function(L, table, function))
         return false;
 
-    int _0[] = { 0, (native_to_lua(L, args), 0)... };
+    int _[] = { 0, (native_to_lua(L, args), 0)... };
     constexpr int ret_count = sizeof...(ret_types);
     if (!lua_call_function(L, sizeof...(arg_types), ret_count))
         return false;
@@ -637,7 +637,7 @@ bool lua_call_object_function(lua_State* L, T* o, const char function[], std::tu
     if (!lua_get_object_function(L, o, function))
         return false;
 
-    int _0[] = { 0, (native_to_lua(L, args), 0)... };
+    int _[] = { 0, (native_to_lua(L, args), 0)... };
     constexpr int ret_count = sizeof...(ret_types);
     if (!lua_call_function(L, sizeof...(arg_types), ret_count))
         return false;
@@ -652,7 +652,7 @@ bool lua_call_global_function(lua_State* L, const char function[], std::tuple<re
     if (lua_getglobal(L, function) != LUA_TFUNCTION || !lua_isfunction(L, -1))
         return false;
 
-    int _0[] = { 0, (native_to_lua(L, args), 0)... };
+    int _[] = { 0, (native_to_lua(L, args), 0)... };
     constexpr int ret_count = sizeof...(ret_types);
     if (!lua_call_function(L, sizeof...(arg_types), ret_count))
         return false;
