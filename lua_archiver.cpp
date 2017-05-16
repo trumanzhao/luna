@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
 #include <algorithm>
 #include "lua/lua.hpp"
 #include "lz4/lz4.h"
