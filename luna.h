@@ -611,8 +611,7 @@ bool lua_get_object_function(lua_State* L, T* object, const char function[])
 template<size_t... Integers, typename... var_types>
 void lua_to_native_mutil(lua_State* L, std::tuple<var_types&...>& vars, std::index_sequence<Integers...>&&)
 {
-    constexpr int ret_count = sizeof...(Integers);
-    int _[] = { 0, (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - ret_count), 0)... };
+    int _[] = { 0, (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - sizeof...(Integers)), 0)... };
 }
 
 bool lua_call_function(std::string& err, lua_State* L, int arg_count, int ret_count);
@@ -621,10 +620,9 @@ template <typename... ret_types, typename... arg_types>
 bool lua_call_function(std::string& err, lua_State* L, std::tuple<ret_types&...>&& rets, arg_types... args)
 {
     int _[] = { 0, (native_to_lua(L, args), 0)... };
-    constexpr int ret_count = sizeof...(ret_types);
-    if (!lua_call_function(err, L, sizeof...(arg_types), ret_count))
+    if (!lua_call_function(err, L, sizeof...(arg_types), sizeof...(ret_types)))
         return false;
-    lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
+    lua_to_native_mutil(L, rets, std::make_index_sequence<sizeof...(ret_types)>());
     return true;
 }
 
@@ -633,10 +631,9 @@ bool lua_call_table_function(std::string& err, lua_State* L, const char table[],
 {
     lua_get_table_function(L, table, function);
     int _[] = { 0, (native_to_lua(L, args), 0)... };
-    constexpr int ret_count = sizeof...(ret_types);
-    if (!lua_call_function(err, L, sizeof...(arg_types), ret_count))
+    if (!lua_call_function(err, L, sizeof...(arg_types), sizeof...(ret_types)))
         return false;
-    lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
+    lua_to_native_mutil(L, rets, std::make_index_sequence<sizeof...(ret_types)>());
     return true;
 }
 
@@ -645,10 +642,9 @@ bool lua_call_object_function(std::string& err, lua_State* L, T* o, const char f
 {
     lua_get_object_function(L, o, function);
     int _[] = { 0, (native_to_lua(L, args), 0)... };
-    constexpr int ret_count = sizeof...(ret_types);
-    if (!lua_call_function(err, L, sizeof...(arg_types), ret_count))
+    if (!lua_call_function(err, L, sizeof...(arg_types), sizeof...(ret_types)))
         return false;
-    lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
+    lua_to_native_mutil(L, rets, std::make_index_sequence<sizeof...(ret_types)>());
     return true;
 }
 
@@ -657,10 +653,9 @@ bool lua_call_global_function(std::string& err, lua_State* L, const char functio
 {
     lua_getglobal(L, function);
     int _[] = { 0, (native_to_lua(L, args), 0)... };
-    constexpr int ret_count = sizeof...(ret_types);
-    if (!lua_call_function(err, L, sizeof...(arg_types), ret_count))
+    if (!lua_call_function(err, L, sizeof...(arg_types), sizeof...(ret_types)))
         return false;
-    lua_to_native_mutil(L, rets, std::make_index_sequence<ret_count>());
+    lua_to_native_mutil(L, rets, std::make_index_sequence<sizeof...(ret_types)>());
     return true;
 }
 
