@@ -598,11 +598,22 @@ inline bool lua_get_global_function(lua_State* L, const char function[])
 bool lua_get_table_function(lua_State* L, const char table[], const char function[]);
 
 template <typename T>
+void lua_set_table_function(lua_State* L, int idx, const char name[], T func)
+{
+    if (idx < 0)
+    {
+        idx = lua_gettop(L) + idx + 1;
+    }
+    lua_push_function(L, func);
+    lua_setfield(L, idx, name);
+}
+
+template <typename T>
 bool lua_get_object_function(lua_State* L, T* object, const char function[])
 {
     lua_push_object(L, object);
-	if (!lua_istable(L, -1))
-		return false;
+    if (!lua_istable(L, -1))
+        return false;
     lua_getfield(L, -1, function);
     lua_remove(L, -2);
     return lua_isfunction(L, -1);
