@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <algorithm>
-#include "lua/lua.hpp"
+#include "lua.hpp"
 #include "lz4/lz4.h"
 #include "lua_archiver.h"
 #include "var_int.h"

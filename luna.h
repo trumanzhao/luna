@@ -13,7 +13,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include "lua/lua.hpp"
+#include "lua.hpp"
 
 template <typename T> void lua_push_object(lua_State* L, T obj);
 template <typename T> T lua_to_object(lua_State* L, int idx);
