@@ -8,16 +8,17 @@ luna库提供了几个lua开发的常见辅助功能:
 - 变长整数编码,这个是用于支持lua序列化的,但也可以方便的用于其他场合
 
 由于代码量本身很少,所以并没有做成静态/动态库,如有需要直接将代码添加到工程即可.
-注意lua_archiver引用了lz4库用于数据压缩,需要自行添加lz4库(lz4.h+lz4.c).
+注意lua\_archiver引用了lz4库用于数据压缩,需要自行添加lz4库(lz4.h+lz4.c).
 
 lua/c++绑定库(luna.h, luna.cpp)支持Windows, Linux, macOS三平台,但是编译器必须支持C++14.  
+如果编译器仅仅支持到C++11,可以用luna11.h替换luna.h.
 之所以实现这个lua/c++绑定,是出于以下的想法:
 - 希望所有事情在c++代码中就搞定,不希望额外再运行一个什么转换处理工具
 - 希望能够方便的导出一般C++函数,而不必写一大堆lua api调用代码
 - 希望能简单的处理导出对象的生命期
 - 希望能方便的在lua代码中对导出对象进行扩展,重载等
 - 希望使用尽可能简单,无需对luna库本身做任何初始化
-- 希望执行时无副作用,即没有全局或静态的数据,进程中存在多个lua_State时不会相互干扰
+- 希望执行时无副作用,即没有全局或静态的数据,进程中存在多个lua\_State时不会相互干扰
 
 ## C++导出全局函数
 
@@ -39,7 +40,7 @@ lua_register_function(L, func_c);
 
 首先需要在你得类声明中插入导出声明:
 
-``` c++
+```cpp
 class my_class final
 {
     // ... other code ...
@@ -134,13 +135,10 @@ const char* name = nullptr;
 lua_call_table_function(L, "s2s", "test.lua", "some_func", std::tie(x, y, name), 11, 2);
 ```
 
-注意上面的lua_guard,它实际上做的事情是:
+注意上面的lua\_guard,它实际上做的事情是:
 
 1. 在构造时调用`lua_gettop`保存栈.
 2. 析构时调用`lua_settop`恢复栈.
-
-
-如果C++层面不需要返回值,那么也可以不使用lua_guard:
 
 ```cpp
 // 注意这里由于需要传入abc三个参数,所以需要写一个std::tie()表示没有返回参数
