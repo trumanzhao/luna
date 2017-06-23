@@ -57,6 +57,7 @@ inline void native_to_lua(lua_State* L, unsigned long long v) { lua_pushinteger(
 inline void native_to_lua(lua_State* L, float v) { lua_pushnumber(L, v); }
 inline void native_to_lua(lua_State* L, double v) { lua_pushnumber(L, v); }
 inline void native_to_lua(lua_State* L, const char* v) { lua_pushstring(L, v); }
+inline void native_to_lua(lua_State* L, char* v) { lua_pushstring(L, v); }
 inline void native_to_lua(lua_State* L, const std::string& v) { lua_pushstring(L, v.c_str()); }
 
 using lua_global_function = std::function<int(lua_State*)>;
