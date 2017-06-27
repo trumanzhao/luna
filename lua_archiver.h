@@ -12,7 +12,7 @@ class lua_archiver
 public:
     lua_archiver(size_t size);
     lua_archiver(size_t size, size_t lz_size);
-    ~lua_archiver();
+    virtual ~lua_archiver();
 
     void set_buffer_size(size_t size);
     void set_lz_threshold(size_t size) { m_lz_threshold = size; }
