@@ -57,6 +57,7 @@ inline void native_to_lua(lua_State* L, unsigned long long v) { lua_pushinteger(
 inline void native_to_lua(lua_State* L, float v) { lua_pushnumber(L, v); }
 inline void native_to_lua(lua_State* L, double v) { lua_pushnumber(L, v); }
 inline void native_to_lua(lua_State* L, const char* v) { lua_pushstring(L, v); }
+inline void native_to_lua(lua_State* L, char* v) { lua_pushstring(L, v); }
 inline void native_to_lua(lua_State* L, const std::string& v) { lua_pushstring(L, v.c_str()); }
 
 using lua_global_function = std::function<int(lua_State*)>;
@@ -386,10 +387,7 @@ int lua_object_gc(lua_State* L)
 {
     T* obj = lua_to_object<T*>(L, 1);
     if (obj == nullptr)
-    {
-        perror("__gc error: nullptr !");
         return 0;
-    }
     lua_handle_gc(obj);
     return 0;
 }
@@ -476,11 +474,41 @@ void lua_push_object(lua_State* L, T obj)
         }
         lua_setmetatable(L, -2);
 
-        // stack: __objects__, tab
-        lua_pushvalue(L, -1);
-        lua_rawsetp(L, -3, obj);
-    }
-    lua_remove(L, -2);
+		// stack: __objects__, tab
+		lua_pushvalue(L, -1);
+		lua_rawsetp(L, -3, obj);
+	}
+	lua_remove(L, -2);
+}
+
+template <typename T>
+void lua_unref_object(lua_State* L, T obj)
+{
+    if (obj == nullptr)
+        return;
+
+    lua_getfield(L, LUA_REGISTRYINDEX, "__objects__");
+	if (!lua_istable(L, -1))
+	{
+		lua_pop(L, 1);
+		return;
+	}
+
+    // stack: __objects__
+    if (lua_rawgetp(L, -1, obj) != LUA_TTABLE)
+	{
+		lua_pop(L, 2);
+		return;
+	}
+
+	// stack: __objects__, __shadow_object__
+    lua_pushstring(L, "__pointer__");
+    lua_pushnil(L);
+    lua_rawset(L, -3);
+
+    lua_pushnil(L);
+    lua_rawsetp(L, -3, obj);
+	lua_pop(L, 2);
 }
 
 template<typename T>
@@ -496,9 +524,16 @@ T lua_to_object(lua_State* L, int idx)
 {
     static_assert(has_meta_data<typename std::remove_pointer<T>::type>::value, "T should be declared export !");
     T obj = nullptr;
+
+	if (idx < 0)
+	{
+		idx = lua_gettop(L) + idx + 1;
+	}
+
      if (lua_istable(L, idx))
      {
-         lua_getfield(L, idx, "__pointer__");
+		 lua_pushstring(L, "__pointer__");
+		 lua_rawget(L, idx);
          obj = (T)lua_touserdata(L, -1);
          lua_pop(L, 1);
      }
