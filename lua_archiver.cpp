@@ -31,8 +31,6 @@ static const int small_int_max = UCHAR_MAX - (int)ar_type::count;
 static const int max_share_string = UCHAR_MAX;
 static const int max_table_depth = 16;
 
-static int normal_index(lua_State* L, int idx) { return idx >= 0 ? idx : lua_gettop(L) + idx + 1; }
-
 lua_archiver::lua_archiver(size_t size)
 {
     m_buffer_size = size;
@@ -58,8 +56,8 @@ void lua_archiver::set_buffer_size(size_t size)
 
 void* lua_archiver::save(size_t* data_len, lua_State* L, int first, int last)
 {
-    first = normal_index(L, first);
-    last = normal_index(L, last);
+    first = lua_normal_index(L, first);
+    last = lua_normal_index(L, last);
     if (last < first || !alloc_buffer())
         return nullptr;
 
@@ -246,7 +244,7 @@ bool lua_archiver::save_table(lua_State* L, int idx)
         return false;
 
     *m_pos++ = (unsigned char)ar_type::table_head;
-    idx = normal_index(L, idx);
+    idx = lua_normal_index(L, idx);
 
     lua_pushnil(L);
     while (lua_next(L, idx))

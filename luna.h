@@ -60,6 +60,14 @@ inline void native_to_lua(lua_State* L, const char* v) { lua_pushstring(L, v); }
 inline void native_to_lua(lua_State* L, char* v) { lua_pushstring(L, v); }
 inline void native_to_lua(lua_State* L, const std::string& v) { lua_pushstring(L, v.c_str()); }
 
+inline int lua_normal_index(lua_State* L, int idx)
+{
+	int top = lua_gettop(L);
+	if (idx < 0 && -idx <= top)
+		return idx + top + 1;
+	return idx;
+}
+
 using lua_global_function = std::function<int(lua_State*)>;
 using lua_object_function = std::function<int(void*, lua_State*)>;
 
@@ -405,7 +413,7 @@ void lua_register_class(lua_State* L, T* obj)
     {
         const char* name = item->name;
         // export member name "m_xxx" as "xxx"
-#if !defined(LUNA_KEEP_MEMBER_PREFIX)
+#if not defined(LUNA_KEEP_MEMBER_PREFIX)
         if (name[0] == 'm' && name[1] == '_')
             name += 2;
 #endif
@@ -518,19 +526,16 @@ T lua_to_object(lua_State* L, int idx)
     static_assert(std::is_final<typename std::remove_pointer<T>::type>::value, "T should be declared final !");
     T obj = nullptr;
 
-	if (idx < 0)
-	{
-		idx = lua_gettop(L) + idx + 1;
-	}
+	idx = lua_normal_index(L, idx);
 
-     if (lua_istable(L, idx))
-     {
-		 lua_pushstring(L, "__pointer__");
-		 lua_rawget(L, idx);
-         obj = (T)lua_touserdata(L, -1);
-         lua_pop(L, 1);
-     }
-     return obj;
+	if (lua_istable(L, idx))
+	{
+		lua_pushstring(L, "__pointer__");
+		lua_rawget(L, idx);
+		obj = (T)lua_touserdata(L, -1);
+		lua_pop(L, 1);
+	}
+	return obj;
 }
 
 #define DECLARE_LUA_CLASS(ClassName)    \
@@ -634,10 +639,7 @@ bool lua_get_table_function(lua_State* L, const char table[], const char functio
 template <typename T>
 void lua_set_table_function(lua_State* L, int idx, const char name[], T func)
 {
-    if (idx < 0)
-    {
-        idx = lua_gettop(L) + idx + 1;
-    }
+    idx = lua_normal_index(L, idx);
     lua_push_function(L, func);
     lua_setfield(L, idx, name);
 }
