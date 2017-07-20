@@ -12,7 +12,6 @@
 #include "lua_archiver.h"
 #include "var_int.h"
 
-
 enum class ar_type
 {
     nill,
@@ -38,8 +37,6 @@ static int normal_index(lua_State* L, int idx)
 		return idx + top + 1;
 	return idx;
 }
-
-
 
 lua_archiver::lua_archiver(size_t size)
 {
