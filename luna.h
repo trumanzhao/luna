@@ -413,7 +413,7 @@ void lua_register_class(lua_State* L, T* obj)
     {
         const char* name = item->name;
         // export member name "m_xxx" as "xxx"
-#if not defined(LUNA_KEEP_MEMBER_PREFIX)
+#if !defined(LUNA_KEEP_MEMBER_PREFIX)
         if (name[0] == 'm' && name[1] == '_')
             name += 2;
 #endif
