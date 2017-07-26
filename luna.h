@@ -661,54 +661,54 @@ void lua_to_native_mutil(lua_State* L, std::tuple<var_types&...>& vars, std::ind
     int _[] = { 0, (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - sizeof...(Integers)), 0)... };
 }
 
-bool lua_call_function(std::string& err, lua_State* L, int arg_count, int ret_count);
+bool lua_call_function(lua_State* L, std::string* err, int arg_count, int ret_count);
 
 template <typename... ret_types, typename... arg_types>
-bool lua_call_function(std::string& err, lua_State* L, std::tuple<ret_types&...>&& rets, arg_types... args)
+bool lua_call_function(lua_State* L, std::string* err, std::tuple<ret_types&...>&& rets, arg_types... args)
 {
     int _[] = { 0, (native_to_lua(L, args), 0)... };
-    if (!lua_call_function(err, L, sizeof...(arg_types), sizeof...(ret_types)))
+    if (!lua_call_function(L, err, sizeof...(arg_types), sizeof...(ret_types)))
         return false;
     lua_to_native_mutil(L, rets, std::make_index_sequence<sizeof...(ret_types)>());
     return true;
 }
 
 template <typename... ret_types, typename... arg_types>
-bool lua_call_table_function(std::string& err, lua_State* L, const char table[], const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
+bool lua_call_table_function(lua_State* L, std::string* err, const char table[], const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
     lua_get_table_function(L, table, function);
     int _[] = { 0, (native_to_lua(L, args), 0)... };
-    if (!lua_call_function(err, L, sizeof...(arg_types), sizeof...(ret_types)))
+    if (!lua_call_function(L, err, sizeof...(arg_types), sizeof...(ret_types)))
         return false;
     lua_to_native_mutil(L, rets, std::make_index_sequence<sizeof...(ret_types)>());
     return true;
 }
 
 template <typename T, typename... ret_types, typename... arg_types>
-bool lua_call_object_function(std::string& err, lua_State* L, T* o, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
+bool lua_call_object_function(lua_State* L, std::string* err, T* o, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
     lua_get_object_function(L, o, function);
     int _[] = { 0, (native_to_lua(L, args), 0)... };
-    if (!lua_call_function(err, L, sizeof...(arg_types), sizeof...(ret_types)))
+    if (!lua_call_function(L, err, sizeof...(arg_types), sizeof...(ret_types)))
         return false;
     lua_to_native_mutil(L, rets, std::make_index_sequence<sizeof...(ret_types)>());
     return true;
 }
 
 template <typename... ret_types, typename... arg_types>
-bool lua_call_global_function(std::string& err, lua_State* L, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
+bool lua_call_global_function(lua_State* L, std::string* err, const char function[], std::tuple<ret_types&...>&& rets, arg_types... args)
 {
     lua_getglobal(L, function);
     int _[] = { 0, (native_to_lua(L, args), 0)... };
-    if (!lua_call_function(err, L, sizeof...(arg_types), sizeof...(ret_types)))
+    if (!lua_call_function(L, err, sizeof...(arg_types), sizeof...(ret_types)))
         return false;
     lua_to_native_mutil(L, rets, std::make_index_sequence<sizeof...(ret_types)>());
     return true;
 }
 
-inline bool lua_call_table_function(std::string& err, lua_State* L, const char table[], const char function[]) { return lua_call_table_function(err, L, table, function, std::tie()); }
-template <typename T> inline bool lua_call_object_function(std::string& err, lua_State* L, T* o, const char function[]) { return lua_call_object_function(err, L, o, function, std::tie()); }
-inline bool lua_call_global_function(std::string& err, lua_State* L, const char function[]) { return lua_call_global_function(err, L, function, std::tie()); }
+inline bool lua_call_table_function(lua_State* L, std::string* err, const char table[], const char function[]) { return lua_call_table_function(L, err, table, function, std::tie()); }
+template <typename T> inline bool lua_call_object_function(lua_State* L, std::string* err, T* o, const char function[]) { return lua_call_object_function(L, err, o, function, std::tie()); }
+inline bool lua_call_global_function(lua_State* L, std::string* err, const char function[]) { return lua_call_global_function(L, err, function, std::tie()); }
 
 class lua_guard
 {

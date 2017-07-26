@@ -62,7 +62,7 @@ bool lua_get_table_function(lua_State* L, const char table[], const char functio
     return lua_isfunction(L, -1);
 }
 
-bool lua_call_function(std::string& err, lua_State* L, int arg_count, int ret_count)
+bool lua_call_function(lua_State* L, std::string* err, int arg_count, int ret_count)
 {
     int func_idx = lua_gettop(L) - arg_count;
     if (func_idx <= 0 || !lua_isfunction(L, func_idx))
@@ -75,7 +75,10 @@ bool lua_call_function(std::string& err, lua_State* L, int arg_count, int ret_co
     lua_insert(L, func_idx);
     if (lua_pcall(L, arg_count, ret_count, func_idx))
     {
-        err = lua_tostring(L, -1);
+		if (err != nullptr)
+		{
+			*err = lua_tostring(L, -1);
+		}
         return false;
     }
     lua_remove(L, -ret_count - 1); // remove 'traceback'
