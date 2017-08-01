@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <algorithm>
 #include "lua.hpp"
-#include "lz4/lz4.h"
+#include "lz4.h"
 #include "lua_archiver.h"
 #include "var_int.h"
 
