@@ -165,7 +165,7 @@ struct lua_member_item
     lua_object_function func;
 };
 
-int Lua_object_bridge(lua_State* L);
+int lua_object_bridge(lua_State* L);
 
 template <typename T>
 int lua_member_index(lua_State* L)
@@ -253,7 +253,7 @@ int lua_member_index(lua_State* L)
     case lua_member_type::member_function:
         lua_pushlightuserdata(L, obj);
         lua_pushlightuserdata(L, &item->func);
-        lua_pushcclosure(L, Lua_object_bridge, 2);
+        lua_pushcclosure(L, lua_object_bridge, 2);
         break;
 
     default:

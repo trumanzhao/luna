@@ -25,7 +25,7 @@ struct luna_function_wapper final
 EXPORT_CLASS_BEGIN(luna_function_wapper)
 EXPORT_CLASS_END()
 
-static int Lua_global_bridge(lua_State* L)
+static int lua_global_bridge(lua_State* L)
 {
     auto* wapper  = lua_to_object<luna_function_wapper*>(L, lua_upvalueindex(1));
     if (wapper != nullptr)
@@ -38,10 +38,10 @@ static int Lua_global_bridge(lua_State* L)
 void lua_push_function(lua_State* L, lua_global_function func)
 {
     lua_push_object(L, new luna_function_wapper(func));
-    lua_pushcclosure(L, Lua_global_bridge, 1);
+    lua_pushcclosure(L, lua_global_bridge, 1);
 }
 
-int Lua_object_bridge(lua_State* L)
+int lua_object_bridge(lua_State* L)
 {
     void* obj = lua_touserdata(L, lua_upvalueindex(1));
     lua_object_function* func = (lua_object_function*)lua_touserdata(L, lua_upvalueindex(2));
