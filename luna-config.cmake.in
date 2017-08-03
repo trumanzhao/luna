@@ -1,0 +1,4 @@
+include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_BINARY_DIR})
+include("${CMAKE_BINARY_DIR}/luna-exports.cmake")
+

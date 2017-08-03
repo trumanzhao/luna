@@ -20,6 +20,18 @@ lua/c++绑定库(luna.h, luna.cpp)支持Windows, Linux, macOS三平台,默认的
 - 希望使用尽可能简单,无需对luna库本身做任何初始化
 - 希望执行时无副作用,即没有全局或静态的数据,进程中存在多个lua\_State时不会相互干扰
 
+## 编译说明
+
+luna同时支持Windows, Linux, MacOS三平台,编译器必须支持C++14,需要安装cmake.  
+在编译之前，应先编译安装lua,然后:
+```sh
+cd luna
+mkdir build
+cd build
+cmake ..
+make
+```
+
 ## C\+\+导出全局函数
 
 当函数的参数以及返回值是***基本类型***或者是***已导出类***时,可以直接用`lua_register_function`导出:
