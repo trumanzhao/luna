@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 project(luna)
 aux_source_directory(src luna_src)
 aux_source_directory(lz4 lz4_src)
@@ -31,7 +31,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set(CMAKE_MACOSX_RPATH 0)
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" )
     set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 endif()
 
