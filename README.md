@@ -24,6 +24,7 @@ lua/c++绑定库(luna.h, luna.cpp)支持Windows, Linux, macOS三平台,默认的
 
 luna同时支持Windows, Linux, MacOS三平台,编译器必须支持C++14,需要安装cmake.  
 在编译之前，应先编译安装lua,然后:
+
 ```sh
 cd luna
 mkdir build
@@ -31,6 +32,10 @@ cd build
 cmake ..
 make
 ```
+
+除了编译为动态库,也可以简单的将源码复制到工程中使用,如果打算这样用,那么注意:   
+luna.h并不直接存在,而是cmake根据编译环境选取的luna14.h或者luna11.h,你可以根据自己的环境选择即可.
+
 
 ## C\+\+导出全局函数
 
