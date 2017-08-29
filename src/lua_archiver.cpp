@@ -32,10 +32,10 @@ static const int max_table_depth = 16;
 
 static int normal_index(lua_State* L, int idx)
 {
-	int top = lua_gettop(L);
-	if (idx < 0 && -idx <= top)
-		return idx + top + 1;
-	return idx;
+    int top = lua_gettop(L);
+    if (idx < 0 && -idx <= top)
+        return idx + top + 1;
+    return idx;
 }
 
 lua_archiver::lua_archiver(size_t size)
