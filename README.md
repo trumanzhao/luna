@@ -95,7 +95,7 @@ EXPORT_CLASS_END()
 注意,C++对象一旦被push进入lua,其生命期就交给lua的gc管理了,C++层面不能随便删除.
 这些lua托管的对象在gc时,会默认调用delete,如果不希望调用delete,可以在对象中实现自定义gc方法: `void __gc()`.  
 另外,由于lua的gc回收资源总是具有一定延迟的,所以如果C++对象持有较多的资源的话,最好显示释放资源或者在lua层面显示的调用gc.   
-对于已经push到lua的对象,如果想从C++解除引用,可以调用`lua_unref_object(L, object)`;   
+对于已经push到lua的对象,如果想从C++解除引用,可以调用`lua_detach(L, object)`;   
 
 ``` c++
 class my_class final
