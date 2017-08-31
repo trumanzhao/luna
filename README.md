@@ -150,7 +150,7 @@ lua_guard g(L); //用它来做栈保护
 int x, y;
 const char* name = nullptr; 
 // 小心,如果用char*做字符串返回值的话,确保name变量不要在lua_guard g的作用域之外使用
-lua_call_table_function(L, nullptr, "s2s", "test.lua", "some_func", std::tie(x, y, name), 11, 2);
+lua_call_table_function(L, nullptr, "s2s", "some_func", std::tie(x, y, name), 11, 2);
 ```
 
 注意上面的lua\_guard,它实际上做的事情是:
