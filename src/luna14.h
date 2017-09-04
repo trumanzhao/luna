@@ -368,9 +368,9 @@ int lua_member_new_index(lua_State* L)
 template<typename T>
 struct has_member_gc
 {
-    template<typename U> static auto check(int) -> decltype(std::declval<U>().__gc(), std::true_type());
-    template<typename U> static std::false_type check(...);
-    enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
+    template<typename U> static auto check_gc(int) -> decltype(std::declval<U>().__gc(), std::true_type());
+    template<typename U> static std::false_type check_gc(...);
+    enum { value = std::is_same<decltype(check_gc<T>(0)), std::true_type>::value };
 };
 
 template <class T>
@@ -514,9 +514,9 @@ void lua_detach(lua_State* L, T obj)
 template<typename T>
 struct has_meta_data
 {
-    template<typename U> static auto check(int) -> decltype(std::declval<U>().lua_get_meta_data(), std::true_type());
-    template<typename U> static std::false_type check(...);
-    enum { value = std::is_same<decltype(check<T>(0)), std::true_type>::value };
+    template<typename U> static auto check_meta(int) -> decltype(std::declval<U>().lua_get_meta_data(), std::true_type());
+    template<typename U> static std::false_type check_meta(...);
+    enum { value = std::is_same<decltype(check_meta<T>(0)), std::true_type>::value };
 };
 
 template <typename T>
