@@ -1,4 +1,4 @@
-﻿/*
+/*
 ** repository: https://github.com/trumanzhao/luna
 ** trumanzhao, 2016/10/19, trumanzhao@foxmail.com
 */
@@ -32,10 +32,10 @@ static const int max_table_depth = 16;
 
 static int normal_index(lua_State* L, int idx)
 {
-    int top = lua_gettop(L);
-    if (idx < 0 && -idx <= top)
-        return idx + top + 1;
-    return idx;
+	int top = lua_gettop(L);
+	if (idx < 0 && -idx <= top)
+		return idx + top + 1;
+	return idx;
 }
 
 lua_archiver::lua_archiver(size_t size)
@@ -253,6 +253,9 @@ bool lua_archiver::save_table(lua_State* L, int idx)
     *m_pos++ = (unsigned char)ar_type::table_head;
     idx = normal_index(L, idx);
 
+	if (!lua_checkstack(L, 1))
+        return false;
+
     lua_pushnil(L);
     while (lua_next(L, idx))
     {
@@ -317,6 +320,9 @@ int lua_archiver::find_shared_str(const char* str)
 
 bool lua_archiver::load_value(lua_State* L)
 {
+    if (!lua_checkstack(L, 1))
+        return false;
+
     if (m_end - m_pos < (ptrdiff_t)sizeof(unsigned char))
         return false;
 
