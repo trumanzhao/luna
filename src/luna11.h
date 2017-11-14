@@ -562,7 +562,7 @@ lua_member_item* ClassName::lua_get_meta_data()   \
     return s_member_list;  \
 }
 
-#define EXPORT_LUA_MEMBER(Type, Member, Name, ReadOnly)  {Name, Type, offsetof(class_type, Member), sizeof(((class_type*)nullptr)->Member), ReadOnly, nullptr},
+#define EXPORT_LUA_MEMBER(Type, Member, Name, ReadOnly)  {Name, Type, offsetof(class_type, Member), sizeof(class_type::Member), ReadOnly, nullptr},
 
 #define EXPORT_LUA_CHAR_AS(Member, Name)   EXPORT_LUA_MEMBER(lua_member_type::member_char, Member, Name, false)
 #define EXPORT_LUA_CHAR_AS_R(Member, Name)   EXPORT_LUA_MEMBER(lua_member_type::member_char, Member, Name, true)
