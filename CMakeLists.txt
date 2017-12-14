@@ -20,9 +20,9 @@ int main(int, char**) {
 }" HAVE_MAKE_SEQUENCE)
 
 if (HAVE_MAKE_SEQUENCE)
-    configure_file(${CMAKE_SOURCE_DIR}/src/luna14.h luna.h COPYONLY)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/luna14.h luna.h COPYONLY)
 else()
-    configure_file(${CMAKE_SOURCE_DIR}/src/luna11.h luna.h COPYONLY)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/luna11.h luna.h COPYONLY)
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lz4)
