@@ -20,24 +20,6 @@ size_t encode_u64(unsigned char* buffer, size_t buffer_size, uint64_t value)
     return (size_t)(pos - buffer);
 }
 
-size_t encode_s64(unsigned char* buffer, size_t buffer_size, int64_t value)
-{
-    uint64_t uValue = (uint64_t)value;
-    if (value < 0)
-    {
-        // 将符号位挪到最低位
-        uValue--;
-        uValue = ~uValue;
-        uValue <<= 1;
-        uValue |= 0x1;
-    }
-    else
-    {
-        uValue <<= 1;
-    }
-    return encode_u64(buffer, buffer_size, uValue);
-}
-
 size_t decode_u64(uint64_t* value, const unsigned char* data, size_t data_len)
 {
     auto pos = data, end = data + data_len;
@@ -60,25 +42,47 @@ size_t decode_u64(uint64_t* value, const unsigned char* data, size_t data_len)
     return (size_t)(pos - data);
 }
 
+size_t encode_s64(unsigned char* buffer, size_t buffer_size, int64_t value)
+{
+	uint64_t uvalue = (uint64_t)value;
+	if (value < 0)
+	{
+		--uvalue;
+		uvalue = ~uvalue;
+		uvalue <<= 1;
+		uvalue |= 0x1;
+	}
+	else
+	{
+		uvalue <<= 1;
+	}
+	return encode_u64(buffer, buffer_size, uvalue);
+}
+
 size_t decode_s64(int64_t* value, const unsigned char* data, size_t data_len)
 {
-    uint64_t number = 0;
-    size_t count = decode_u64(&number, data, data_len);
+    uint64_t uvalue = 0;
+    size_t count = decode_u64(&uvalue, data, data_len);
     if (count == 0)
         return 0;
 
-    if (number & 0x1)
+    if (uvalue & 0x1)
     {
-        number >>= 1;
-        number = ~number;
-        number++;
+        uvalue >>= 1;
+		if (uvalue == 0)
+		{
+			uvalue = 0x1ull << 63;
+		}
+        uvalue = ~uvalue;
+        uvalue++;
     }
     else
     {
-        number >>= 1;
+        uvalue >>= 1;
     }
 
-    *value = (int64_t)number;
+    *value = (int64_t)uvalue;
     return count;
 }
+
 

@@ -3,10 +3,7 @@
 ** trumanzhao, 2016/10/19, trumanzhao@foxmail.com
 */
 
-#include <assert.h>
-#include <string.h>
 #include <stdint.h>
-#include <algorithm>
 #include "lua.hpp"
 #include "lz4.h"
 #include "lua_archiver.h"
