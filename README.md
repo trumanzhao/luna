@@ -33,7 +33,7 @@ cmake ..
 make
 ```
 
-在macos上,可能会遇到编译期默认没有搜索`/usr/local/include` 目录而导致找不到lua.hpp的问题.  
+在macos上,可能会遇到编译器默认没有搜索`/usr/local/include` 目录而导致找不到lua.hpp的问题.  
 解决办法是执行`xcode-select --install`,该命令不仅仅是安装命令行工具,还会设置相应的参数.
 
 
