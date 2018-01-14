@@ -665,7 +665,7 @@ bool lua_get_object_function(lua_State* L, T* object, const char function[])
 template<size_t... Integers, typename... var_types>
 void lua_to_native_mutil(lua_State* L, std::tuple<var_types&...>& vars, luna_sequence<Integers...>&&)
 {
-    int _[] = { 0, (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - sizeof...(Integers)), 0)... };
+    int _[] = { 0, (std::get<Integers>(vars) = lua_to_native<var_types>(L, (int)Integers - (int)sizeof...(Integers)), 0)... };
 }
 
 bool lua_call_function(lua_State* L, std::string* err, int arg_count, int ret_count);
