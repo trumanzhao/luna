@@ -83,14 +83,18 @@ void* lua_archiver::save(size_t* data_len, lua_State* L, int first, int last)
 
     *data_len = (size_t)(m_pos - m_begin);
 
-    if (*data_len >= m_lz_threshold && m_buffer_size < 1 + LZ4_COMPRESSBOUND(*data_len))
+    if (*data_len >= m_lz_threshold)
     {
-        *m_lz_buffer = 'z';
-        int len = LZ4_compress_default((const char*)m_begin + 1, (char*)m_lz_buffer + 1, (int)*data_len, (int)m_buffer_size - 1);
-        if (len <= 0)
-            return nullptr;
-        *data_len = 1 + len;
-        return m_lz_buffer;
+        int raw_len = ((int)*data_len) - 1;
+        if (1 + LZ4_COMPRESSBOUND(raw_len) < m_buffer_size)
+        {
+            *m_lz_buffer = 'z';
+            int out_len = LZ4_compress_default((const char*)m_begin + 1, (char*)m_lz_buffer + 1, raw_len, (int)m_buffer_size - 1);
+            if (out_len <= 0)
+                return nullptr;
+            *data_len = 1 + out_len;
+            return m_lz_buffer;
+        }
     }
 
     return m_begin;
