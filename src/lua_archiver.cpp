@@ -39,13 +39,15 @@ static int normal_index(lua_State* L, int idx)
 
 lua_archiver::lua_archiver(size_t size)
 {
-    m_buffer_size = size;
-    m_lz_threshold = size;
+    m_ar_buffer_size = size;
+    m_lz_buffer_size = 1 + LZ4_COMPRESSBOUND(size - 1);
+    m_lz_threshold = size / 2;
 }
 
-lua_archiver::lua_archiver(size_t size, size_t lz_size)
+lua_archiver::lua_archiver(size_t ar_size, size_t lz_size)
 {
-    m_buffer_size = size;
+    m_ar_buffer_size = ar_size;
+    m_lz_buffer_size = 1 + LZ4_COMPRESSBOUND(ar_size - 1);
     m_lz_threshold = lz_size;
 }
 
@@ -56,7 +58,8 @@ lua_archiver::~lua_archiver()
 
 void lua_archiver::set_buffer_size(size_t size)
 {
-    m_buffer_size = size;
+    m_ar_buffer_size = size;
+    m_lz_buffer_size = 1 + LZ4_COMPRESSBOUND(size - 1);
     free_buffer();
 }
 
@@ -69,7 +72,7 @@ void* lua_archiver::save(size_t* data_len, lua_State* L, int first, int last)
 
     *m_ar_buffer = 'x';
     m_begin = m_ar_buffer;
-    m_end = m_ar_buffer + m_buffer_size;
+    m_end = m_ar_buffer + m_ar_buffer_size;
     m_pos = m_begin + 1;
     m_table_depth = 0;
     m_shared_string.clear();
@@ -82,22 +85,18 @@ void* lua_archiver::save(size_t* data_len, lua_State* L, int first, int last)
     }
 
     *data_len = (size_t)(m_pos - m_begin);
-
     if (*data_len >= m_lz_threshold)
     {
-        int raw_len = ((int)*data_len) - 1;
-        if (1 + LZ4_COMPRESSBOUND(raw_len) < m_buffer_size)
+        *m_lz_buffer = 'z';
+        int raw_len = ((int)*data_len) - 1;        
+        int out_len = LZ4_compress_default((const char*)m_begin + 1, (char*)m_lz_buffer + 1, raw_len, (int)m_lz_buffer_size - 1);
+        if (out_len > 0)
         {
-            *m_lz_buffer = 'z';
-            int out_len = LZ4_compress_default((const char*)m_begin + 1, (char*)m_lz_buffer + 1, raw_len, (int)m_buffer_size - 1);
-            if (out_len <= 0)
-                return nullptr;
             *data_len = 1 + out_len;
             return m_lz_buffer;
         }
     }
-
-    return m_begin;
+    return m_ar_buffer;
 }
 
 int lua_archiver::load(lua_State* L, const void* data, size_t data_len)
@@ -111,7 +110,7 @@ int lua_archiver::load(lua_State* L, const void* data, size_t data_len)
     if (*m_pos == 'z')
     {
         m_pos++;
-        int len = LZ4_decompress_safe((const char*)m_pos, (char*)m_lz_buffer, (int)data_len - 1, (int)m_buffer_size);
+        int len = LZ4_decompress_safe((const char*)m_pos, (char*)m_lz_buffer, (int)data_len - 1, (int)m_lz_buffer_size);
         if (len <= 0)
             return 0;
         m_pos = m_lz_buffer;
@@ -145,13 +144,14 @@ bool lua_archiver::alloc_buffer()
 {
     if (m_ar_buffer == nullptr)
     {
-        m_ar_buffer = new unsigned char[m_buffer_size];
+        m_ar_buffer = new unsigned char[m_ar_buffer_size];
     }
 
     if (m_lz_buffer == nullptr)
     {
-        m_lz_buffer = new unsigned char[m_buffer_size];
+        m_lz_buffer = new unsigned char[m_lz_buffer_size];
     }
+    
     return m_ar_buffer != nullptr && m_lz_buffer != nullptr;
 }
 
