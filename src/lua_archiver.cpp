@@ -13,7 +13,7 @@
 
 enum class ar_type
 {
-    nill,
+    nil,
     number,
     integer,
     string,
@@ -176,7 +176,7 @@ bool lua_archiver::save_value(lua_State* L, int idx)
     switch (type)
     {
     case LUA_TNIL:
-        return save_nill();
+        return save_nil();
 
     case LUA_TNUMBER:
         return lua_isinteger(L, idx) ? save_integer(lua_tointeger(L, idx)) : save_number(lua_tonumber(L, idx));
@@ -237,11 +237,11 @@ bool lua_archiver::save_bool(bool v)
     return true;
 }
 
-bool lua_archiver::save_nill()
+bool lua_archiver::save_nil()
 {
     if (m_end - m_pos < sizeof(unsigned char))
         return false;
-    *m_pos++ = (unsigned char)ar_type::nill;
+    *m_pos++ = (unsigned char)ar_type::nil;
     return true;
 }
 
@@ -321,7 +321,7 @@ int lua_archiver::find_shared_str(const char* str)
     return -1;
 }
 
-bool lua_archiver::load_value(lua_State* L)
+bool lua_archiver::load_value(lua_State* L, bool can_be_nil)
 {
     if (!lua_checkstack(L, 1))
         return false;
@@ -343,7 +343,9 @@ bool lua_archiver::load_value(lua_State* L)
 
     switch ((ar_type)code)
     {
-    case ar_type::nill:
+    case ar_type::nil:
+        if (!can_be_nil)
+            return false;
         lua_pushnil(L);
         break;
 
@@ -405,7 +407,7 @@ bool lua_archiver::load_value(lua_State* L)
                 m_pos++;
                 return true;
             }
-            if (!load_value(L) || !load_value(L))
+            if (!load_value(L, false) || !load_value(L))
                 return false;
             lua_settable(L, -3);
         }

@@ -27,11 +27,11 @@ private:
     bool save_number(double v);
     bool save_integer(int64_t v);
     bool save_bool(bool v);
-    bool save_nill();
+    bool save_nil();
     bool save_table(lua_State* L, int idx);
     bool save_string(lua_State* L, int idx);
     int find_shared_str(const char* str);
-    bool load_value(lua_State* L);
+    bool load_value(lua_State* L, bool can_be_nil = true);
 
 private:
     unsigned char* m_begin = nullptr;
