@@ -20,9 +20,9 @@ int main(int, char**) {
 }" HAVE_MAKE_SEQUENCE)
 
 if (HAVE_MAKE_SEQUENCE)
-    configure_file(${CMAKE_SOURCE_DIR}/src/luna14.h luna.h COPYONLY)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/luna14.h luna.h COPYONLY)
 else()
-    configure_file(${CMAKE_SOURCE_DIR}/src/luna11.h luna.h COPYONLY)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/luna11.h luna.h COPYONLY)
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lz4)
@@ -37,11 +37,10 @@ endif()
 
 add_library(luna SHARED ${luna_src} ${lz4_src})
 
-export(PACKAGE luna)
-export(TARGETS luna FILE luna-exports.cmake)
+#export(PACKAGE luna)
+#export(TARGETS luna FILE luna-exports.cmake)
 configure_file(luna-config.cmake.in luna-config.cmake)
 
 install(TARGETS luna RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/luna.h lua_archiver.h var_int.h DESTINATION include)
-
+#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/luna.h src/lua_archiver.h src/var_int.h DESTINATION include)
 
