@@ -37,10 +37,10 @@ endif()
 
 add_library(luna SHARED ${luna_src} ${lz4_src})
 
-#export(PACKAGE luna)
-#export(TARGETS luna FILE luna-exports.cmake)
+export(PACKAGE luna)
+export(TARGETS luna FILE luna-exports.cmake)
 configure_file(luna-config.cmake.in luna-config.cmake)
 
 install(TARGETS luna RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
-#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/luna.h src/lua_archiver.h src/var_int.h DESTINATION include)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/luna.h src/lua_archiver.h src/var_int.h DESTINATION include)
 
