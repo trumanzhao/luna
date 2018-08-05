@@ -382,7 +382,7 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil)
         if (decode_len == 0)
             return false;
         m_pos += decode_len;
-        if (m_end - m_pos < (ptrdiff_t)str_len)
+        if (str_len > (uint64_t)(m_end - m_pos))
             return false;
         m_shared_string.push_back((char*)m_pos);
         m_shared_strlen.push_back((size_t)str_len);
