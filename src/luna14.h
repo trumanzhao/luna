@@ -83,6 +83,12 @@ return_type call_helper(lua_State* L, class_type* obj, return_type(class_type::*
     return (obj->*func)(lua_to_native<arg_types>(L, Integers + 1)...);
 }
 
+template<size_t... Integers, typename return_type, typename class_type, typename... arg_types>
+return_type call_helper(lua_State* L, class_type* obj, return_type(class_type::*func)(arg_types...) const, std::index_sequence<Integers...>&&)
+{
+    return (obj->*func)(lua_to_native<arg_types>(L, Integers + 1)...);
+}
+
 template <typename return_type, typename... arg_types>
 lua_global_function lua_adapter(return_type(*func)(arg_types...))
 {
@@ -119,6 +125,16 @@ lua_object_function lua_adapter(return_type(T::*func)(arg_types...))
     };
 }
 
+template <typename return_type, typename T, typename... arg_types>
+lua_object_function lua_adapter(return_type(T::*func)(arg_types...) const)
+{
+    return [=](void* obj, lua_State* L)
+    {
+        native_to_lua(L, call_helper(L, (T*)obj, func, std::make_index_sequence<sizeof...(arg_types)>()));
+        return 1;
+    };
+}
+
 template <typename T, typename... arg_types>
 lua_object_function lua_adapter(void(T::*func)(arg_types...))
 {
@@ -129,8 +145,28 @@ lua_object_function lua_adapter(void(T::*func)(arg_types...))
     };
 }
 
+template <typename T, typename... arg_types>
+lua_object_function lua_adapter(void(T::*func)(arg_types...) const)
+{
+    return [=](void* obj, lua_State* L)
+    {
+        call_helper(L, (T*)obj, func, std::make_index_sequence<sizeof...(arg_types)>());
+        return 0;
+    };
+}
+
 template <typename T>
 lua_object_function lua_adapter(int(T::*func)(lua_State* L))
+{
+    return [=](void* obj, lua_State* L)
+    {
+        T* this_ptr = (T*)obj;
+        return (this_ptr->*func)(L);
+    };
+}
+
+template <typename T>
+lua_object_function lua_adapter(int(T::*func)(lua_State* L) const)
 {
     return [=](void* obj, lua_State* L)
     {
@@ -722,5 +758,3 @@ private:
     int m_top = 0;
     lua_State* m_lvm = nullptr;
 };
-
-
