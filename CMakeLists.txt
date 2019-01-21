@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 project(luna)
 aux_source_directory(src luna_src)
 aux_source_directory(lz4 lz4_src)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++11" SUPPORT_CXX11)
@@ -10,17 +10,9 @@ if (NOT SUPPORT_CXX11)
     message(FATAL_ERROR "compiler not support c++11")
 endif()
 
-include(CheckCXXSourceCompiles)
-set(CMAKE_REQUIRED_FLAGS "-std=c++1y")
-check_cxx_source_compiles("
-#include <utility>
-int main(int, char**) {
-    auto o = std::make_index_sequence<10>();
-    return 0;
-}" HAVE_MAKE_SEQUENCE)
-
-if (HAVE_MAKE_SEQUENCE)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/luna14.h luna.h COPYONLY)
+check_cxx_compiler_flag("-std=c++17" SUPPORT_CXX17)
+if (SUPPORT_CXX17)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/luna.h luna.h COPYONLY)
 else()
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/luna11.h luna.h COPYONLY)
 endif()
