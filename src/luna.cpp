@@ -85,3 +85,41 @@ bool lua_call_function(lua_State* L, std::string* err, int arg_count, int ret_co
     return true;
 }
 
+static const char* s_fence = "__fence__";
+
+bool lua_set_fence(lua_State* L, const void* p)
+{
+    lua_getfield(L, LUA_REGISTRYINDEX, s_fence);
+    if (!lua_istable(L, -1))
+    {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setfield(L, LUA_REGISTRYINDEX, s_fence);
+    }
+
+    if (lua_rawgetp(L, -1, p) != LUA_TNIL)
+    {
+        lua_pop(L, 2);
+        return false;
+    }  
+         
+    lua_pushboolean(L, true);
+    lua_rawsetp(L, -3, p);
+    lua_pop(L, 2);
+    return true;     
+}
+
+void lua_del_fence(lua_State* L, const void* p)
+{
+    lua_getfield(L, LUA_REGISTRYINDEX, s_fence);
+    if (!lua_istable(L, -1))
+    {
+        lua_pop(L, 1);
+        return;
+    }
+    
+    lua_pushnil(L);
+    lua_rawsetp(L, -2, p);   
+    lua_pop(L, 1);  
+}

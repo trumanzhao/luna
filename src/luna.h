@@ -108,6 +108,9 @@ inline int lua_normal_index(lua_State* L, int idx)
     return idx;
 }
 
+bool lua_set_fence(lua_State* L, const void* p);
+void lua_del_fence(lua_State* L, const void* p);
+
 using lua_global_function = std::function<int(lua_State*)>;
 using lua_object_function = std::function<int(void*, lua_State*)>;
 
@@ -456,6 +459,8 @@ int lua_object_gc(lua_State* L)
     if (obj == nullptr)
         return 0;
 
+    lua_del_fence(L, obj);
+
     if constexpr (has_member_gc<T>::value)
     {
         obj->__gc();
@@ -534,6 +539,12 @@ void lua_push_object(lua_State* L, T obj)
     // stack: __objects__
     if (lua_rawgetp(L, -1, obj) != LUA_TTABLE)
     {
+        if (!lua_set_fence(L, obj))
+        {
+            lua_remove(L, -2);
+            return;
+        }
+
         lua_pop(L, 1);
 
         lua_newtable(L);
@@ -564,6 +575,8 @@ void lua_detach(lua_State* L, T obj)
 {
     if (obj == nullptr)
         return;
+
+    lua_del_fence(L, obj);
 
     lua_getfield(L, LUA_REGISTRYINDEX, "__objects__");
     if (!lua_istable(L, -1))
@@ -618,7 +631,7 @@ T lua_to_object(lua_State* L, int idx)
 
 #define DECLARE_LUA_CLASS(ClassName)    \
     const char* lua_get_meta_name() { return "_class_meta:"#ClassName; }    \
-    lua_member_item* lua_get_meta_data();   \
+    lua_member_item* lua_get_meta_data();
 
 #define EXPORT_CLASS_BEGIN(ClassName)   \
 lua_member_item* ClassName::lua_get_meta_data()   \
