@@ -10,16 +10,8 @@ if (NOT SUPPORT_CXX11)
     message(FATAL_ERROR "compiler not support c++11")
 endif()
 
-check_cxx_compiler_flag("-std=c++17" SUPPORT_CXX17)
-if (SUPPORT_CXX17)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/luna.h luna.h COPYONLY)
-else()
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/luna11.h luna.h COPYONLY)
-endif()
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lz4)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set(CMAKE_MACOSX_RPATH 0)
 
@@ -35,5 +27,5 @@ export(TARGETS luna FILE luna-exports.cmake)
 configure_file(luna-config.cmake.in luna-config.cmake)
 
 install(TARGETS luna RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/luna.h src/lua_archiver.h src/var_int.h DESTINATION include)
+install(FILES src/luna.h src/lua_archiver.h src/var_int.h DESTINATION include)
 
