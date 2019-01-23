@@ -99,16 +99,28 @@ EXPORT_CLASS_END()
 对于已经push到lua的对象,如果想从C++解除引用,可以调用`lua_detach(L, object)`;   
 
 ``` c++
-class my_class final
+struct player final
 {
-    // ...
-public:
-    DECLARE_LUA_CLASS(my_class);	
-    void __gc()
-    {
-        // lua gc时,如果存在本函数,那么会调用本函数取代默认的delete
-    }
+    // 通过自定义__gc函数,可以自行管理对象生命期,而不是自动被gc删除
+    // void __gc() { puts("__gc"); }
+    DECLARE_LUA_CLASS(player);
+    std::string m_name = "some-player";
 };
+
+EXPORT_CLASS_BEGIN(player)
+EXPORT_LUA_STD_STR(m_name)
+EXPORT_CLASS_END()
+
+void some_event(lua_State* L)
+{
+    player* p = new player();
+    // 在对象p被传参push到lua后,p的生命期默认就托管给lua的gc管理了
+    lua_call_global_function(L, nullptr, "new_player", std::tie(), p);
+    lua_gc(L, LUA_GCCOLLECT, 0);
+    // 下面的写法是错误的,因为对象p可能已经在gc中被回收(delete)了
+    // 如果真需要这么写,可以自定义__gc函数,或者在gc前detach
+    p->m_name = "abc";
+}
 ```
 
 ## lua中访问导出对象
