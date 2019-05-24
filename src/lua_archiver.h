@@ -32,6 +32,7 @@ private:
     bool save_string(lua_State* L, int idx);
     int find_shared_str(const char* str);
     bool load_value(lua_State* L, bool can_be_nil = true);
+    bool load_table(lua_State* L);
 
 private:
     unsigned char* m_begin = nullptr;

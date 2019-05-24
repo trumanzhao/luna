@@ -6,12 +6,15 @@
 #include <stdint.h>
 #include <string.h>
 #include <algorithm>
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
 #include <lua.hpp>
 #include "lz4.h"
 #include "lua_archiver.h"
 #include "var_int.h"
 
-enum class ar_type
+enum class ar_type : unsigned char
 {
     nil,
     number,
@@ -36,6 +39,26 @@ static int normal_index(lua_State* L, int idx)
         return idx + top + 1;
     return idx;
 }
+
+#if defined(__linux) || defined(__APPLE__)
+inline unsigned long fast_log2(uint32_t x)
+{
+    return x > 1 ? 32 - __builtin_clz(x - 1) : 0;
+}
+#endif
+
+#ifdef _MSC_VER
+inline unsigned long fast_log2(uint32_t x)
+{
+    if (x > 1)
+    {
+        unsigned long idx = 0;
+        _BitScanReverse(&idx, x - 1);
+        return idx + 1;
+    }
+    return 0;
+}
+#endif
 
 lua_archiver::lua_archiver(size_t size)
 {
@@ -245,33 +268,45 @@ bool lua_archiver::save_nil()
     return true;
 }
 
+// table: table_head + lhsize + narr + (k,v)... + table_tail
 bool lua_archiver::save_table(lua_State* L, int idx)
 {
-    if (m_end - m_pos < (ptrdiff_t)sizeof(unsigned char))
-        return false;
-
     if (++m_table_depth > max_table_depth)
         return false;
 
-    *m_pos++ = (unsigned char)ar_type::table_head;
+    if (m_end - m_pos < (ptrdiff_t)sizeof(unsigned char) * 2)
+        return false;
+
     idx = normal_index(L, idx);
+    *m_pos++ = (unsigned char)ar_type::table_head;
+    unsigned char* lhsize = m_pos++;
+    uint64_t narr = (uint64_t)luaL_len(L, idx);
+    size_t encode_len = encode_u64(m_pos, (size_t)(m_end - m_pos), narr);
+    if (encode_len == 0)
+        return false;
+    m_pos += encode_len;
 
     if (!lua_checkstack(L, 1))
         return false;
 
+    int size = 0;
     lua_pushnil(L);
     while (lua_next(L, idx))
     {
         if (!save_value(L, -2) || !save_value(L, -1))
             return false;
+        ++size;
         lua_pop(L, 1);
     }
+
+    // 考虑数组出现空洞的情况,narr未必是准确的,可能出现narr>size的情况
+    // 由于这里的hsize只是作为load时预留之用,所以这种情况下记为0
+    *lhsize = (unsigned char)fast_log2((unsigned)(size > narr ? size - narr : 0));
 
     --m_table_depth;
 
     if (m_end - m_pos < (ptrdiff_t)sizeof(unsigned char))
         return false;
-
     *m_pos++ = (unsigned char)ar_type::table_tail;
     return true;
 }
@@ -399,19 +434,7 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil)
         break;
 
     case ar_type::table_head:
-        lua_newtable(L);
-        while (m_pos < m_end)
-        {
-            if (*m_pos == (unsigned char)ar_type::table_tail)
-            {
-                m_pos++;
-                return true;
-            }
-            if (!load_value(L, false) || !load_value(L))
-                return false;
-            lua_settable(L, -3);
-        }
-        return false;
+        return load_table(L);
 
     default:
         return false;
@@ -419,3 +442,38 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil)
 
     return true;
 }
+
+bool lua_archiver::load_table(lua_State* L)
+{
+    if (m_end - m_pos < (ptrdiff_t)sizeof(unsigned char))
+        return false;
+    unsigned char lhsize = *m_pos++;
+    uint64_t narr = 0;
+    size_t decode_len = decode_u64(&narr, m_pos, (size_t)(m_end - m_pos));
+    if (decode_len == 0)
+        return false;
+    m_pos += decode_len;
+
+    uint64_t rest_len = (uint64_t)(m_end - m_pos);
+    while (narr > (rest_len - 1) / 2)
+        narr /= 2;
+
+    uint64_t hsize = (lhsize > 0 && lhsize < 32) ? (1ull << lhsize) : 0;
+    while (hsize > (rest_len - 1) / 2)
+        hsize /= 2;
+
+    lua_createtable(L, (int)narr, (int)hsize);
+    while (m_pos < m_end)
+    {
+        if (*m_pos == (unsigned char)ar_type::table_tail)
+        {
+            m_pos++;
+            return true;
+        }
+        if (!load_value(L, false) || !load_value(L))
+            return false;
+        lua_settable(L, -3);
+    }
+    return false;
+}
+
