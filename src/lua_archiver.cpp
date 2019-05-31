@@ -455,10 +455,17 @@ bool lua_archiver::load_table(lua_State* L)
     m_pos += decode_len;
 
     uint64_t rest_len = (uint64_t)(m_end - m_pos);
+    if (rest_len < 1)
+        return false;
+
+    if (narr > m_max_arr_size)
+        narr = m_max_arr_size;        
     while (narr > (rest_len - 1) / 2)
         narr /= 2;
 
     uint64_t hsize = (lhsize > 0 && lhsize < 32) ? (1ull << lhsize) : 0;
+    if (hsize > m_max_hash_size)
+        hsize = m_max_hash_size;
     while (hsize > (rest_len - 1) / 2)
         hsize /= 2;
 
