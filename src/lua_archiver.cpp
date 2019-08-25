@@ -9,7 +9,7 @@
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
-#include <lua.hpp>
+#include "lua.hpp"
 #include "lz4.h"
 #include "lua_archiver.h"
 #include "var_int.h"
@@ -148,6 +148,8 @@ int lua_archiver::load(lua_State* L, const void* data, size_t data_len)
 
     m_shared_string.clear();
     m_shared_strlen.clear();
+    m_arr_size = m_max_arr_size;
+    m_hash_size = m_max_hash_size;
 
     int count = 0;
     int top = lua_gettop(L);
@@ -447,6 +449,7 @@ bool lua_archiver::load_table(lua_State* L)
 {
     if (m_end - m_pos < (ptrdiff_t)sizeof(unsigned char))
         return false;
+
     unsigned char lhsize = *m_pos++;
     uint64_t narr = 0;
     size_t decode_len = decode_u64(&narr, m_pos, (size_t)(m_end - m_pos));
@@ -458,18 +461,35 @@ bool lua_archiver::load_table(lua_State* L)
     if (rest_len < 1)
         return false;
 
-    if (narr > m_max_arr_size)
-        narr = m_max_arr_size;        
-    while (narr > (rest_len - 1) / 2)
-        narr /= 2;
+    uint64_t max_count = (rest_len - 1) / 2;
+    if (narr > max_count)
+        narr = 0;
 
-    uint64_t hsize = (lhsize > 0 && lhsize < 32) ? (1ull << lhsize) : 0;
-    if (hsize > m_max_hash_size)
-        hsize = m_max_hash_size;
-    while (hsize > (rest_len - 1) / 2)
-        hsize /= 2;
+    uint64_t hsize = (lhsize > 0 && lhsize < 31) ? (1ull << lhsize) : 0;
+    if (hsize > max_count)
+        hsize = max_count;
 
-    lua_createtable(L, (int)narr, (int)hsize);
+    int narr_i = (int)narr;
+    if (m_max_arr_size > 0)
+    {
+        if (narr_i > m_arr_size)
+        {
+            narr_i = 0;
+        }
+        m_arr_size -= narr_i;
+    }
+
+    int hsize_i = (int)hsize;
+    if (m_max_hash_size > 0)
+    {
+        if (hsize_i > m_hash_size)
+        {
+            hsize_i = 0;
+        }
+        m_hash_size -= hsize_i;
+    }
+    
+    lua_createtable(L, narr_i, hsize_i);
     while (m_pos < m_end)
     {
         if (*m_pos == (unsigned char)ar_type::table_tail)

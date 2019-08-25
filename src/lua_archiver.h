@@ -16,7 +16,8 @@ public:
 
     void set_buffer_size(size_t size);
     void set_lz_threshold(size_t size) { m_lz_threshold = size; }
-    void set_table_reserve(size_t max_arr_size, size_t max_hash_size) { m_max_arr_size = max_arr_size; m_max_hash_size = max_hash_size; }
+    void set_array_reserve(int size) { m_max_arr_size = size; }
+    void set_hash_reserve(int size) { m_max_hash_size = size; }
 
     void* save(size_t* data_len, lua_State* L, int first, int last);
     int load(lua_State* L, const void* data, size_t data_len);
@@ -47,6 +48,8 @@ private:
     size_t m_ar_buffer_size = 0;
     size_t m_lz_buffer_size = 0;
     size_t m_lz_threshold = 0;
-    size_t m_max_arr_size = USHRT_MAX;
-    size_t m_max_hash_size = USHRT_MAX;
+    int m_max_arr_size = 1024;
+    int m_max_hash_size = 4096;
+    int m_arr_size = 0;
+    int m_hash_size = 0;
 };
