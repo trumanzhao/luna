@@ -1,4 +1,0 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-if(NOT TARGET luna)
-  include("${CMAKE_CURRENT_BINARY_DIR}/luna-exports.cmake")
-endif()

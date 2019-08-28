@@ -20,8 +20,9 @@ lua\_archiver引用了lz4库用于数据压缩(lz4.h+lz4.c).
 
 ## 编译说明
 
-luna同时支持Windows, Linux, MacOS三平台,默认基于C\+\+17标准实现,最低要求为C\+\+11.  
+默认基于C\+\+17标准实现,最低要求为C\+\+11.  
 需要C\+\+17支持的代码主要是luna.h,如果编译器不支持C\+\+17,可以将其替换为C\+\+11版本的luna11.h.  
+当然,可能还需要改一下makefile中的选项.  
 
 在编译之前，应先编译安装lua,然后:
 
@@ -180,3 +181,18 @@ lua_call_table_function(L, nullptr, "s2s", "some_func", std::tie(), a, b, c);
 ```cpp
 lua_call_table_function(L, nullptr, "s2s", "some_func");
 ```
+
+## 性能上的建议
+
+从lua调用导出对象C\+\+成员函数时,每次`object.some_function`都会触发一次元表查询并产生一个闭包.  
+如果代码对此比较敏感,建议将这个返回的闭包保存起来,如`local my_function=object.some_function`.  
+也可以这样写`object.some_function=object.some_function`,但性能比local的会差一丢丢.  
+
+
+
+
+
+
+
+
+
