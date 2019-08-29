@@ -186,7 +186,11 @@ lua_call_table_function(L, nullptr, "s2s", "some_func");
 
 从lua调用导出对象C\+\+成员函数时,每次`object.some_function`都会触发一次元表查询并产生一个闭包.  
 如果代码对此比较敏感,建议将这个返回的闭包保存起来,如`local my_function=object.some_function`.  
-也可以这样写`object.some_function=object.some_function`,但性能比local的会差一丢丢.  
+当然,也可以这样写`object.some_function=object.some_function`.  
+   
+lua序列化数据在反序列化(load)时,处于性能考虑,需要用到数据中记录的数组及哈希长度,为了安全起见,建议对此长度做一定限制(set_max_array_reserve/set_max_hash_reserve),他们分别表示一次反序列化(load)过程中可以创建的数组(哈希)长度总和,设为-1时表示不予限制(完全信任数据).
+
+
 
 
 

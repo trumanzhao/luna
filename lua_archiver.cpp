@@ -148,8 +148,8 @@ int lua_archiver::load(lua_State* L, const void* data, size_t data_len)
 
     m_shared_string.clear();
     m_shared_strlen.clear();
-    m_arr_size = m_max_arr_size;
-    m_hash_size = m_max_hash_size;
+    m_arr_reserve = m_max_arr_reserve;
+    m_hash_reserve = m_max_hash_reserve;
 
     int count = 0;
     int top = lua_gettop(L);
@@ -470,23 +470,23 @@ bool lua_archiver::load_table(lua_State* L)
         hsize = max_count;
 
     int narr_i = (int)narr;
-    if (m_max_arr_size > 0)
+    if (m_max_arr_reserve >= 0)
     {
-        if (narr_i > m_arr_size)
+        if (narr_i > m_arr_reserve)
         {
-            narr_i = 0;
+            narr_i = m_arr_reserve;
         }
-        m_arr_size -= narr_i;
+        m_arr_reserve -= narr_i;
     }
 
     int hsize_i = (int)hsize;
-    if (m_max_hash_size > 0)
+    if (m_max_hash_reserve >= 0)
     {
-        if (hsize_i > m_hash_size)
+        if (hsize_i > m_hash_reserve)
         {
-            hsize_i = 0;
+            hsize_i = m_hash_reserve;
         }
-        m_hash_size -= hsize_i;
+        m_hash_reserve -= hsize_i;
     }
     
     lua_createtable(L, narr_i, hsize_i);
