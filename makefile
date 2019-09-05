@@ -72,7 +72,7 @@ ifeq ($(target_type), static_shared)
 link = ar cr $@ $^ $(link_flags)
 endif
 
-the_goal = debug
+the_goal = release
 ifneq ($(MAKECMDGOALS),)
 the_goal = $(MAKECMDGOALS)
 endif
