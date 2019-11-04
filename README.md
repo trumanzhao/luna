@@ -22,17 +22,8 @@ lua\_archiver引用了lz4库用于数据压缩(lz4.h+lz4.c).
 
 默认基于C\+\+17标准实现,最低要求为C\+\+11.  
 需要C\+\+17支持的代码主要是luna.h,如果编译器不支持C\+\+17,可以将其替换为C\+\+11版本的luna11.h.  
-当然,可能还需要改一下makefile中的选项.  
+当然,可能还需要改一下makefile中的选项(比如lua库路径之类的).   
 
-在编译之前，应先编译安装lua,然后:
-
-```sh
-cd luna
-mkdir build
-cd build
-cmake ..
-make
-```
 
 在macos上,可能会遇到编译器默认没有搜索`/usr/local/include` 目录而导致找不到lua.hpp的问题.  
 解决办法是执行`xcode-select --install`,该命令不仅仅是安装命令行工具,还会设置相应的参数.
