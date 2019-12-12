@@ -179,22 +179,22 @@ struct lua_export_helper {
     }
 
 	template <typename T>
-	static member_operator getter(typename std::enable_if<std::is_integral<T>::value, T>::type&) {
+	static typename std::enable_if<std::is_integral<T>::value, member_operator>::type getter(const T&) {
 		return [](lua_State* L, void*, char* addr){ lua_pushinteger(L, (lua_Integer)*(T*)addr); };
     }
 
 	template <typename T>
-	static member_operator setter(typename std::enable_if<std::is_integral<T>::value, T>::type&) {
+	static typename std::enable_if<std::is_integral<T>::value, member_operator>::type setter(const T&) {
 		return [](lua_State* L, void*, char* addr){ *(T*)addr = (T)lua_tonumber(L, -1); };
     }    
 
 	template <typename T>
-	static member_operator getter(typename std::enable_if<std::is_floating_point<T>::value, T>::type&) {
+	static typename std::enable_if<std::is_floating_point<T>::value, member_operator>::type getter(const T&) {
 		return [](lua_State* L, void*, char* addr){ lua_pushnumber(L, (lua_Number)*(T*)addr); };
     }
 
 	template <typename T>
-	static member_operator setter(typename std::enable_if<std::is_floating_point<T>::value, T>::type&) {
+	static typename std::enable_if<std::is_floating_point<T>::value, member_operator>::type setter(const T&) {
 		return [](lua_State* L, void*, char* addr){ *(T*)addr = (T)lua_tonumber(L, -1); };
     }    
 
