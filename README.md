@@ -62,15 +62,17 @@ public:
 在cpp中增加导出表的实现:
 
 ``` c++
-EXPORT_CLASS_BEGIN(my_class)
-EXPORT_LUA_FUNCTION(func_a)
-EXPORT_LUA_FUNCTION(func_b)
-EXPORT_LUA_STRING(m_name)
-EXPORT_CLASS_END()
+LUA_EXPORT_CLASS_BEGIN(my_class)
+LUA_EXPORT_METHOD(func_a)
+LUA_EXPORT_METHOD(func_b)
+LUA_EXPORT_PROPERTY(m_name)
+LUA_EXPORT_CLASS_END()
 ```
 
-可以用带`_AS`的导出宏指定导出的名字,用带`_R`的宏指定导出为只读变量.
-比如: `EXPORT_LUA_STRING_AS(m_name, Name)`
+可以用带`_AS`的导出宏指定导出的名字,用带`_READONLY`的宏指定导出为只读变量.
+比如: `LUA_EXPORT_PROPERTY_READONLY_AS(m_name, Name)`  
+对于成员函数,导出时指定`READONLY`是指禁止在lua中覆盖这个导出方法.  
+
 
 ## 关于导出类(对象)的注意点
 
@@ -95,9 +97,9 @@ struct player final
     std::string m_name = "some-player";
 };
 
-EXPORT_CLASS_BEGIN(player)
-EXPORT_LUA_STD_STR(m_name)
-EXPORT_CLASS_END()
+LUA_EXPORT_CLASS_BEGIN(player)
+LUA_EXPORT_PROPERTY(m_name)
+LUA_EXPORT_CLASS_END()
 
 void some_event(lua_State* L)
 {
