@@ -47,8 +47,7 @@ lua_register_function(L, func_c);
 首先需要在你得类声明中插入导出声明:
 
 ```cpp
-class my_class final
-{
+class my_class final {
     // ... other code ...
     int func_a(const char* a, int b);
     int func_b(some_class_t* a, int b);
@@ -89,8 +88,7 @@ LUA_EXPORT_CLASS_END()
 对于已经push到lua的对象,如果想从C++解除引用,可以调用`lua_detach(L, object)`;   
 
 ``` c++
-struct player final
-{
+struct player final {
     // 通过自定义__gc函数,可以自行管理对象生命期,而不是自动被gc删除
     // void __gc() { puts("__gc"); }
     DECLARE_LUA_CLASS(player);
@@ -101,8 +99,7 @@ LUA_EXPORT_CLASS_BEGIN(player)
 LUA_EXPORT_PROPERTY(m_name)
 LUA_EXPORT_CLASS_END()
 
-void some_event(lua_State* L)
-{
+void some_event(lua_State* L) {
     player* p = new player();
     // 在对象p被传参push到lua后,p的生命期默认就托管给lua的gc管理了
     lua_call_global_function(L, nullptr, "new_player", std::tie(), p);
