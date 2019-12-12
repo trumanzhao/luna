@@ -7,8 +7,7 @@
 
 #include <vector>
 
-class lua_archiver
-{
+class lua_archiver {
 public:
     lua_archiver(size_t size);
     lua_archiver(size_t ar_size, size_t lz_size);
