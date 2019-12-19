@@ -165,47 +165,47 @@ lua_object_function lua_adapter(int(T::*func)(lua_State* L) const) {
     };
 }
 
-using member_operator = std::function<void(lua_State*, void*, char*)>;
+using luna_member_wrapper = std::function<void(lua_State*, void*, char*)>;
 
-int lua_object_bridge(lua_State* L);
+int _lua_object_bridge(lua_State* L);
 
 struct lua_export_helper {
-    static member_operator getter(const bool&) {
+    static luna_member_wrapper getter(const bool&) {
         return [](lua_State* L, void*, char* addr){ lua_pushboolean(L, *(bool*)addr); };
     }
 
-    static member_operator setter(const bool&) {
+    static luna_member_wrapper setter(const bool&) {
         return [](lua_State* L, void*, char* addr){ *(bool*)addr = lua_toboolean(L, -1); };
     }
 
 	template <typename T>
-	static typename std::enable_if<std::is_integral<T>::value, member_operator>::type getter(const T&) {
+	static typename std::enable_if<std::is_integral<T>::value, luna_member_wrapper>::type getter(const T&) {
 		return [](lua_State* L, void*, char* addr){ lua_pushinteger(L, (lua_Integer)*(T*)addr); };
     }
 
 	template <typename T>
-	static typename std::enable_if<std::is_integral<T>::value, member_operator>::type setter(const T&) {
+	static typename std::enable_if<std::is_integral<T>::value, luna_member_wrapper>::type setter(const T&) {
 		return [](lua_State* L, void*, char* addr){ *(T*)addr = (T)lua_tonumber(L, -1); };
     }    
 
 	template <typename T>
-	static typename std::enable_if<std::is_floating_point<T>::value, member_operator>::type getter(const T&) {
+	static typename std::enable_if<std::is_floating_point<T>::value, luna_member_wrapper>::type getter(const T&) {
 		return [](lua_State* L, void*, char* addr){ lua_pushnumber(L, (lua_Number)*(T*)addr); };
     }
 
 	template <typename T>
-	static typename std::enable_if<std::is_floating_point<T>::value, member_operator>::type setter(const T&) {
+	static typename std::enable_if<std::is_floating_point<T>::value, luna_member_wrapper>::type setter(const T&) {
 		return [](lua_State* L, void*, char* addr){ *(T*)addr = (T)lua_tonumber(L, -1); };
     }    
 
-	static member_operator getter(const std::string&) {
+	static luna_member_wrapper getter(const std::string&) {
 	    return [](lua_State* L, void*, char* addr){
             const std::string& str = *(std::string*)addr;
             lua_pushlstring(L, str.c_str(), str.size()); 
         };
 	}
 
-	static member_operator setter(const std::string&) {
+	static luna_member_wrapper setter(const std::string&) {
         return [](lua_State* L, void*, char* addr){
             size_t len = 0;
             const char* str = lua_tolstring(L, -1, &len);
@@ -216,12 +216,12 @@ struct lua_export_helper {
 	}
 
 	template <size_t Size>
-	static member_operator getter(const char (&)[Size]) {
+	static luna_member_wrapper getter(const char (&)[Size]) {
 		return [](lua_State* L, void*, char* addr){ lua_pushstring(L, addr);};
 	}
 
 	template <size_t Size>
-	static member_operator setter(const char (&)[Size]) {
+	static luna_member_wrapper setter(const char (&)[Size]) {
         return [](lua_State* L, void*, char* addr){ 
             size_t len = 0;
             const char* str = lua_tolstring(L, -1, &len);
@@ -233,16 +233,16 @@ struct lua_export_helper {
 	}
 	
 	template <typename return_type, typename T, typename... arg_types>
-	static member_operator getter(return_type(T::*func)(arg_types...)) {
+	static luna_member_wrapper getter(return_type(T::*func)(arg_types...)) {
 		return [adapter=lua_adapter(func)](lua_State* L, void* obj, char*) mutable { 
 				lua_pushlightuserdata(L, obj);
 				lua_pushlightuserdata(L, &adapter);
-				lua_pushcclosure(L, lua_object_bridge, 2);
+				lua_pushcclosure(L, _lua_object_bridge, 2);
 			};				
 	}
 
 	template <typename return_type, typename T, typename... arg_types>
-	static member_operator setter(return_type(T::*func)(arg_types...)) {
+	static luna_member_wrapper setter(return_type(T::*func)(arg_types...)) {
 		return [=](lua_State* L, void* obj, char*){ lua_rawset(L, -3); };				
 	}    
 };
@@ -250,8 +250,8 @@ struct lua_export_helper {
 struct lua_member_item {
     const char* name;
     int offset;
-    member_operator getter;
-    member_operator setter;
+    luna_member_wrapper getter;
+    luna_member_wrapper setter;
 };
 
 template <typename T>
@@ -485,18 +485,18 @@ lua_member_item* ClassName::lua_get_meta_data() { \
     static lua_member_item s_member_list[] = {
 
 #define LUA_EXPORT_CLASS_END()    \
-        { nullptr, 0, member_operator(), member_operator()}  \
+        { nullptr, 0, luna_member_wrapper(), luna_member_wrapper()}  \
     };  \
     return s_member_list;  \
 }
 
 #define LUA_EXPORT_PROPERTY_AS(Member, Name)   {Name, offsetof(class_type, Member), lua_export_helper::getter(((class_type*)nullptr)->Member), lua_export_helper::setter(((class_type*)nullptr)->Member)},
-#define LUA_EXPORT_PROPERTY_READONLY_AS(Member, Name)   {Name, offsetof(class_type, Member), lua_export_helper::getter(((class_type*)nullptr)->Member), member_operator()},
+#define LUA_EXPORT_PROPERTY_READONLY_AS(Member, Name)   {Name, offsetof(class_type, Member), lua_export_helper::getter(((class_type*)nullptr)->Member), luna_member_wrapper()},
 #define LUA_EXPORT_PROPERTY(Member)   LUA_EXPORT_PROPERTY_AS(Member, #Member)
 #define LUA_EXPORT_PROPERTY_READONLY(Member)   LUA_EXPORT_PROPERTY_READONLY_AS(Member, #Member)
 
 #define LUA_EXPORT_METHOD_AS(Method, Name) { Name, 0, lua_export_helper::getter(&class_type::Method), lua_export_helper::setter(&class_type::Method)},
-#define LUA_EXPORT_METHOD_READONLY_AS(Method, Name) { Name, 0, lua_export_helper::getter(&class_type::Method), member_operator()},
+#define LUA_EXPORT_METHOD_READONLY_AS(Method, Name) { Name, 0, lua_export_helper::getter(&class_type::Method), luna_member_wrapper()},
 #define LUA_EXPORT_METHOD(Method) LUA_EXPORT_METHOD_AS(Method, #Method)
 #define LUA_EXPORT_METHOD_READONLY(Method) LUA_EXPORT_METHOD_READONLY_AS(Method, #Method)
 

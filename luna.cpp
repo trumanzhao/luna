@@ -37,7 +37,7 @@ void lua_push_function(lua_State* L, lua_global_function func) {
     lua_pushcclosure(L, lua_global_bridge, 1);
 }
 
-int lua_object_bridge(lua_State* L) {
+int _lua_object_bridge(lua_State* L) {
     void* obj = lua_touserdata(L, lua_upvalueindex(1));
     lua_object_function* func = (lua_object_function*)lua_touserdata(L, lua_upvalueindex(2));
     if (obj != nullptr && func != nullptr) {
