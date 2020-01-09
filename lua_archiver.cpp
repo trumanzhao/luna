@@ -8,6 +8,7 @@
 #include <algorithm>
 #ifdef _MSC_VER
 #include <intrin.h>
+#include <winsock2.h>
 #endif
 #include "lua.hpp"
 #include "lz4.h"
