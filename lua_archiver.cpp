@@ -9,10 +9,20 @@
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
+#ifdef __APPLE__
+#include <libkern/OSByteOrder.h> 
+#endif
 #include "lua.hpp"
 #include "lz4.h"
 #include "lua_archiver.h"
 #include "var_int.h"
+
+#ifdef __APPLE__
+#define htobe64(x) OSSwapHostToBigInt64(x)
+#define htole64(x) OSSwapHostToLittleInt64(x)
+#define be64toh(x) OSSwapBigToHostInt64(x)
+#define le64toh(x) OSSwapLittleToHostInt64(x)
+#endif
 
 enum class ar_type : unsigned char {
     nil,
@@ -198,7 +208,7 @@ bool lua_archiver::save_number(double v) {
     if (m_end - m_pos < sizeof(unsigned char) + sizeof(double))
         return false;
     *m_pos++ = (unsigned char)ar_type::number;
-    int64_t ni64 = htonll(*(int64_t*)&v);
+    int64_t ni64 = htobe64(*(int64_t*)&v);
     memcpy(m_pos, &ni64, sizeof(ni64));
     m_pos += sizeof(ni64);
     return true;
@@ -350,7 +360,7 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil) {
             return false;
         memcpy(&integer, m_pos, sizeof(integer));
         m_pos += sizeof(integer);        
-        integer = ntohll(integer);
+        integer = be64toh(integer);
         number = *(double*)&integer;
         lua_pushnumber(L, (lua_Number)number);
         break;
