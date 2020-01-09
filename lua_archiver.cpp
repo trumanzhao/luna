@@ -9,19 +9,14 @@
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
-#ifdef __APPLE__
-#include <libkern/OSByteOrder.h> 
-#endif
 #include "lua.hpp"
 #include "lz4.h"
 #include "lua_archiver.h"
 #include "var_int.h"
 
-#ifdef __APPLE__
-#define htobe64(x) OSSwapHostToBigInt64(x)
-#define htole64(x) OSSwapHostToLittleInt64(x)
-#define be64toh(x) OSSwapBigToHostInt64(x)
-#define le64toh(x) OSSwapLittleToHostInt64(x)
+#ifdef __linux
+inline uint64_t htonll(uint64_t h64bits) { return htobe64(h64bits); }
+inline uint64_t ntohll(uint64_t n64bits) { return be64toh(n64bits); }
 #endif
 
 enum class ar_type : unsigned char {
@@ -208,7 +203,7 @@ bool lua_archiver::save_number(double v) {
     if (m_end - m_pos < sizeof(unsigned char) + sizeof(double))
         return false;
     *m_pos++ = (unsigned char)ar_type::number;
-    int64_t ni64 = htobe64(*(int64_t*)&v);
+    uint64_t ni64 = htonll(*(uint64_t*)&v);
     memcpy(m_pos, &ni64, sizeof(ni64));
     m_pos += sizeof(ni64);
     return true;
@@ -343,8 +338,6 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil) {
         return true;
     }
 
-    double number = 0;
-    int64_t integer = 0;
     size_t decode_len = 0;
     uint64_t str_len = 0, str_idx = 0;
 
@@ -355,17 +348,19 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil) {
         lua_pushnil(L);
         break;
 
-    case ar_type::number:
+    case ar_type::number: {        
         if (m_end - m_pos < (ptrdiff_t)sizeof(int64_t))
             return false;
-        memcpy(&integer, m_pos, sizeof(integer));
-        m_pos += sizeof(integer);        
-        integer = be64toh(integer);
-        number = *(double*)&integer;
-        lua_pushnumber(L, (lua_Number)number);
+        uint64_t i64 = 0;       
+        memcpy(&i64, m_pos, sizeof(i64));
+        m_pos += sizeof(i64);        
+        i64 = ntohll(i64);
+        lua_pushnumber(L, (lua_Number)*(double*)&i64);
         break;
+    }
 
-    case ar_type::integer:
+    case ar_type::integer: {
+        int64_t integer = 0;
         decode_len = decode_s64(&integer, m_pos, (size_t)(m_end - m_pos));
         if (decode_len == 0)
             return false;
@@ -375,6 +370,7 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil) {
         }
         lua_pushinteger(L, (lua_Integer)integer);
         break;
+    }
 
     case ar_type::bool_true:
         lua_pushboolean(L, true);
