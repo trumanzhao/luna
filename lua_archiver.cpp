@@ -198,8 +198,9 @@ bool lua_archiver::save_number(double v) {
     if (m_end - m_pos < sizeof(unsigned char) + sizeof(double))
         return false;
     *m_pos++ = (unsigned char)ar_type::number;
-    memcpy(m_pos, &v, sizeof(double));
-    m_pos += sizeof(double);
+    int64_t ni64 = htonll(*(int64_t*)&v);
+    memcpy(m_pos, &ni64, sizeof(ni64));
+    m_pos += sizeof(ni64);
     return true;
 }
 
@@ -345,11 +346,13 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil) {
         break;
 
     case ar_type::number:
-        if (m_end - m_pos < (ptrdiff_t)sizeof(double))
+        if (m_end - m_pos < (ptrdiff_t)sizeof(int64_t))
             return false;
-        memcpy(&number, m_pos, sizeof(double));
-        m_pos += sizeof(double);
-        lua_pushnumber(L, number);
+        memcpy(&integer, m_pos, sizeof(integer));
+        m_pos += sizeof(integer);        
+        integer = ntohll(integer);
+        number = *(double*)&integer;
+        lua_pushnumber(L, (lua_Number)number);
         break;
 
     case ar_type::integer:
@@ -360,7 +363,7 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil) {
         if (integer >= 0) {
             integer += small_int_max;
         }
-        lua_pushinteger(L, integer);
+        lua_pushinteger(L, (lua_Integer)integer);
         break;
 
     case ar_type::bool_true:
