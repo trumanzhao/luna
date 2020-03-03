@@ -235,10 +235,10 @@ struct lua_export_helper {
     template <typename return_type, typename T, typename... arg_types>
     static luna_member_wrapper getter(return_type(T::*func)(arg_types...)) {
         return [adapter=lua_adapter(func)](lua_State* L, void* obj, char*) mutable { 
-                lua_pushlightuserdata(L, obj);
-                lua_pushlightuserdata(L, &adapter);
-                lua_pushcclosure(L, _lua_object_bridge, 2);
-            };
+            lua_pushlightuserdata(L, obj);
+            lua_pushlightuserdata(L, &adapter);
+            lua_pushcclosure(L, _lua_object_bridge, 2);
+        };
     }
 
     template <typename return_type, typename T, typename... arg_types>
@@ -249,10 +249,10 @@ struct lua_export_helper {
     template <typename return_type, typename T, typename... arg_types>
     static luna_member_wrapper getter(return_type(T::*func)(arg_types...) const) {
         return [adapter=lua_adapter(func)](lua_State* L, void* obj, char*) mutable { 
-                lua_pushlightuserdata(L, obj);
-                lua_pushlightuserdata(L, &adapter);
-                lua_pushcclosure(L, _lua_object_bridge, 2);
-            };
+            lua_pushlightuserdata(L, obj);
+            lua_pushlightuserdata(L, &adapter);
+            lua_pushcclosure(L, _lua_object_bridge, 2);
+        };
     }
 
     template <typename return_type, typename T, typename... arg_types>
