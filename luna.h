@@ -178,50 +178,50 @@ struct lua_export_helper {
         return [](lua_State* L, void*, char* addr){ *(bool*)addr = lua_toboolean(L, -1); };
     }
 
-	template <typename T>
-	static typename std::enable_if<std::is_integral<T>::value, luna_member_wrapper>::type getter(const T&) {
-		return [](lua_State* L, void*, char* addr){ lua_pushinteger(L, (lua_Integer)*(T*)addr); };
+    template <typename T>
+    static typename std::enable_if<std::is_integral<T>::value, luna_member_wrapper>::type getter(const T&) {
+        return [](lua_State* L, void*, char* addr){ lua_pushinteger(L, (lua_Integer)*(T*)addr); };
     }
 
-	template <typename T>
-	static typename std::enable_if<std::is_integral<T>::value, luna_member_wrapper>::type setter(const T&) {
-		return [](lua_State* L, void*, char* addr){ *(T*)addr = (T)lua_tonumber(L, -1); };
+    template <typename T>
+    static typename std::enable_if<std::is_integral<T>::value, luna_member_wrapper>::type setter(const T&) {
+        return [](lua_State* L, void*, char* addr){ *(T*)addr = (T)lua_tonumber(L, -1); };
     }    
 
-	template <typename T>
-	static typename std::enable_if<std::is_floating_point<T>::value, luna_member_wrapper>::type getter(const T&) {
-		return [](lua_State* L, void*, char* addr){ lua_pushnumber(L, (lua_Number)*(T*)addr); };
+    template <typename T>
+    static typename std::enable_if<std::is_floating_point<T>::value, luna_member_wrapper>::type getter(const T&) {
+        return [](lua_State* L, void*, char* addr){ lua_pushnumber(L, (lua_Number)*(T*)addr); };
     }
 
-	template <typename T>
-	static typename std::enable_if<std::is_floating_point<T>::value, luna_member_wrapper>::type setter(const T&) {
-		return [](lua_State* L, void*, char* addr){ *(T*)addr = (T)lua_tonumber(L, -1); };
+    template <typename T>
+    static typename std::enable_if<std::is_floating_point<T>::value, luna_member_wrapper>::type setter(const T&) {
+        return [](lua_State* L, void*, char* addr){ *(T*)addr = (T)lua_tonumber(L, -1); };
     }    
 
-	static luna_member_wrapper getter(const std::string&) {
-	    return [](lua_State* L, void*, char* addr){
+    static luna_member_wrapper getter(const std::string&) {
+        return [](lua_State* L, void*, char* addr){
             const std::string& str = *(std::string*)addr;
             lua_pushlstring(L, str.c_str(), str.size()); 
         };
-	}
+    }
 
-	static luna_member_wrapper setter(const std::string&) {
+    static luna_member_wrapper setter(const std::string&) {
         return [](lua_State* L, void*, char* addr){
             size_t len = 0;
             const char* str = lua_tolstring(L, -1, &len);
             if (str != nullptr) {
                 *(std::string*)addr = std::string(str, len);                        
             }
-		};
-	}
+        };
+    }
 
-	template <size_t Size>
-	static luna_member_wrapper getter(const char (&)[Size]) {
-		return [](lua_State* L, void*, char* addr){ lua_pushstring(L, addr);};
-	}
+    template <size_t Size>
+    static luna_member_wrapper getter(const char (&)[Size]) {
+        return [](lua_State* L, void*, char* addr){ lua_pushstring(L, addr);};
+    }
 
-	template <size_t Size>
-	static luna_member_wrapper setter(const char (&)[Size]) {
+    template <size_t Size>
+    static luna_member_wrapper setter(const char (&)[Size]) {
         return [](lua_State* L, void*, char* addr){ 
             size_t len = 0;
             const char* str = lua_tolstring(L, -1, &len);
@@ -230,35 +230,35 @@ struct lua_export_helper {
                 addr[len] = '\0';                    
             }
         };
-	}
-	
-	template <typename return_type, typename T, typename... arg_types>
-	static luna_member_wrapper getter(return_type(T::*func)(arg_types...)) {
-		return [adapter=lua_adapter(func)](lua_State* L, void* obj, char*) mutable { 
-				lua_pushlightuserdata(L, obj);
-				lua_pushlightuserdata(L, &adapter);
-				lua_pushcclosure(L, _lua_object_bridge, 2);
-			};				
-	}
+    }
+    
+    template <typename return_type, typename T, typename... arg_types>
+    static luna_member_wrapper getter(return_type(T::*func)(arg_types...)) {
+        return [adapter=lua_adapter(func)](lua_State* L, void* obj, char*) mutable { 
+                lua_pushlightuserdata(L, obj);
+                lua_pushlightuserdata(L, &adapter);
+                lua_pushcclosure(L, _lua_object_bridge, 2);
+            };
+    }
 
-	template <typename return_type, typename T, typename... arg_types>
-	static luna_member_wrapper setter(return_type(T::*func)(arg_types...)) {
-		return [=](lua_State* L, void* obj, char*){ lua_rawset(L, -3); };				
-	}    
+    template <typename return_type, typename T, typename... arg_types>
+    static luna_member_wrapper setter(return_type(T::*func)(arg_types...)) {
+        return [=](lua_State* L, void* obj, char*){ lua_rawset(L, -3); };
+    }    
 
-	template <typename return_type, typename T, typename... arg_types>
-	static luna_member_wrapper getter(return_type(T::*func)(arg_types...) const) {
-		return [adapter=lua_adapter(func)](lua_State* L, void* obj, char*) mutable { 
-				lua_pushlightuserdata(L, obj);
-				lua_pushlightuserdata(L, &adapter);
-				lua_pushcclosure(L, _lua_object_bridge, 2);
-			};				
-	}
+    template <typename return_type, typename T, typename... arg_types>
+    static luna_member_wrapper getter(return_type(T::*func)(arg_types...) const) {
+        return [adapter=lua_adapter(func)](lua_State* L, void* obj, char*) mutable { 
+                lua_pushlightuserdata(L, obj);
+                lua_pushlightuserdata(L, &adapter);
+                lua_pushcclosure(L, _lua_object_bridge, 2);
+            };
+    }
 
-	template <typename return_type, typename T, typename... arg_types>
-	static luna_member_wrapper setter(return_type(T::*func)(arg_types...) const) {
-		return [=](lua_State* L, void* obj, char*){ lua_rawset(L, -3); };				
-	}        
+    template <typename return_type, typename T, typename... arg_types>
+    static luna_member_wrapper setter(return_type(T::*func)(arg_types...) const) {
+        return [=](lua_State* L, void* obj, char*){ lua_rawset(L, -3); };
+    }        
 };
 
 struct lua_member_item {
