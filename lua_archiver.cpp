@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 #include <algorithm>
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -143,7 +144,7 @@ int lua_archiver::load(lua_State* L, const void* data, size_t data_len) {
     int count = 0;
     int top = lua_gettop(L);
     while (m_pos < m_end) {
-        if (!load_value(L)) {
+        if (!load_value(L, false)) {
             lua_settop(L, top);
             return 0;
         }
@@ -326,7 +327,7 @@ int lua_archiver::find_shared_str(const char* str) {
     return -1;
 }
 
-bool lua_archiver::load_value(lua_State* L, bool can_be_nil) {
+bool lua_archiver::load_value(lua_State* L, bool tab_key) {
     if (!lua_checkstack(L, 1))
         return false;
 
@@ -344,7 +345,7 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil) {
 
     switch ((ar_type)code) {
     case ar_type::nil:
-        if (!can_be_nil)
+        if (tab_key)
             return false;
         lua_pushnil(L);
         break;
@@ -356,7 +357,10 @@ bool lua_archiver::load_value(lua_State* L, bool can_be_nil) {
         memcpy(&i64, m_pos, sizeof(i64));
         m_pos += sizeof(i64);        
         i64 = ntohll(i64);
-        lua_pushnumber(L, (lua_Number)*(double*)&i64);
+        double f64 = *(double*)&i64;
+        if (tab_key && isnan(f64))
+            return false;
+        lua_pushnumber(L, (lua_Number)f64);
         break;
     }
 
@@ -457,7 +461,7 @@ bool lua_archiver::load_table(lua_State* L) {
             m_pos++;
             return true;
         }
-        if (!load_value(L, false) || !load_value(L))
+        if (!load_value(L, true) || !load_value(L, false))
             return false;
         lua_settable(L, -3);
     }
