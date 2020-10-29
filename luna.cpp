@@ -69,6 +69,7 @@ bool lua_call_function(lua_State* L, std::string* err, int arg_count, int ret_co
         if (err != nullptr) {
             *err = lua_tostring(L, -1);
         }
+        lua_pop(L, 2);
         return false;
     }
     lua_remove(L, -ret_count - 1); // remove 'traceback'
