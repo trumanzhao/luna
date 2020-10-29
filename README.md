@@ -115,6 +115,7 @@ void some_event(lua_State* L) {
 lua代码中直接访问导出对象的成员/方法即可.
 
 ``` lua
+--当然,你得在C++中实现并导出这个get_obj_from_cpp函数
 local obj = get_obj_from_cpp();
 obj.func("abc", 123);
 obj.name = "new name";
