@@ -75,8 +75,8 @@ inline int lua_normal_index(lua_State* L, int idx) {
     return idx;
 }
 
-bool _lua_set_fence(lua_State* L, const void* p);
-void _lua_del_fence(lua_State* L, const void* p);
+bool _lua_set_fence(lua_State* L, const char fence[]);
+void _lua_del_fence(lua_State* L, const char fence[]);
 
 using lua_global_function = std::function<int(lua_State*)>;
 using lua_object_function = std::function<int(void*, lua_State*)>;
@@ -333,13 +333,30 @@ struct has_member_gc {
     enum { value = std::is_same<decltype(check_gc<T>(0)), std::true_type>::value };
 };
 
+#define MAX_LUA_OBJECT_KEY 256
+
+template <typename T, int S>
+const char* lua_get_object_key(char (&out)[S], T* obj) {
+    const char* meta_name = obj->lua_get_meta_name();
+    int len = snprintf(out, S, "%p@%s", obj, meta_name);
+    if (len < 0 || len >= S) {
+        return nullptr;
+    }
+    return out;
+}
+
 template <typename T>
 int lua_object_gc(lua_State* L) {
     T* obj = lua_to_object<T*>(L, 1);
     if (obj == nullptr)
         return 0;
 
-    _lua_del_fence(L, obj);
+    char key[MAX_LUA_OBJECT_KEY];
+    const char* pkey = lua_get_object_key(key, obj);
+    if (pkey == nullptr)
+        return 0;
+
+    _lua_del_fence(L, pkey);
 
     if constexpr (has_member_gc<T>::value) {
         obj->__gc();
@@ -405,9 +422,17 @@ void lua_push_object(lua_State* L, T obj) {
         lua_setfield(L, LUA_REGISTRYINDEX, "__objects__");
     }
 
+    char key[MAX_LUA_OBJECT_KEY];
+    const char* pkey = lua_get_object_key(key, obj);
+    if (pkey == nullptr) {
+        lua_pop(L, 1);
+        lua_pushnil(L);
+        return;
+    }
+
     // stack: __objects__
-    if (lua_rawgetp(L, -1, obj) != LUA_TTABLE) {
-        if (!_lua_set_fence(L, obj)) {
+    if (lua_getfield(L, -1, pkey) != LUA_TTABLE) {
+        if (!_lua_set_fence(L, pkey)) {
             lua_remove(L, -2);
             return;
         }
@@ -431,17 +456,23 @@ void lua_push_object(lua_State* L, T obj) {
 
         // stack: __objects__, tab
         lua_pushvalue(L, -1);
-        lua_rawsetp(L, -3, obj);
+        lua_setfield(L, -3, pkey);
     }
     lua_remove(L, -2);
 }
 
 template <typename T>
 void lua_detach(lua_State* L, T obj) {
-    if (obj == nullptr)
+   if (obj == nullptr)
         return;
 
-    _lua_del_fence(L, obj);
+    char key[MAX_LUA_OBJECT_KEY];
+    const char* pkey = lua_get_object_key(key, obj);
+    if (pkey == nullptr) {
+        return;
+    }
+
+    _lua_del_fence(L, pkey);
 
     lua_getfield(L, LUA_REGISTRYINDEX, "__objects__");
     if (!lua_istable(L, -1)) {
@@ -450,7 +481,7 @@ void lua_detach(lua_State* L, T obj) {
     }
 
     // stack: __objects__
-    if (lua_rawgetp(L, -1, obj) != LUA_TTABLE) {
+    if (lua_getfield(L, -1, pkey) != LUA_TTABLE) {
         lua_pop(L, 2);
         return;
     }
